@@ -1,0 +1,105 @@
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'constants.dart';
+
+/// Port of the original "color" SharedPreferences file used by the Sketchware
+/// project. All keys keep their original names.
+class AppPrefs {
+  AppPrefs._();
+  static final AppPrefs I = AppPrefs._();
+
+  late SharedPreferences _p;
+
+  Future<void> init() async {
+    _p = await SharedPreferences.getInstance();
+  }
+
+  bool get day => _p.getBool('day') ?? true; // true = light mode
+  set day(bool v) => _p.setBool('day', v);
+
+  int get fontSize => _p.getInt('SIZE') ?? 20; // global font size
+  set fontSize(int v) => _p.setInt('SIZE', v);
+
+  int get quranFontSize => _p.getInt('quranSize') ?? 26;
+  set quranFontSize(int v) => _p.setInt('quranSize', v);
+
+  String get fontUi => _p.getString('fontui') ?? 'Rabar';
+  set fontUi(String v) => _p.setString('fontui', v);
+
+  String get fontQuran => _p.getString('fontquran') ?? 'Quran';
+  set fontQuran(String v) => _p.setString('fontquran', v);
+
+  String get tafsir => _p.getString('tafsir') ?? 'rebar';
+  set tafsir(String v) => _p.setString('tafsir', v);
+
+  String get cityId => _p.getString('city') ?? 'Hawler';
+  set cityId(String v) => _p.setString('city', v);
+
+  String get cityName => _p.getString('cityname') ?? 'هەولێر';
+  set cityName(String v) => _p.setString('cityname', v);
+
+  /// Mushaf page mode ("shewamm" in the original).
+  bool get mushafMode => _p.getBool('shewamm') ?? false;
+  set mushafMode(bool v) => _p.setBool('shewamm', v);
+
+  bool get screenFull => _p.getBool('screenful') ?? false;
+  set screenFull(bool v) => _p.setBool('screenful', v);
+
+  bool get dialoging => _p.getBool('dialoging') ?? false;
+  set dialoging(bool v) => _p.setBool('dialoging', v);
+
+  // --- prayer notification switches (NwezhiActivity) ---
+  bool get notifFajr => _p.getBool('nfajr') ?? true;
+  set notifFajr(bool v) => _p.setBool('nfajr', v);
+  bool get notifDhuhr => _p.getBool('ndhuhr') ?? true;
+  set notifDhuhr(bool v) => _p.setBool('ndhuhr', v);
+  bool get notifAsr => _p.getBool('nasr') ?? true;
+  set notifAsr(bool v) => _p.setBool('nasr', v);
+  bool get notifMaghrib => _p.getBool('nmaghrib') ?? true;
+  set notifMaghrib(bool v) => _p.setBool('nmaghrib', v);
+  bool get notifIsha => _p.getBool('nisha') ?? true;
+  set notifIsha(bool v) => _p.setBool('nisha', v);
+
+  // --- tasbih counters (TasbihFragmentActivity) ---
+  List<String> get tasbihList => _p.getStringList('tasbihlist') ??
+      <String>['سوبحان الله|33', 'الحمد لله|33', 'الله أكبر|34'];
+  set tasbihList(List<String> v) => _p.setStringList('tasbihlist', v);
+
+  // --- current generic-article context (set by Home cards, read by Hack1) ---
+  String get articleFile => _p.getString('json') ?? 'zikrakan.json';
+  set articleFile(String v) => _p.setString('json', v);
+  String get articleTitle => _p.getString('nametitle') ?? 'زیکرەکان';
+  set articleTitle(String v) => _p.setString('nametitle', v);
+
+  // --- zikr detail (KrdnawaActivity: name / zkr / vip) ---
+  String get zikrName => _p.getString('name') ?? '';
+  set zikrName(String v) => _p.setString('name', v);
+  String get zikrBody => _p.getString('zkr') ?? '';
+  set zikrBody(String v) => _p.setString('zkr', v);
+  String get zikrVip => _p.getString('vip') ?? '';
+  set zikrVip(String v) => _p.setString('vip', v);
+
+  // manual prayer times (DastnwezhActivity)
+  Map<String, String> manualTimes() {
+    return {
+      for (final k in kPrayerNames.keys) k: _p.getString('m_$k') ?? '',
+    };
+  }
+
+  void setManualTime(String k, String v) => _p.setString('m_$k', v);
+
+  bool get useManual => _p.getBool('usemanual') ?? false;
+  set useManual(bool v) => _p.setBool('usemanual', v);
+
+  ThemeData get theme => ThemeData(
+        brightness: day ? Brightness.light : Brightness.dark,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: day ? AppColors.primaryDark : AppColors.gold,
+          brightness: day ? Brightness.light : Brightness.dark,
+        ),
+        scaffoldBackgroundColor: day ? AppColors.dayBg : AppColors.nightBg,
+        cardColor: day ? Colors.white : AppColors.nightCard,
+        fontFamily: fontUi,
+        useMaterial3: true,
+      );
+}
