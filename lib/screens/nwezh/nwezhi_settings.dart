@@ -38,7 +38,7 @@ class _NwezhiSettingsScreenState extends State<NwezhiSettingsScreen> {
   Future<void> _enableExactAlarms() async {
     final allowed = await PrayerNotifications.I.requestExactAlarmPermission();
     if (!mounted) return;
-    await _save();
+    await PrayerNotifications.I.scheduleAll();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(allowed
