@@ -180,14 +180,20 @@ class _QariakanScreenState extends State<QariakanScreen> {
                             FavoriteButton(id: 'reciter::${r['id']}',
                               title: '${r['name_ar'] ?? 'قاری'}',
                               content: 'دەنگی قورئان — ${r['name_ar'] ?? ''}'),
-                            IconButton(
-                              tooltip: 'داگرتنی دەنگ بۆ ئۆفلاین',
-                              onPressed: _downloadingId == '${r['id'] ?? r['name_ar']}'
-                                  ? null : () => _download(r),
-                              icon: Icon(
-                                _downloadingId == '${r['id'] ?? r['name_ar']}'
-                                  ? Icons.downloading_rounded : Icons.download_rounded,
-                                color: AppColors.primaryDark)),
+                            FutureBuilder<File>(
+                              future: _audioFile(r),
+                              builder: (context, fileSnap) {
+                                final downloaded = fileSnap.hasData && fileSnap.data!.existsSync();
+                                final busy = _downloadingId == '${r['id'] ?? r['name_ar']}';
+                                return IconButton(
+                                  tooltip: downloaded ? 'داگیراوە — دووبارە داگرتن' : 'داگرتنی دەنگ بۆ ئۆفلاین',
+                                  onPressed: busy ? null : () => _download(r),
+                                  icon: Icon(
+                                    busy ? Icons.downloading_rounded
+                                      : downloaded ? Icons.download_done_rounded : Icons.download_rounded,
+                                    color: AppColors.primaryDark));
+                              },
+                            ),
                             Icon(_playing && (_selected == (r['id'] is int ? r['id'] : int.tryParse('${r['id']}')))
                                 ? Icons.pause_circle_rounded : Icons.play_circle_rounded,
                               size: 32, color: AppColors.primaryDark),
