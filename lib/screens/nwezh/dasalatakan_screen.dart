@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
+import '../../data/favorites.dart';
 
 /// Original: DasalatakanActivity — supplications during prayer (duha.db).
 class DasalatakanScreen extends StatelessWidget {
@@ -40,10 +41,14 @@ class DasalatakanScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12)),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('${r['wata'] ?? ''}',
+                        Row(children: [
+                          Expanded(child: Text('${r['wata'] ?? ''}',
                             style: TextStyle(fontSize: 12.5,
                                 fontWeight: FontWeight.bold,
-                                color: dark ? AppColors.gold : AppColors.primaryDark)),
+                                color: dark ? AppColors.gold : AppColors.primaryDark))),
+                          FavoriteButton(id: 'prayer_dua::${r['id'] ?? i}',
+                            title: '${r['wata'] ?? 'دوعای نوێژ'}', content: '${r['du3a'] ?? ''}'),
+                        ]),
                         const SizedBox(height: 6),
                         Directionality(
                           textDirection: TextDirection.rtl,
