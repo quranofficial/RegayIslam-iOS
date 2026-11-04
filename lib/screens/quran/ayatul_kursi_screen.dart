@@ -4,6 +4,7 @@ import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
 import '../../data/favorites.dart';
+import 'open_quran.dart' show toArabicDigits;
 
 /// Dedicated Ayat al-Kursi reader (Al-Baqarah 2:255).
 class AyatulKursiScreen extends StatelessWidget {
@@ -55,8 +56,8 @@ class AyatulKursiScreen extends StatelessWidget {
                       color: AppColors.gold, size: 34),
                   const SizedBox(height: 8),
                   FavoriteButton(id: 'quran::2::255',
-                    title: 'سوورەتی البقرة • ئایەتی ٢٥٥', content: arabic),
-                  const Text('سوورەتی البقرة • ئایەتی ٢٥٥',
+                    title: 'سوورەتی البقرة • ئایەتی ${toArabicDigits(255)}', content: arabic),
+                  Text('سوورەتی البقرة • ئایەتی ${toArabicDigits(255)}',
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   const SizedBox(height: 18),
                   SelectableText(arabic,
@@ -65,7 +66,7 @@ class AyatulKursiScreen extends StatelessWidget {
                       fontFamilyFallback: const ['Quran', 'Quran1', 'Quran3'],
                       fontSize: AppPrefs.I.quranFontSize.toDouble(),
                       height: 2.1, color: txt)),
-                  if (tafsir.trim().isNotEmpty) ...[
+                  if (AppPrefs.I.showQuranTafsir && tafsir.trim().isNotEmpty) ...[
                     const Divider(height: 28),
                     Align(alignment: Alignment.centerRight,
                       child: Text('تەفسیر',
