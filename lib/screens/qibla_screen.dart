@@ -94,6 +94,11 @@ class _QiblaScreenState extends State<QiblaScreen> {
               const SizedBox(height: 14),
               OutlinedButton.icon(
                   onPressed: () async {
+                    final enabled = await Geolocator.isLocationServiceEnabled();
+                    if (!enabled) {
+                      await Geolocator.openLocationSettings();
+                      return;
+                    }
                     final p = await Geolocator.checkPermission();
                     if (p == LocationPermission.deniedForever) {
                       await Geolocator.openAppSettings();
