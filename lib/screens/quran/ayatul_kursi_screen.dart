@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
+import '../../data/favorites.dart';
 
 /// Dedicated Ayat al-Kursi reader (Al-Baqarah 2:255).
 class AyatulKursiScreen extends StatelessWidget {
@@ -53,6 +54,8 @@ class AyatulKursiScreen extends StatelessWidget {
                   const Icon(Icons.auto_awesome_rounded,
                       color: AppColors.gold, size: 34),
                   const SizedBox(height: 8),
+                  FavoriteButton(id: 'quran::2::255',
+                    title: 'سوورەتی البقرة • ئایەتی ٢٥٥', content: arabic),
                   const Text('سوورەتی البقرة • ئایەتی ٢٥٥',
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   const SizedBox(height: 18),
