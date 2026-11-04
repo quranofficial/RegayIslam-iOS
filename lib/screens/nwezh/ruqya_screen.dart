@@ -106,6 +106,7 @@ class _RuqyaScreenState extends State<RuqyaScreen> {
                           SelectableText('${v['text'] ?? ''}',
                             textAlign: TextAlign.center,
                             style: TextStyle(fontFamily: AppPrefs.I.fontQuran,
+                              fontFamilyFallback: const ['Quran', 'Quran1', 'Quran3'],
                               fontSize: AppPrefs.I.quranFontSize.toDouble(),
                               height: 2, color: txt)),
                         ],
