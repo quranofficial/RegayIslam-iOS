@@ -412,14 +412,19 @@ class _HomeScreenState extends State<HomeScreen> {
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                             color: dark ? Colors.white10 : Colors.black12)),
-                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      Icon(g.icon, size: 30,
-                          color: dark ? AppColors.gold : AppColors.primaryDark),
-                      const SizedBox(height: 8),
-                      Text(g.label,
-                          textAlign: TextAlign.center, maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 11.5, height: 1.3, color: txt)),
+                    child: Stack(children: [
+                      Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        Icon(g.icon, size: 30,
+                            color: dark ? AppColors.gold : AppColors.primaryDark),
+                        const SizedBox(height: 8),
+                        Text(g.label,
+                            textAlign: TextAlign.center, maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 11.5, height: 1.3, color: txt)),
+                      ])),
+                      Positioned(top: -8, left: -8,
+                        child: FavoriteButton(id: 'section::${g.label}',
+                          title: g.label, content: 'بەشی ${g.label} لە ئەپی ڕێگای ئیسلام')),
                     ]))),
         ]);
   }
