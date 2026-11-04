@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
@@ -30,6 +29,9 @@ class _QariakanScreenState extends State<QariakanScreen> {
     _player.onPlayerStateChanged.listen((s) {
       if (mounted) setState(() => _playing = s == PlayerState.playing);
     });
+    _player.onPlayerComplete.listen((_) {
+      if (mounted) setState(() => _playing = false);
+    });
   }
 
   Future<void> _load() async {
@@ -51,7 +53,7 @@ class _QariakanScreenState extends State<QariakanScreen> {
 
   String _url(Map<String, dynamic> r) {
     final suraNum = (_surah?['soraid'] ?? 1).toString().padLeft(3, '0');
-    final base = '${r['url'] ?? ''}';
+    final base = '${r['url'] ?? ''}'.replaceFirst(RegExp(r'^http://', caseSensitive: false), 'https://');
     return base.endsWith('/') ? '$base$suraNum.mp3' : '$base/$suraNum.mp3';
   }
 
@@ -61,9 +63,12 @@ class _QariakanScreenState extends State<QariakanScreen> {
       if (_playing && _selected == r['id']) {
         await _player.pause();
       } else {
-        final head = await http.head(Uri.parse(url)).timeout(
-            const Duration(seconds: 8));
-        if (head.statusCode >= 400) throw Exception();
+        final uri = Uri.tryParse(url);
+        if (uri == null || uri.host.isEmpty) {
+          throw const FormatException('Invalid audio URL');
+        }
+        // Some audio/CDN servers reject HEAD although GET streaming works.
+        await _player.stop();
         await _player.play(UrlSource(url));
         setState(() => _selected = r['id'] is int ? r['id'] as int : int.tryParse('${r['id']}'));
       }
