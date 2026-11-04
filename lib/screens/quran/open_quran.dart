@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
+import '../../data/favorites.dart';
 import 'quran_settings_sheet.dart';
 
 /// Original: OpenquranActivity — ayah list with tafsir, audio playback with
@@ -186,6 +187,11 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                                         color: dark ? AppColors.gold : AppColors.primaryDark)),
                               ),
                               const Spacer(),
+                              FavoriteButton(
+                                id: 'quran::${widget.surahId}::$ayahNum',
+                                title: 'سوڕەتی ${widget.surahName} • ئایەتی ${toArabicDigits(ayahNum)}',
+                                content: '$ayahText\\n\\n$tafsir',
+                                color: dark ? AppColors.gold : AppColors.primaryDark),
                               Text('سوڕەتی ${widget.surahName} • ئایەتی ${toArabicDigits(ayahNum)}',
                                 style: TextStyle(fontSize: 10,
                                   color: txt.withOpacity(.55),
