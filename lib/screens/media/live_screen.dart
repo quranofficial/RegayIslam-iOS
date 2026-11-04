@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/rtdb.dart';
+import '../../data/favorites.dart';
 import '../misc/webview_screen.dart';
 
 /// Original: LiveActivity — live streams from Firebase RTDB "Live"/"livemuslim".
@@ -92,8 +93,12 @@ class _LiveScreenState extends State<LiveScreen> {
                                 maxLines: 1, overflow: TextOverflow.ellipsis,
                                 style: TextStyle(fontSize: 12,
                                     color: txt.withOpacity(.55))),
-                            trailing: const Icon(Icons.play_circle_rounded,
+                            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                              FavoriteButton(id: 'live::${s['id'] ?? s['url'] ?? s['link'] ?? title}',
+                                title: title, content: '${s['desc'] ?? s['url'] ?? s['link'] ?? ''}'),
+                              const Icon(Icons.play_circle_rounded,
                                 color: Color(0xFFD32F2F), size: 30),
+                            ]),
                           ),
                         ),
                     ]),
