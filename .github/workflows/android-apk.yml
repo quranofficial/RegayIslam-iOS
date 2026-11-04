@@ -1,0 +1,82 @@
+
+name: Build RegayIslam Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Get Flutter packages
+        run: flutter pub get
+
+      - name: Generate Android platform
+        run: |
+          flutter create --platforms=android --org com.nwezhakanm --project-name regayislam .
+
+      - name: Set exact Android package name
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          gradle = Path("android/app/build.gradle.kts")
+          if not gradle.exists():
+              raise SystemExit("Android Gradle file not found")
+
+          text = gradle.read_text()
+          text = re.sub(r'(?m)^\s*namespace\s*=\s*"[^"]+"',
+                        '    namespace = "com.nwezhakanm"', text)
+          text = re.sub(r'(?m)^\s*applicationId\s*=\s*"[^"]+"',
+                        '        applicationId = "com.nwezhakanm"', text)
+          gradle.write_text(text)
+
+          root = Path("android/app/src/main")
+          activity = next(root.rglob("MainActivity.kt"), None)
+          if activity is None:
+              raise SystemExit("MainActivity.kt not found")
+
+          activity.write_text(
+              re.sub(r'(?m)^package\s+.*$',
+                     'package com.nwezhakanm',
+                     activity.read_text(), count=1)
+          )
+
+          target = root / "kotlin/com/nwezhakanm/MainActivity.kt"
+          target.parent.mkdir(parents=True, exist_ok=True)
+          if activity != target:
+              target.write_text(activity.read_text())
+              activity.unlink()
+
+          print("Package name configured: com.nwezhakanm")
+          PY
+
+      - name: Build Release APK
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: RegayIslam-Android-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+
