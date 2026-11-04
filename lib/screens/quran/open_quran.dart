@@ -191,7 +191,7 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                               FavoriteButton(
                                 id: 'quran::${widget.surahId}::$ayahNum',
                                 title: 'سوڕەتی ${widget.surahName} • ئایەتی ${toArabicDigits(ayahNum)}',
-                                content: '$ayahText\\n\\n$tafsir',
+                                content: '$ayahText\n\n$tafsir',
                                 color: dark ? AppColors.gold : AppColors.primaryDark),
                               if (AppPrefs.I.showQuranAyahNumbers) Text('سوڕەتی ${widget.surahName} • ئایەتی ${toArabicDigits(ayahNum)}',
                                 style: TextStyle(fontSize: 10,
@@ -204,6 +204,7 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                               child: Text(ayahText,
                                   style: TextStyle(
                                       fontFamily: AppPrefs.I.fontQuran,
+                                      fontFamilyFallback: const ['Quran', 'Quran1', 'Quran3'],
                                       fontSize: AppPrefs.I.quranFontSize
                                           .toDouble(),
                                       height: 2, color: txt)),
