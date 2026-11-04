@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
+import '../../data/favorites.dart';
 
 /// Original: KtebActivity — library/books list (garanawa.db) opening the
 /// chapter reader; PDF items open PdfScreen.
@@ -57,7 +58,9 @@ class KtebScreen extends StatelessWidget {
                     subtitle: Text('${b['desc'] ?? 'چیرۆک و بابەت'}',
                         maxLines: 1, overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontSize: 12, color: txt.withOpacity(.55))),
-                    trailing: Icon(Icons.chevron_left, color: txt.withOpacity(.4)),
+                    trailing: FavoriteButton(id: 'book::${b['tableName']}',
+                      title: '${b['title'] ?? 'کتێب'}',
+                      content: '${b['desc'] ?? 'کتێبخانە'}'),
                   ),
                 );
               },
@@ -141,10 +144,13 @@ class _BookReaderScreenState extends State<BookReaderScreen> {
                             maxLines: 2, overflow: TextOverflow.ellipsis,
                             style: TextStyle(fontWeight: FontWeight.bold,
                                 fontSize: 14, color: txt)),
-                        trailing: Icon(open
-                            ? Icons.expand_less_rounded
-                            : Icons.expand_more_rounded,
+                        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                          FavoriteButton(id: 'bookchapter::${widget.table}::$i',
+                            title: '${widget.title} — ${r['sarder'] ?? 'بابەت'}',
+                            content: '${r['drezha'] ?? ''}'),
+                          Icon(open ? Icons.expand_less_rounded : Icons.expand_more_rounded,
                             color: txt.withOpacity(.4)),
+                        ]),
                       ),
                       if (open)
                         Padding(
