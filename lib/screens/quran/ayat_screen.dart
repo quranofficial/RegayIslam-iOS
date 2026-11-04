@@ -104,7 +104,9 @@ class _AyatScreenState extends State<AyatScreen> {
                         borderRadius: BorderRadius.circular(18)),
                     child: Column(children: [
                       Row(children: [
-                        Text('سوڕەتی ${r['sura_name_ar']} • ئایەتی ${toArabicDigits((r['ayah'] as num?)?.toInt() ?? 0)}',
+                        Text(AppPrefs.I.showQuranSurahName
+                          ? 'سوڕەتی ${r['sura_name_ar']} • ئایەتی ${toArabicDigits((r['ayah'] as num?)?.toInt() ?? 0)}'
+                          : 'ئایەتی ${toArabicDigits((r['ayah'] as num?)?.toInt() ?? 0)}',
                             style: TextStyle(fontSize: 12,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.primaryDark)),
@@ -128,7 +130,7 @@ class _AyatScreenState extends State<AyatScreen> {
                                 fontSize: _zoom, height: 2.1, color: txt)),
                       ),
                       const SizedBox(height: 14),
-                      Container(
+                      if (AppPrefs.I.showQuranTafsir) Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
