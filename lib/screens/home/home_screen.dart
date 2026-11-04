@@ -4,6 +4,7 @@ import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
 import '../../data/rtdb.dart';
+import '../../data/favorites.dart';
 import '../../main.dart' show toggleDayNight;
 import '../articles/json_article_screen.dart';
 import '../articles/info_screen.dart';
@@ -312,6 +313,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _grid(bool dark, Color card, Color txt) {
     final items = <_G>[
+      _G('دڵخوازەکان', Icons.bookmarks_rounded,
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesScreen()))),
       _G('نوێژکردن', Icons.mosque_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NwezhHubScreen()))),
       _G('ناوەکانی خودای گەورە', Icons.badge_rounded,
