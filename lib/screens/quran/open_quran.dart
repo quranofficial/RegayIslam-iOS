@@ -123,7 +123,8 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
         appBar: AppBar(
           backgroundColor: dark ? AppColors.nightCard : AppColors.primaryDark,
           title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('سوڕەتی ${widget.surahName}',
+            if (AppPrefs.I.showQuranSurahName)
+              Text('سوڕەتی ${widget.surahName}',
                 style: const TextStyle(color: Colors.white, fontSize: 17,
                     fontWeight: FontWeight.bold)),
             Text('${widget.place} • ${widget.juz}',
@@ -172,7 +173,7 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                           child: Column(crossAxisAlignment:
                               CrossAxisAlignment.stretch, children: [
                             Row(children: [
-                              Container(
+                              if (AppPrefs.I.showQuranAyahNumbers) Container(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 8, vertical: 2),
                                 decoration: BoxDecoration(
@@ -186,13 +187,13 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                                         fontWeight: FontWeight.bold,
                                         color: dark ? AppColors.gold : AppColors.primaryDark)),
                               ),
-                              const Spacer(),
+                              if (AppPrefs.I.showQuranAyahNumbers) const Spacer(),
                               FavoriteButton(
                                 id: 'quran::${widget.surahId}::$ayahNum',
                                 title: 'سوڕەتی ${widget.surahName} • ئایەتی ${toArabicDigits(ayahNum)}',
                                 content: '$ayahText\\n\\n$tafsir',
                                 color: dark ? AppColors.gold : AppColors.primaryDark),
-                              Text('سوڕەتی ${widget.surahName} • ئایەتی ${toArabicDigits(ayahNum)}',
+                              if (AppPrefs.I.showQuranAyahNumbers) Text('سوڕەتی ${widget.surahName} • ئایەتی ${toArabicDigits(ayahNum)}',
                                 style: TextStyle(fontSize: 10,
                                   color: txt.withOpacity(.55),
                                   fontWeight: FontWeight.w600)),
@@ -207,7 +208,7 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                                           .toDouble(),
                                       height: 2, color: txt)),
                             ),
-                            if (tafsir.trim().isNotEmpty) ...[
+                            if (AppPrefs.I.showQuranTafsir && tafsir.trim().isNotEmpty) ...[
                               const SizedBox(height: 8),
                               Container(
                                 padding: const EdgeInsets.all(8),
