@@ -104,7 +104,7 @@ class _AyatScreenState extends State<AyatScreen> {
                         borderRadius: BorderRadius.circular(18)),
                     child: Column(children: [
                       Row(children: [
-                        Text('${r['sura_name_ar']} • ئایەتی ${toArabicDigits((r['ayah'] as num?)?.toInt() ?? 0)}',
+                        Text('سوڕەتی ${r['sura_name_ar']} • ئایەتی ${toArabicDigits((r['ayah'] as num?)?.toInt() ?? 0)}',
                             style: TextStyle(fontSize: 12,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.primaryDark)),
