@@ -3,6 +3,7 @@ import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
 import '../../data/rtdb.dart';
+import '../../data/favorites.dart';
 
 /// Original: RamazanActivity + Ramazan1Activity — Ramadan content from rm.db
 /// (sections: پێشوازی، ڕۆژوو، شەوی قەدر...) and the live Ramadan banner from
@@ -50,7 +51,11 @@ class RamazanScreen extends StatelessWidget {
                                 color: Colors.white, fontSize: 13))),
                     title: Text('${t['titles']}',
                         style: TextStyle(fontWeight: FontWeight.bold, color: txt)),
-                    trailing: Icon(Icons.chevron_left, color: txt.withOpacity(.4)),
+                    trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                      FavoriteButton(id: 'ramadan_section::${t['tableName']}',
+                        title: '${t['titles'] ?? 'ڕەمەزان'}', content: 'بەشی مانگی ڕەمەزان'),
+                      Icon(Icons.chevron_left, color: txt.withOpacity(.4)),
+                    ]),
                   ),
                 ),
               const SizedBox(height: 8),
@@ -124,10 +129,14 @@ class RamadanDetailScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12)),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('${r['title'] ?? ''}',
+                        Row(children: [
+                          Expanded(child: Text('${r['title'] ?? ''}',
                             style: TextStyle(fontSize: 14.5,
                                 fontWeight: FontWeight.bold,
-                                color: dark ? AppColors.gold : const Color(0xFF1B5E20))),
+                                color: dark ? AppColors.gold : const Color(0xFF1B5E20)))),
+                          FavoriteButton(id: 'ramadan_content::${table}::${r['_id'] ?? i}',
+                            title: '${r['title'] ?? title}', content: '${r['desc'] ?? ''}'),
+                        ]),
                         const SizedBox(height: 6),
                         SelectableText('${r['desc'] ?? ''}',
                             style: TextStyle(fontSize: 14, height: 1.9, color: txt)),
