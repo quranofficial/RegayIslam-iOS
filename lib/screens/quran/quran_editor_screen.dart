@@ -65,7 +65,7 @@ class _QuranEditorScreenState extends State<QuranEditorScreen> {
                 const Icon(Icons.text_decrease_rounded),
                 Expanded(child: Slider(
                   min: 16, max: 54, divisions: 19,
-                  value: p.quranFontSize.toDouble().clamp(16, 54),
+                  value: p.quranFontSize.toDouble().clamp(16.0, 54.0).toDouble(),
                   label: '${p.quranFontSize}',
                   onChanged: (v) => setState(() => p.quranFontSize = v.round()),
                 )),
