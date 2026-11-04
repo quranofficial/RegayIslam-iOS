@@ -60,6 +60,7 @@ jobs:
                       manifest_text, count=1)
           manifest_text = re.sub(r'android:label="[^"]*"', 'android:label="ڕێگای ئیسلام"', manifest_text, count=1)
           manifest_text = re.sub(r'android:icon="@[^"]+"', 'android:icon="@drawable/app_icon"', manifest_text, count=1)
+          manifest_text = re.sub(r'android:roundIcon="@[^"]+"', 'android:roundIcon="@drawable/app_icon"', manifest_text, count=1)
           if "ScheduledNotificationReceiver" not in manifest_text:
               receiver_xml = """    <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
               <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
