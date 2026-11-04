@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
 
@@ -30,6 +31,14 @@ class _PdfScreenState extends State<PdfScreen> {
   Future<void> _download() async {
     setState(() { _downloading = true; _error = null; });
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final cacheKey = 'pdf_cache_${widget.url}';
+      final cachedPath = prefs.getString(cacheKey);
+      if (cachedPath != null && await File(cachedPath).exists()) {
+        if (!mounted) return;
+        setState(() { _localPath = cachedPath; _downloading = false; _progress = 100; });
+        return;
+      }
       final dir = await getApplicationDocumentsDirectory();
       final name = 'pdf_${DateTime.now().millisecondsSinceEpoch}.pdf';
       final file = File('${dir.path}/$name');
@@ -49,8 +58,9 @@ class _PdfScreenState extends State<PdfScreen> {
       }
       await sink.close();
       client.close();
+      await prefs.setString(cacheKey, file.path);
       if (!mounted) return;
-      setState(() { _localPath = file.path; _downloading = false; });
+      setState(() { _localPath = file.path; _downloading = false; _progress = 100; });
     } catch (e) {
       if (!mounted) return;
       setState(() { _downloading = false; _error = 'داگرتن سەرکەوتوو نەبوو — دواتر دووبارە هەوڵبدەرەوە'; });
