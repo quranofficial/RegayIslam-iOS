@@ -73,7 +73,9 @@ class _NwezhiSettingsScreenState extends State<NwezhiSettingsScreen> {
                   if (v == null) return;
                   setState(() { p.cityId = v; p.cityName = v; });
                   final t = await Db.I.prayerTimes(v, DateTime.now());
+                  if (!mounted) return;
                   setState(() => _today = t);
+                  await _save();
                 },
               ),
             ),
@@ -102,6 +104,9 @@ class _NwezhiSettingsScreenState extends State<NwezhiSettingsScreen> {
           _sw('بانگی عەسر', p.notifAsr, (v) { p.notifAsr = v; _save(); }, txt, dark),
           _sw('بانگی ئێوارە', p.notifMaghrib, (v) { p.notifMaghrib = v; _save(); }, txt, dark),
           _sw('بانگی خەوتنان', p.notifIsha, (v) { p.notifIsha = v; _save(); }, txt, dark),
+          const Divider(height: 20),
+          _sw('دەنگی بانگ', p.adhanSoundEnabled, (v) { setState(() => p.adhanSoundEnabled = v); _save(); }, txt, dark),
+          _sw('لەرزینی مۆبایل', p.adhanVibrationEnabled, (v) { setState(() => p.adhanVibrationEnabled = v); _save(); }, txt, dark),
           const SizedBox(height: 10),
           ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
