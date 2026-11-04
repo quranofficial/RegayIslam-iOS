@@ -64,6 +64,11 @@ class AppPrefs {
   bool get notifIsha => _p.getBool('nisha') ?? true;
   set notifIsha(bool v) => _p.setBool('nisha', v);
 
+  bool get adhanSoundEnabled => _p.getBool('adhanSoundEnabled') ?? true;
+  set adhanSoundEnabled(bool v) => _p.setBool('adhanSoundEnabled', v);
+  bool get adhanVibrationEnabled => _p.getBool('adhanVibrationEnabled') ?? true;
+  set adhanVibrationEnabled(bool v) => _p.setBool('adhanVibrationEnabled', v);
+
   // --- tasbih counters (TasbihFragmentActivity) ---
   List<String> get tasbihList => _p.getStringList('tasbihlist') ??
       <String>['سوبحان الله|33', 'الحمد لله|33', 'الله أكبر|34'];
