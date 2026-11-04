@@ -122,7 +122,7 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
         appBar: AppBar(
           backgroundColor: dark ? AppColors.nightCard : AppColors.primaryDark,
           title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(widget.surahName,
+            Text('سوڕەتی ${widget.surahName}',
                 style: const TextStyle(color: Colors.white, fontSize: 17,
                     fontWeight: FontWeight.bold)),
             Text('${widget.place} • ${widget.juz}',
@@ -186,13 +186,10 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                                         color: dark ? AppColors.gold : AppColors.primaryDark)),
                               ),
                               const Spacer(),
-                              Directionality(
-                                textDirection: TextDirection.ltr,
-                                child: Text('sura:${widget.surahId} ayah:$ayahNum',
-                                    style: TextStyle(
-                                        fontSize: 10,
-                                        color: txt.withOpacity(.35))),
-                              ),
+                              Text('سوڕەتی ${widget.surahName} • ئایەتی ${toArabicDigits(ayahNum)}',
+                                style: TextStyle(fontSize: 10,
+                                  color: txt.withOpacity(.55),
+                                  fontWeight: FontWeight.w600)),
                             ]),
                             const SizedBox(height: 8),
                             Directionality(
@@ -269,6 +266,7 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
 }
 
 String toArabicDigits(int n) {
+  if (!AppPrefs.I.useKurdishDigits) return n.toString();
   const d = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
   return n.toString().split('').map((c) => d[int.parse(c)]).join();
 }
