@@ -29,12 +29,18 @@ class PrayerNotifications {
     final android = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     await android?.requestNotificationsPermission();
-    final canSchedule = await android?.canScheduleExactNotifications();
-    if (canSchedule != true) {
-      await android?.requestExactAlarmsPermission();
-    }
     _canUseExactAlarms =
         await android?.canScheduleExactNotifications() ?? false;
+  }
+
+  Future<bool> requestExactAlarmPermission() async {
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android == null) return true;
+    await android.requestExactAlarmsPermission();
+    _canUseExactAlarms =
+        await android.canScheduleExactNotifications() ?? false;
+    return _canUseExactAlarms;
   }
 
   Future<void> showNow(String title, String body) async {
