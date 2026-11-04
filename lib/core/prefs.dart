@@ -21,6 +21,13 @@ class AppPrefs {
   bool get useKurdishDigits => _p.getBool('kurdishDigits') ?? true;
   set useKurdishDigits(bool v) => _p.setBool('kurdishDigits', v);
 
+  bool get showQuranTafsir => _p.getBool('showQuranTafsir') ?? true;
+  set showQuranTafsir(bool v) => _p.setBool('showQuranTafsir', v);
+  bool get showQuranAyahNumbers => _p.getBool('showQuranAyahNumbers') ?? true;
+  set showQuranAyahNumbers(bool v) => _p.setBool('showQuranAyahNumbers', v);
+  bool get showQuranSurahName => _p.getBool('showQuranSurahName') ?? true;
+  set showQuranSurahName(bool v) => _p.setBool('showQuranSurahName', v);
+
   int get fontSize => _p.getInt('SIZE') ?? 20; // global font size
   set fontSize(int v) => _p.setInt('SIZE', v);
 
