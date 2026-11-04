@@ -10,28 +10,65 @@ class Rtdb {
 
   static const String base = 'https://regayislam-1-default-rtdb.firebaseio.com';
 
-  Future<dynamic> get(String path) async {
-    try {
-      final r = await http
-          .get(Uri.parse('$base/$path.json'))
-          .timeout(const Duration(seconds: 12));
-      if (r.statusCode == 200) return jsonDecode(r.body);
-    } catch (_) {}
-    return null;
+  String? _lastError;
+  String? get lastError => _lastError;
+
+  Uri _uri(String path) {
+    final safePath = path.split('/').where((part) => part.isNotEmpty)
+        .map(Uri.encodeComponent).join('/');
+    return Uri.parse('$base/$safePath.json');
   }
 
-  /// List from an RTDB node (handles both arrays and keyed maps).
+  Future<dynamic> get(String path) async {
+    _lastError = null;
+    try {
+      final r = await http.get(_uri(path),
+          headers: const {'Accept': 'application/json'})
+          .timeout(const Duration(seconds: 20));
+      if (r.statusCode != 200) {
+        _lastError = 'Firebase HTTP ' + r.statusCode.toString() + ': ' + r.body;
+        return null;
+      }
+      final value = jsonDecode(r.body);
+      if (value is Map && value['error'] != null) {
+        _lastError = 'Firebase: ' + value['error'].toString();
+        return null;
+      }
+      return value;
+    } catch (e) {
+      _lastError = e.toString();
+      return null;
+    }
+  }
+
+  /// Convert Firebase arrays, keyed collections and single records to rows.
   Future<List<Map<String, dynamic>>> list(String path) async {
     final v = await get(path);
     final out = <Map<String, dynamic>>[];
+    const fields = {'name', 'title', 'desc', 'text', 'link', 'url',
+      'video', 'videourl', 'stream', 'youtube', 'image', 'thumbnail'};
     if (v is List) {
-      for (final e in v) {
-        if (e is Map) out.add(Map<String, dynamic>.from(e));
+      for (var i = 0; i < v.length; i++) {
+        final item = v[i];
+        if (item is Map) {
+          out.add(Map<String, dynamic>.from(item));
+        } else if (item is String && item.trim().isNotEmpty) {
+          out.add({'id': i.toString(), 'url': item.trim()});
+        }
       }
     } else if (v is Map) {
-      v.forEach((_, e) {
-        if (e is Map) out.add(Map<String, dynamic>.from(e));
-      });
+      final oneRecord = v.keys.any((k) => fields.contains(k.toString().toLowerCase()));
+      if (oneRecord) {
+        out.add(Map<String, dynamic>.from(v));
+      } else {
+        v.forEach((key, item) {
+          if (item is Map) {
+            out.add({'id': key.toString(), ...Map<String, dynamic>.from(item)});
+          } else if (item is String && item.trim().isNotEmpty) {
+            out.add({'id': key.toString(), 'url': item.trim()});
+          }
+        });
+      }
     }
     return out;
   }
