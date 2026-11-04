@@ -3,6 +3,7 @@ import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
 import '../../data/favorites.dart';
+import '../pdf/pdf_screen.dart';
 
 /// Original: KtebActivity — library/books list (garanawa.db) opening the
 /// chapter reader; PDF items open PdfScreen.
@@ -45,10 +46,18 @@ class KtebScreen extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14)),
                   child: ListTile(
-                    onTap: () => Navigator.push(context, MaterialPageRoute(
-                        builder: (_) => BookReaderScreen(
-                            title: '${b['title'] ?? 'کتێب'}',
-                            table: '${b['tableName'] ?? ''}'))),
+                    onTap: () {
+                      final title = '${b['title'] ?? 'کتێب'}';
+                      final url = '${b['url'] ?? b['link'] ?? b['pdf'] ?? ''}'.trim();
+                      if (url.isNotEmpty) {
+                        Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => PdfScreen(title: title, url: url)));
+                      } else {
+                        Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => BookReaderScreen(
+                            title: title, table: '${b['tableName'] ?? ''}')));
+                      }
+                    },
                     leading: CircleAvatar(
                         backgroundColor: AppColors.primaryDark.withOpacity(.1),
                         child: Icon(Icons.menu_book_rounded,
