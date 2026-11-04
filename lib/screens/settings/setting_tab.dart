@@ -11,8 +11,13 @@ import '../misc/webview_screen.dart';
 
 /// Original: SettingFragmentActivity — app settings incl. night mode,
 /// fonts, prayer notifications, socials and about.
-class SettingTab extends StatelessWidget {
+class SettingTab extends StatefulWidget {
   const SettingTab({super.key});
+  @override
+  State<SettingTab> createState() => _SettingTabState();
+}
+
+class _SettingTabState extends State<SettingTab> {
 
   void _openUrl(BuildContext c, String url) {
     final fixed = url.startsWith('http') ? url : 'https://$url';
@@ -46,6 +51,15 @@ class SettingTab extends StatelessWidget {
                     title: Text('دۆخی شەو', style: TextStyle(color: txt)),
                     value: dark,
                     onChanged: (_) => toggleDayNight()),
+                const Divider(height: 1),
+                SwitchListTile(
+                    secondary: const Icon(Icons.format_list_numbered_rounded,
+                        color: AppColors.primaryDark),
+                    title: Text('ژمارە کوردی', style: TextStyle(color: txt)),
+                    subtitle: Text(p.useKurdishDigits ? '١٢٣' : '123',
+                        style: TextStyle(color: txt.withOpacity(.55))),
+                    value: p.useKurdishDigits,
+                    onChanged: (v) => setState(() => p.useKurdishDigits = v)),
               ])),
           _section('قورئان و فۆنت', dark, txt),
           Card(color: dark ? AppColors.nightCard : Colors.white,
