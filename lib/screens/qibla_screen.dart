@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../core/constants.dart';
 import '../core/prefs.dart';
 
@@ -93,10 +92,17 @@ class _QiblaScreenState extends State<QiblaScreen> {
               const SizedBox(height: 10),
               Text(_error!, style: TextStyle(color: txt)),
               const SizedBox(height: 14),
-              OutlinedButton(
-                  onPressed: () =>
-                      launchUrl(Uri.parse('https://qiblafinder.withgoogle.com')),
-                  child: const Text('کردنەوەی Qibla Finder لە وێب')),
+              OutlinedButton.icon(
+                  onPressed: () async {
+                    final p = await Geolocator.checkPermission();
+                    if (p == LocationPermission.deniedForever) {
+                      await Geolocator.openAppSettings();
+                    } else {
+                      await _locate();
+                    }
+                  },
+                  icon: const Icon(Icons.location_searching_rounded),
+                  label: const Text('دووبارە داوای مۆڵەتی شوێن بکە')),
             ] else ...[
               Stack(alignment: Alignment.center, children: [
                 SizedBox(
