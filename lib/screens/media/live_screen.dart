@@ -31,15 +31,23 @@ class _LiveScreenState extends State<LiveScreen> {
   }
 
   void _open(Map<String, dynamic> s) {
-    final link = '${s['link'] ?? s['url'] ?? s['video'] ?? ''}';
+    final link = '${s['link'] ?? s['url'] ?? s['video'] ?? s['videoUrl'] ?? s['stream'] ?? s['youtube'] ?? ''}'.trim();
     final title = '${s['name'] ?? s['title'] ?? 'پەخشی ڕاستەوخۆ'}';
-    if (link.isEmpty) return;
+    if (link.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لینکی پەخش لە Firebase نییە')));
+      return;
+    }
+    final uri = Uri.tryParse(link);
+    if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لینکی پەخش دروست نییە')));
+      return;
+    }
     final yt = link.contains('youtube.com') || link.contains('youtu.be');
     if (yt) {
       Navigator.push(context, MaterialPageRoute(
           builder: (_) => WebViewScreen(title: title, url: link)));
     } else {
-      launchUrl(Uri.parse(link), mode: LaunchMode.externalApplication);
+      launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
 
