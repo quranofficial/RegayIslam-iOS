@@ -135,6 +135,16 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   return Card(
                     color: dark ? AppColors.nightCard : Colors.white,
                     child: ListTile(
+                      onTap: () => showDialog<void>(
+                        context: context,
+                        builder: (_) => AlertDialog(
+                          title: Text(item.title),
+                          content: SingleChildScrollView(
+                            child: SelectableText(item.content)),
+                          actions: [TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('داخستن'))],
+                        )),
                       leading: const Icon(Icons.bookmark_rounded, color: AppColors.gold),
                       title: Text(item.title, style: TextStyle(
                         fontWeight: FontWeight.bold, color: txt)),
