@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:flutter/services.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
+import '../../data/favorites.dart';
 import 'open_quran.dart' show toArabicDigits;
 
 /// Original: AyatActivity — daily ayah with recitation, zoom, copy & share.
@@ -108,6 +109,11 @@ class _AyatScreenState extends State<AyatScreen> {
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.primaryDark)),
                         const Spacer(),
+                        FavoriteButton(
+                          id: 'daily_ayah::${r['suraId']}::${r['ayah']}',
+                          title: '${r['sura_name_ar']} • ئایەتی ${toArabicDigits((r['ayah'] as num?)?.toInt() ?? 0)}',
+                          content: '${r['text']}\\n\\n${r[AppPrefs.I.tafsir] ?? ''}',
+                          color: dark ? AppColors.gold : AppColors.primaryDark),
                         Text('ڕێگای ئیسلام',
                             style: TextStyle(
                                 fontSize: 11, color: txt.withOpacity(.4))),
@@ -118,6 +124,7 @@ class _AyatScreenState extends State<AyatScreen> {
                         child: Text('${r['text']}',
                             style: TextStyle(
                                 fontFamily: AppPrefs.I.fontQuran,
+                                fontFamilyFallback: const ['Quran', 'Quran1', 'Quran3'],
                                 fontSize: _zoom, height: 2.1, color: txt)),
                       ),
                       const SizedBox(height: 14),
