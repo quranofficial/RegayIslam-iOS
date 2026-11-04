@@ -25,7 +25,7 @@ class ZikrDetailScreen extends StatelessWidget {
               style: const TextStyle(color: Colors.white, fontSize: 16,
                   fontWeight: FontWeight.bold)),
           actions: [
-            FavoriteButton(id: 'zikr::${p.zikrName}::${p.zikrBody.hashCode}',
+            FavoriteButton(id: 'zikr::${p.zikrName}',
               title: p.zikrName.isEmpty ? 'زیکر' : p.zikrName,
               content: p.zikrBody, color: Colors.white),
             IconButton(
