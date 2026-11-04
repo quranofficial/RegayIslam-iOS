@@ -45,9 +45,17 @@ class _VideosScreenState extends State<VideosScreen> {
   }
 
   void _open(Map<String, dynamic> v) {
-    final link = '${v['url'] ?? v['link'] ?? v['video'] ?? ''}';
-    if (link.isEmpty) return;
-    launchUrl(Uri.parse(link), mode: LaunchMode.externalApplication);
+    final link = '${v['url'] ?? v['link'] ?? v['video'] ?? v['videoUrl'] ?? v['youtube'] ?? ''}'.trim();
+    if (link.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لینکی ڤیدیۆ لە Firebase نییە')));
+      return;
+    }
+    final uri = Uri.tryParse(link);
+    if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لینکی ڤیدیۆ دروست نییە')));
+      return;
+    }
+    launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   @override
