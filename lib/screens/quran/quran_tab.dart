@@ -4,6 +4,7 @@ import '../../core/prefs.dart';
 import '../../data/db.dart';
 import 'open_quran.dart' show OpenQuranScreen, toArabicDigits;
 import 'quran_search_screen.dart';
+import 'quran_editor_screen.dart';
 
 /// Original: QurannFragmentActivity — surah list with live search filter.
 class QuranTab extends StatefulWidget {
@@ -56,6 +57,11 @@ class _QuranTabState extends State<QuranTab> {
           title: const Text('قورئانی پیرۆز',
               style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           actions: [
+            IconButton(
+                tooltip: 'ئیدیتی قورئان',
+                icon: const Icon(Icons.edit_note_rounded, color: Colors.white),
+                onPressed: () => Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => const QuranEditorScreen()))),
             IconButton(
                 tooltip: 'گەڕان لە ناو ئایەتەکان',
                 icon: const Icon(Icons.travel_explore_rounded, color: Colors.white),
