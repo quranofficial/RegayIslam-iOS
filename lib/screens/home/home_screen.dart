@@ -11,6 +11,7 @@ import '../misc/zikr_detail_screen.dart';
 import '../media/live_screen.dart';
 import '../media/videos_screen.dart';
 import '../quran/ayat_screen.dart';
+import '../quran/ayatul_kursi_screen.dart';
 import '../quran/name_screen.dart';
 import '../quran/qariakan_screen.dart';
 import '../quran/quran_search_screen.dart';
@@ -19,6 +20,7 @@ import '../settings/question_screen.dart';
 import '../tasbih/tasbih_counter.dart';
 import '../qibla_screen.dart';
 import '../nwezh/prayers_month.dart';
+import '../nwezh/prayer_times_screen.dart';
 import '../nwezh/dasalatakan_screen.dart';
 import '../settings/tawanakanm_screen.dart';
 import 'prayer/nwezh_hub.dart';
@@ -265,7 +267,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _prayerTimesCard(Color card, Color txt, bool dark) => InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () => Navigator.push(context,
-          MaterialPageRoute(builder: (_) => const NwezhHubScreen())),
+          MaterialPageRoute(builder: (_) => const PrayerTimesScreen())),
       child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
@@ -315,7 +317,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _G('ناوەکانی خودای گەورە', Icons.badge_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NameScreen()))),
       _G('ئایەتی کورسی', Icons.menu_book_rounded,
-          () => _openJson('assets/data/zanyaryquran.json', 'زانیاری قورئان')),
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AyatulKursiScreen()))),
       _G('پرسیار و وەڵام', Icons.quiz_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuestionScreen()))),
       _G('ڤیدیۆی ئاینی', Icons.ondemand_video_rounded,
