@@ -94,7 +94,7 @@ class _LiveScreenState extends State<LiveScreen> {
                                 style: TextStyle(fontSize: 12,
                                     color: txt.withOpacity(.55))),
                             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                              FavoriteButton(id: 'live::${s['id'] ?? s['url'] ?? s['link'] ?? title}',
+                              FavoriteButton(id: 'live::${s['id'] ?? s['url'] ?? s['link'] ?? s['name'] ?? 'live_stream'}',
                                 title: '${s['name'] ?? s['title'] ?? 'پەخش'}', content: '${s['desc'] ?? s['url'] ?? s['link'] ?? ''}'),
                               const Icon(Icons.play_circle_rounded,
                                 color: Color(0xFFD32F2F), size: 30),
