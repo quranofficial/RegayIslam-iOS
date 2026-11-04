@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/rtdb.dart';
+import '../../data/favorites.dart';
 
 /// Original: ListvideokanActivity — video list from Firebase "videoNew",
 /// with comment count; opens PlayvideoActivity-equivalent.
@@ -124,8 +125,12 @@ class _VideosScreenState extends State<VideosScreen> {
                                   maxLines: 1, overflow: TextOverflow.ellipsis,
                                   style: TextStyle(fontSize: 11,
                                       color: txt.withOpacity(.55))),
-                              trailing: const Icon(Icons.play_circle_rounded,
+                              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                                FavoriteButton(id: 'video::${v['id'] ?? v['url'] ?? v['link'] ?? title}',
+                                  title: title, content: '${v['desc'] ?? v['url'] ?? v['link'] ?? ''}'),
+                                const Icon(Icons.play_circle_rounded,
                                   size: 30, color: AppColors.primaryDark),
+                              ]),
                             ),
                           );
                         },
