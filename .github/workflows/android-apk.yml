@@ -3,6 +3,10 @@ name: Build RegayIslam Android APK
 on:
   workflow_dispatch:
 
+concurrency:
+  group: regayislam-${{ github.workflow }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
