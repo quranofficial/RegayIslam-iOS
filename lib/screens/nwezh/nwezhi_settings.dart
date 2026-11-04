@@ -119,6 +119,12 @@ class _NwezhiSettingsScreenState extends State<NwezhiSettingsScreen> {
           const Divider(height: 20),
           _sw('دەنگی بانگ', p.adhanSoundEnabled, (v) { setState(() => p.adhanSoundEnabled = v); _save(); }, txt, dark),
           _sw('لەرزینی مۆبایل', p.adhanVibrationEnabled, (v) { setState(() => p.adhanVibrationEnabled = v); _save(); }, txt, dark),
+          OutlinedButton.icon(
+            onPressed: () => PrayerNotifications.I.showNow(
+              'تاقیکردنەوەی بانگ', 'ئەمە تاقیکردنەوەی دەنگی بانگە'),
+            icon: const Icon(Icons.volume_up_rounded),
+            label: const Text('تاقیکردنەوەی دەنگی بانگ'),
+          ),
           if (Theme.of(context).platform == TargetPlatform.android) ...[
             OutlinedButton.icon(
               onPressed: _enableExactAlarms,
