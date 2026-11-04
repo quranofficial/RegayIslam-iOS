@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Apply iOS bundle metadata, permissions, and notification sound resources."""
+"""Apply iOS bundle metadata, app icon, and notification sound resources."""
 from pathlib import Path
+import json
 import plistlib
 import re
+import subprocess
 
 plist_path = Path('ios/Runner/Info.plist')
 if not plist_path.exists():
@@ -18,6 +20,26 @@ data['NSLocationWhenInUseUsageDescription'] = 'بۆ نیشاندانی کاتی 
 
 with plist_path.open('wb') as f:
     plistlib.dump(data, f, sort_keys=False)
+
+# Replace the generated iOS launcher icon with the project's app logo.
+icon_source = Path('assets/images/app_icon.png')
+icon_set = Path('ios/Runner/Assets.xcassets/AppIcon.appiconset')
+icon_set.mkdir(parents=True, exist_ok=True)
+if not icon_source.exists():
+    raise SystemExit('assets/images/app_icon.png is missing.')
+subprocess.run([
+    'sips', '-s', 'format', 'png', '-z', '1024', '1024',
+    str(icon_source), '--out', str(icon_set / 'AppIcon.png')
+], check=True)
+(icon_set / 'Contents.json').write_text(json.dumps({
+    'images': [{
+        'filename': 'AppIcon.png',
+        'idiom': 'universal',
+        'platform': 'ios',
+        'size': '1024x1024'
+    }],
+    'info': {'author': 'xcode', 'version': 1}
+}, ensure_ascii=False, indent=2))
 
 # Register the short custom notification sound in the iOS app bundle.
 sound_path = Path('ios/Runner/adhan.caf')
