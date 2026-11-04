@@ -54,6 +54,7 @@ class DasalatakanScreen extends StatelessWidget {
                           textDirection: TextDirection.rtl,
                           child: Text('${r['du3a'] ?? ''}',
                               style: TextStyle(fontFamily: 'Quran',
+                                  fontFamilyFallback: const ['Quran1', 'Quran3'],
                                   fontSize: 18, height: 2, color: txt)),
                         ),
                       ]),
