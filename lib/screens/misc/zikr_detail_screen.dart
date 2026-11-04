@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
+import '../../data/favorites.dart';
 
 /// Original: KrdnawaActivity — renders a zikr/detail whose content was put
 /// into the prefs by the caller (name / zkr / vip keys in the original).
@@ -24,6 +25,9 @@ class ZikrDetailScreen extends StatelessWidget {
               style: const TextStyle(color: Colors.white, fontSize: 16,
                   fontWeight: FontWeight.bold)),
           actions: [
+            FavoriteButton(id: 'zikr::${p.zikrName}::${p.zikrBody.hashCode}',
+              title: p.zikrName.isEmpty ? 'زیکر' : p.zikrName,
+              content: p.zikrBody, color: Colors.white),
             IconButton(
                 icon: const Icon(Icons.share_rounded, color: Colors.white),
                 onPressed: () => Share.share(
