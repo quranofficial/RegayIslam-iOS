@@ -13,6 +13,7 @@ class PrayerNotifications {
   static final PrayerNotifications I = PrayerNotifications._();
 
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
+  bool _canUseExactAlarms = false;
 
   Future<void> init() async {
     const android = AndroidInitializationSettings('app_icon');
@@ -25,16 +26,23 @@ class PrayerNotifications {
   }
 
   Future<void> requestPermission() async {
-    await _plugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission();
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    await android?.requestNotificationsPermission();
+    final canSchedule = await android?.canScheduleExactNotifications();
+    if (canSchedule != true) {
+      await android?.requestExactAlarmsPermission();
+    }
+    _canUseExactAlarms =
+        await android?.canScheduleExactNotifications() ?? false;
   }
 
   Future<void> showNow(String title, String body) async {
     const android = AndroidNotificationDetails(
-        'channel1', 'ڕێگای ئیسلام',
-        channelDescription: 'Cloud Messaging (Ex. News, updates or messages)',
+        'adhan_channel_v2', 'بانگی نوێژ',
+        channelDescription: 'ئاگادارکردنەوە و دەنگی بانگی نوێژ',
+        sound: RawResourceAndroidNotificationSound('adhan'),
+        playSound: true,
         importance: Importance.max,
         priority: Priority.high,
         enableLights: true,
@@ -44,7 +52,7 @@ class PrayerNotifications {
     await _plugin.show(
         DateTime.now().millisecondsSinceEpoch ~/ 1000 % 100000,
         title, body,
-        const NotificationDetails(android: android, iOS: DarwinNotificationDetails()));
+        const NotificationDetails(android: android, iOS: DarwinNotificationDetails(presentSound: true, sound: 'adhan.caf')));
   }
 
   /// Schedule the adhan notification for every prayer of the next 7 days.
@@ -86,7 +94,9 @@ class PrayerNotifications {
           if (when.isBefore(tz.TZDateTime.now(tz.local))) continue;
           final android = AndroidNotificationDetails(
               'channel1', 'ڕێگای ئیسلام',
-              channelDescription: 'Cloud Messaging',
+              channelDescription: 'دەنگی بانگی نوێژ',
+              sound: const RawResourceAndroidNotificationSound('adhan'),
+              playSound: true,
               importance: Importance.max,
               priority: Priority.high,
               enableVibration: true,
@@ -94,8 +104,10 @@ class PrayerNotifications {
           await _plugin.zonedSchedule(
               id++, names[entry.key] ?? entry.key,
               'ئێستا کاتی ${names[entry.key]}ـە لە ${p.cityName}', when,
-              NotificationDetails(android: android, iOS: const DarwinNotificationDetails()),
-              androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+              NotificationDetails(android: android, iOS: const DarwinNotificationDetails(presentSound: true, sound: 'adhan.caf')),
+              androidScheduleMode: _canUseExactAlarms
+                  ? AndroidScheduleMode.exactAllowWhileIdle
+                  : AndroidScheduleMode.inexactAllowWhileIdle,
               uiLocalNotificationDateInterpretation:
                   UILocalNotificationDateInterpretation.absoluteTime);
         }
