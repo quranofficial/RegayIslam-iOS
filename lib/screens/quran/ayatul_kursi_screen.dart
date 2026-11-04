@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
-import 'open_quran.dart' show toArabicDigits;
 
 /// Dedicated Ayat al-Kursi reader (Al-Baqarah 2:255).
 class AyatulKursiScreen extends StatelessWidget {
@@ -60,6 +59,7 @@ class AyatulKursiScreen extends StatelessWidget {
                   SelectableText(arabic,
                     textAlign: TextAlign.center,
                     style: TextStyle(fontFamily: AppPrefs.I.fontQuran,
+                      fontFamilyFallback: const ['Quran', 'Quran1', 'Quran3'],
                       fontSize: AppPrefs.I.quranFontSize.toDouble(),
                       height: 2.1, color: txt)),
                   if (tafsir.trim().isNotEmpty) ...[
