@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:vibration/vibration.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
+import '../../data/favorites.dart';
 
 /// Original: Tasbih2Activity — tasbih counter with target, vibration and
 /// click animation.
@@ -68,6 +69,8 @@ class _TasbihCounterScreenState extends State<TasbihCounterScreen> {
           title: Text(_zikr,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           actions: [
+            FavoriteButton(id: 'tasbih::$_zikr', title: _zikr,
+              content: 'زیکری هەڵبژێردراو: $_zikr', color: Colors.white),
             IconButton(
                 onPressed: _pick, icon: const Icon(Icons.playlist_add_rounded)),
             IconButton(
