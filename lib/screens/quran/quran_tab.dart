@@ -134,11 +134,11 @@ class _QuranTabState extends State<QuranTab> {
                                 )),
                             ]),
                           ),
-                          title: Text('${s['name']}',
+                          title: Text('سوڕەتی ${s['name']}',
                               style: TextStyle(
                                   fontWeight: FontWeight.bold, color: txt)),
                           subtitle: Text(
-                              '${s['aya']} ئایەت • ${s['place']} • ${s['juz']}',
+                              '${toArabicDigits(int.tryParse('${s['aya']}') ?? 0)} ئایەت • ${s['place']} • ${s['juz']}',
                               style: TextStyle(
                                   fontSize: 12, color: txt.withOpacity(.6))),
                           trailing: Icon(Icons.chevron_left,
