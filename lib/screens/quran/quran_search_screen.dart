@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
+import '../../data/favorites.dart';
 
 /// Original: QuransearchActivity — full-quran search over text + tafsir.
 class QuranSearchScreen extends StatefulWidget {
@@ -91,10 +92,15 @@ class _QuranSearchScreenState extends State<QuranSearchScreen> {
                                 borderRadius: BorderRadius.circular(12)),
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('${r['sura_name_ar']} • ئایەتی ${r['ayah']}',
+                                  Row(children: [
+                                    Expanded(child: Text('${r['sura_name_ar']} • ئایەتی ${r['ayah']}',
                                       style: TextStyle(fontSize: 12,
                                           fontWeight: FontWeight.bold,
-                                          color: AppColors.primaryDark)),
+                                          color: AppColors.primaryDark))),
+                                    FavoriteButton(id: 'quran_search::${r['suraId']}::${r['ayah']}',
+                                      title: '${r['sura_name_ar']} • ئایەتی ${r['ayah']}',
+                                      content: '${r['text'] ?? ''}'),
+                                  ]),
                                   const SizedBox(height: 6),
                                   Directionality(
                                     textDirection: TextDirection.rtl,
