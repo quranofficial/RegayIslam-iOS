@@ -2,9 +2,10 @@ name: Build RegayIslam Unsigned iOS IPA
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
+
+concurrency:
+  group: regayislam-${{ github.workflow }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
