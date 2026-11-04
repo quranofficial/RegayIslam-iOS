@@ -38,6 +38,7 @@ class _QuranEditorScreenState extends State<QuranEditorScreen> {
                 Text('بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontFamily: p.fontQuran,
+                    fontFamilyFallback: const ['Quran', 'Quran1', 'Quran3'],
                     fontSize: p.quranFontSize.toDouble(), height: 2,
                     color: txt)),
               ]),
