@@ -52,7 +52,7 @@ jobs:
           if not manifest.exists():
               raise SystemExit("AndroidManifest.xml not found")
           manifest_text = manifest.read_text()
-          for permission in ("android.permission.POST_NOTIFICATIONS", "android.permission.SCHEDULE_EXACT_ALARM"):
+          for permission in ("android.permission.POST_NOTIFICATIONS", "android.permission.SCHEDULE_EXACT_ALARM", "android.permission.RECEIVE_BOOT_COMPLETED", "android.permission.ACCESS_FINE_LOCATION", "android.permission.ACCESS_COARSE_LOCATION"):
               if permission not in manifest_text:
                   manifest_text = re.sub(
                       r'(<manifest[^>]*>)',
@@ -60,6 +60,18 @@ jobs:
                       manifest_text, count=1)
           manifest_text = re.sub(r'android:label="[^"]*"', 'android:label="ڕێگای ئیسلام"', manifest_text, count=1)
           manifest_text = re.sub(r'android:icon="@[^"]+"', 'android:icon="@drawable/app_icon"', manifest_text, count=1)
+          if "ScheduledNotificationReceiver" not in manifest_text:
+              receiver_xml = """    <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+              <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+                  <intent-filter>
+                      <action android:name="android.intent.action.BOOT_COMPLETED" />
+                      <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                      <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                      <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+                  </intent-filter>
+              </receiver>
+          """
+              manifest_text = manifest_text.replace("</application>", receiver_xml + "    </application>", 1)
           manifest.write_text(manifest_text)
 
           gradle = Path("android/app/build.gradle.kts")
