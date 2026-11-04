@@ -4,6 +4,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:flutter/services.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
+import '../../data/favorites.dart';
 
 /// Original: NameActivity — the 99 names of Allah (name.db) with
 /// Sorani/Badini/English/Farsi meanings.
@@ -126,6 +127,8 @@ class _NameScreenState extends State<NameScreen> {
                               if ('${r['farsi'] ?? ''}'.trim().isNotEmpty)
                                 _m('فارسی', '${r['farsi']}', txt, dark),
                               Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                                FavoriteButton(id: 'allahname::${r['_id'] ?? i}',
+                                  title: '${r['arabic']}', content: '${r['sorani']}'),
                                 TextButton.icon(
                                     onPressed: () {
                                       Clipboard.setData(ClipboardData(
