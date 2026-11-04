@@ -13,6 +13,7 @@ import '../media/live_screen.dart';
 import '../media/videos_screen.dart';
 import '../quran/ayat_screen.dart';
 import '../quran/ayatul_kursi_screen.dart';
+import '../quran/quran_editor_screen.dart';
 import '../quran/name_screen.dart';
 import '../quran/qariakan_screen.dart';
 import '../quran/quran_search_screen.dart';
@@ -317,6 +318,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final items = <_G>[
       _G('دڵخوازەکان', Icons.bookmarks_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesScreen()))),
+      _G('ئیدیتی قورئان', Icons.edit_note_rounded,
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuranEditorScreen()))),
       _G('نوێژکردن', Icons.mosque_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NwezhHubScreen()))),
       _G('ناوەکانی خودای گەورە', Icons.badge_rounded,
