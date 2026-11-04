@@ -103,22 +103,29 @@ class _QuranTabState extends State<QuranTab> {
                                   ayaCount: int.tryParse('${s['aya']}') ?? 0,
                                   place: '${s['place']}',
                                   juz: '${s['juz']}'))),
-                          leading: SizedBox(
+                          leading: Container(
                             width: 44, height: 44,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: dark ? AppColors.gold.withOpacity(.14)
+                                  : AppColors.primaryDark.withOpacity(.08),
+                              border: Border.all(
+                                color: dark ? AppColors.gold.withOpacity(.45)
+                                    : AppColors.primaryDark.withOpacity(.2)),
+                            ),
                             child: Stack(alignment: Alignment.center, children: [
-                              Image.asset('assets/images/icon/$num.png',
-                                  width: 44, height: 44,
-                                  errorBuilder: (_, __, ___) => Container(
-                                      width: 40, height: 40,
-                                      decoration: BoxDecoration(
-                                          color: AppColors.primaryDark
-                                              .withOpacity(.08),
-                                          shape: BoxShape.circle)),
-                              ),
-                              Text(toArabicDigits(num),
-                                  style: const TextStyle(
-                                      fontSize: 13, fontWeight: FontWeight.bold,
-                                      color: AppColors.primaryDark)),
+                              Icon(Icons.auto_stories_rounded, size: 25,
+                                color: dark ? AppColors.gold : AppColors.primaryDark),
+                              Positioned(bottom: 1, right: 1,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: dark ? AppColors.nightCard : Colors.white,
+                                    borderRadius: BorderRadius.circular(6)),
+                                  child: Text(toArabicDigits(num),
+                                    style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold,
+                                      color: dark ? AppColors.gold : AppColors.primaryDark)),
+                                )),
                             ]),
                           ),
                           title: Text('${s['name']}',
