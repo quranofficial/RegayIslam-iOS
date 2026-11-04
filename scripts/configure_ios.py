@@ -2,6 +2,7 @@
 """Apply the iOS bundle metadata and privacy usage descriptions."""
 from pathlib import Path
 import plistlib
+import re
 
 plist_path = Path('ios/Runner/Info.plist')
 if not plist_path.exists():
@@ -17,6 +18,64 @@ data['NSLocationWhenInUseUsageDescription'] = 'بۆ نیشاندانی کاتی 
 
 with plist_path.open('wb') as f:
     plistlib.dump(data, f, sort_keys=False)
+
+# Register the short custom notification sound in the iOS app bundle.
+sound_path = Path('ios/Runner/adhan.caf')
+if not sound_path.exists():
+    raise SystemExit('The generated iOS Adhan sound ios/Runner/adhan.caf is missing.')
+
+project_path = Path('ios/Runner.xcodeproj/project.pbxproj')
+if not project_path.exists():
+    raise SystemExit('Xcode project file was not generated.')
+
+project = project_path.read_text()
+if 'adhan.caf in Resources' not in project:
+    build_id = 'DADA00000000000000000001'
+    file_id = 'DADA00000000000000000002'
+    build_entry = (
+        f'        {build_id} /* adhan.caf in Resources */ = '
+        f'{{isa = PBXBuildFile; fileRef = {file_id} /* adhan.caf */; }};\\n'
+    )
+    file_entry = (
+        f'        {file_id} /* adhan.caf */ = '
+        '{isa = PBXFileReference; lastKnownFileType = file; path = adhan.caf; '
+        'sourceTree = "<group>"; };\\n'
+    )
+    project = project.replace(
+        '/* Begin PBXBuildFile section */\\n',
+        '/* Begin PBXBuildFile section */\\n' + build_entry, 1)
+    project = project.replace(
+        '/* Begin PBXFileReference section */\\n',
+        '/* Begin PBXFileReference section */\\n' + file_entry, 1)
+
+    runner_group = re.search(
+        r'([A-F0-9]{24}) /\\* Runner \\*/ = \\{\\s*isa = PBXGroup;.*?children = \\(.*?\\);',
+        project, re.S)
+    if not runner_group:
+        raise SystemExit('Could not find the Runner group in project.pbxproj.')
+    group_end = runner_group.end(0)
+    group_text = runner_group.group(0)
+    group_text = group_text.replace(
+        'children = (',
+        'children = (\\n                ' + file_id + ' /* adhan.caf */,', 1)
+    project = project[:runner_group.start(0)] + group_text + project[group_end:]
+
+    resources_section = re.search(
+        r'/\\* Begin PBXResourcesBuildPhase section \\*/(.*?)/\\* End PBXResourcesBuildPhase section \\*/',
+        project, re.S)
+    if not resources_section:
+        raise SystemExit('Could not find PBXResourcesBuildPhase.')
+    resources_text = resources_section.group(1)
+    resources_phase = re.search(
+        r'files = \\((.*?)\\);', resources_text, re.S)
+    if not resources_phase:
+        raise SystemExit('Could not find the iOS Resources file list.')
+    resources_text = resources_text[:resources_phase.start(1)] + (
+        '\\n                ' + build_id + ' /* adhan.caf in Resources */,'
+        + resources_text[resources_phase.start(1):])
+    project = (project[:resources_section.start(1)] + resources_text
+               + project[resources_section.end(1):])
+    project_path.write_text(project)
 
 export_options = {
     'method': 'app-store-connect',
