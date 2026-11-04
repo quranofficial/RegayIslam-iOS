@@ -20,6 +20,8 @@ import '../ramadan/ramazan_screen.dart';
 import '../settings/question_screen.dart';
 import '../tasbih/tasbih_counter.dart';
 import '../qibla_screen.dart';
+import '../books/kteb_screen.dart';
+import '../nwezh/ruqya_screen.dart';
 import '../nwezh/prayers_month.dart';
 import '../nwezh/prayer_times_screen.dart';
 import '../nwezh/dasalatakan_screen.dart';
@@ -328,9 +330,9 @@ class _HomeScreenState extends State<HomeScreen> {
       _G('تاوانەکانم', Icons.warning_amber_rounded,
           () => _openJson('assets/data/tawanakan.json', 'تاوانەگەورەکان')),
       _G('کتێبخانە', Icons.local_library_rounded,
-          () => _openInfo('kteb', 'کتێبخانە')),
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KtebScreen()))),
       _G('ڕوقیەی شەرعی', Icons.healing_rounded,
-          () => _openInfo('ruqyay', 'ڕوقیەی شەرعی')),
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RuqyaScreen()))),
       _G('زیکرەکان', Icons.self_improvement_rounded,
           () => _openJson('assets/data/zikrakan.json', 'زیکرەکان')),
       _G('فەرموودەکان', Icons.format_quote_rounded,
