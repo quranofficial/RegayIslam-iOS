@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'dart:convert';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
 import '../../data/favorites.dart';
@@ -22,6 +25,7 @@ class _QariakanScreenState extends State<QariakanScreen> {
   bool _loading = true;
   bool _playing = false;
   String? _error;
+  String? _downloadingId;
 
   @override
   void initState() {
@@ -58,6 +62,44 @@ class _QariakanScreenState extends State<QariakanScreen> {
     return base.endsWith('/') ? '$base$suraNum.mp3' : '$base/$suraNum.mp3';
   }
 
+  Future<File> _audioFile(Map<String, dynamic> r) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final folder = Directory('${dir.path}/quran_audio');
+    await folder.create(recursive: true);
+    final reciter = '${r['id'] ?? r['name_ar'] ?? 'reciter'}'
+        .replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+    final surah = (_surah?['soraid'] ?? 1).toString().padLeft(3, '0');
+    return File('${folder.path}/${reciter}_${surah}.mp3');
+  }
+
+  Future<void> _download(Map<String, dynamic> r) async {
+    final id = '${r['id'] ?? r['name_ar'] ?? ''}';
+    if (_downloadingId != null) return;
+    setState(() => _downloadingId = id);
+    try {
+      final url = _url(r);
+      final uri = Uri.tryParse(url);
+      if (uri == null || uri.host.isEmpty) throw const FormatException('Invalid audio URL');
+      final response = await http.get(uri).timeout(const Duration(minutes: 4));
+      if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
+        throw Exception('Audio download failed: HTTP ${response.statusCode}');
+      }
+      final file = await _audioFile(r);
+      await file.writeAsBytes(response.bodyBytes, flush: true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('دەنگەکە بۆ بەکارهێنانی ئۆفلاین داگیرا ✅')));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('داگرتنی دەنگ سەرکەوتوو نەبوو')));
+      }
+    } finally {
+      if (mounted) setState(() => _downloadingId = null);
+    }
+  }
+
   Future<void> _play(Map<String, dynamic> r) async {
     try {
       final url = _url(r);
@@ -70,7 +112,12 @@ class _QariakanScreenState extends State<QariakanScreen> {
         }
         // Some audio/CDN servers reject HEAD although GET streaming works.
         await _player.stop();
-        await _player.play(UrlSource(url));
+        final local = await _audioFile(r);
+        if (await local.exists() && await local.length() > 0) {
+          await _player.play(DeviceFileSource(local.path));
+        } else {
+          await _player.play(UrlSource(url));
+        }
         setState(() => _selected = r['id'] is int ? r['id'] as int : int.tryParse('${r['id']}'));
       }
     } catch (_) {
@@ -133,6 +180,14 @@ class _QariakanScreenState extends State<QariakanScreen> {
                             FavoriteButton(id: 'reciter::${r['id']}',
                               title: '${r['name_ar'] ?? 'قاری'}',
                               content: 'دەنگی قورئان — ${r['name_ar'] ?? ''}'),
+                            IconButton(
+                              tooltip: 'داگرتنی دەنگ بۆ ئۆفلاین',
+                              onPressed: _downloadingId == '${r['id'] ?? r['name_ar']}'
+                                  ? null : () => _download(r),
+                              icon: Icon(
+                                _downloadingId == '${r['id'] ?? r['name_ar']}'
+                                  ? Icons.downloading_rounded : Icons.download_rounded,
+                                color: AppColors.primaryDark)),
                             Icon(_playing && (_selected == (r['id'] is int ? r['id'] : int.tryParse('${r['id']}')))
                                 ? Icons.pause_circle_rounded : Icons.play_circle_rounded,
                               size: 32, color: AppColors.primaryDark),
