@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
+import '../../data/favorites.dart';
 
 /// Renders the static screens ported 1:1 from the original activities
 /// (Hwhe, Whw, Gss, Hwuw, Vsbs, Cheshtan, Estyxara, Islam, Fate7a, Error,
@@ -103,6 +104,10 @@ class _InfoScreenState extends State<InfoScreen> {
                     fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
                     fontFamily: arabic ? 'Quran' : null,
                     color: txt)),
+        if (!isTitle)
+          Align(alignment: Alignment.centerLeft,
+            child: FavoriteButton(id: 'info::${widget.screenKey}::$id',
+              title: widget.title, content: text)),
           ),
       ]),
     );
