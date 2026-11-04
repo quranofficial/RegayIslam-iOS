@@ -17,6 +17,10 @@ class AppPrefs {
   bool get day => _p.getBool('day') ?? true; // true = light mode
   set day(bool v) => _p.setBool('day', v);
 
+  /// Use Kurdish/Arabic-Indic numerals throughout the interface.
+  bool get useKurdishDigits => _p.getBool('kurdishDigits') ?? true;
+  set useKurdishDigits(bool v) => _p.setBool('kurdishDigits', v);
+
   int get fontSize => _p.getInt('SIZE') ?? 20; // global font size
   set fontSize(int v) => _p.setInt('SIZE', v);
 
