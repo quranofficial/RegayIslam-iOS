@@ -3,6 +3,7 @@ import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
 import '../../data/favorites.dart';
+import 'open_quran.dart' show toArabicDigits;
 
 /// Original: QuransearchActivity — full-quran search over text + tafsir.
 class QuranSearchScreen extends StatefulWidget {
@@ -93,7 +94,7 @@ class _QuranSearchScreenState extends State<QuranSearchScreen> {
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(children: [
-                                    Expanded(child: Text('${r['sura_name_ar']} • ئایەتی ${r['ayah']}',
+                                    Expanded(child: Text('سوڕەتی ${r['sura_name_ar']} • ئایەتی ${toArabicDigits((r['ayah'] as num?)?.toInt() ?? 0)}',
                                       style: TextStyle(fontSize: 12,
                                           fontWeight: FontWeight.bold,
                                           color: AppColors.primaryDark))),
@@ -107,6 +108,7 @@ class _QuranSearchScreenState extends State<QuranSearchScreen> {
                                     child: Text('${r['text']}',
                                         style: TextStyle(
                                             fontFamily: AppPrefs.I.fontQuran,
+                                            fontFamilyFallback: const ['Quran', 'Quran1', 'Quran3'],
                                             fontSize: 18, height: 1.9, color: txt)),
                                   ),
                                 ]),
