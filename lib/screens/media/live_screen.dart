@@ -24,7 +24,7 @@ class _LiveScreenState extends State<LiveScreen> {
   }
 
   Future<void> _load() async {
-    var l = await Rtdb.I.list('Live');
+    var l = await Rtdb.I.live();
     if (l.isEmpty) l = await Rtdb.I.liveMuslim();
     if (!mounted) return;
     setState(() { _streams = l; _loading = false; _error = l.isEmpty ? 'پەخشێک بەردەست نییە — دواتر دووبارە هەوڵبدەرەوە' : null; });
