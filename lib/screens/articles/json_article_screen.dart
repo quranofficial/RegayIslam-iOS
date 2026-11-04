@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
+import '../../data/favorites.dart';
 
 /// Original: Hack1Activity — generic article reader over the bundled JSON
 /// files (zikrakan, duha, agr, bahasht, xawn, wta, ...), with live search,
@@ -141,6 +142,7 @@ class _JsonArticleScreenState extends State<JsonArticleScreen> {
                                                 height: 1.9, color: txt)),
                                       ),
                                       Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                                        FavoriteButton(id: '${widget.file}::$i', title: title.isEmpty ? widget.title : title, content: text),
                                         TextButton.icon(
                                             onPressed: () {
                                               Clipboard.setData(ClipboardData(
