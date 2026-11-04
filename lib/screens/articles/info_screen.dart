@@ -103,12 +103,11 @@ class _InfoScreenState extends State<InfoScreen> {
                     height: 1.9,
                     fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
                     fontFamily: arabic ? 'Quran' : null,
-                    color: txt)),
+                    color: txt))),
         if (!isTitle)
           Align(alignment: Alignment.centerLeft,
             child: FavoriteButton(id: 'info::${widget.screenKey}::$id',
               title: widget.title, content: text)),
-          ),
       ]),
     );
   }
