@@ -35,6 +35,18 @@ class _NwezhiSettingsScreenState extends State<NwezhiSettingsScreen> {
         const SnackBar(content: Text('ئاگادارکردنەوەکان نوێکرانەوە ✅')));
   }
 
+  Future<void> _enableExactAlarms() async {
+    final allowed = await PrayerNotifications.I.requestExactAlarmPermission();
+    if (!mounted) return;
+    await _save();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(allowed
+        ? 'ئاگادارکردنەوەی کاتی ورد چالاک کرا ✅'
+        : 'مۆڵەتی کاتی ورد نەدرا؛ ئاگادارکردنەوەکان بە شێوەی ئاسایی دادەنرێن'),
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = !AppPrefs.I.day;
@@ -107,6 +119,14 @@ class _NwezhiSettingsScreenState extends State<NwezhiSettingsScreen> {
           const Divider(height: 20),
           _sw('دەنگی بانگ', p.adhanSoundEnabled, (v) { setState(() => p.adhanSoundEnabled = v); _save(); }, txt, dark),
           _sw('لەرزینی مۆبایل', p.adhanVibrationEnabled, (v) { setState(() => p.adhanVibrationEnabled = v); _save(); }, txt, dark),
+          if (Theme.of(context).platform == TargetPlatform.android) ...[
+            OutlinedButton.icon(
+              onPressed: _enableExactAlarms,
+              icon: const Icon(Icons.alarm_on_rounded),
+              label: const Text('چالاککردنی کاتی وردی بانگ'),
+            ),
+            const SizedBox(height: 8),
+          ],
           const SizedBox(height: 10),
           ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
