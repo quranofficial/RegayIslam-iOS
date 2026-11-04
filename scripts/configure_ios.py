@@ -21,25 +21,45 @@ data['NSLocationWhenInUseUsageDescription'] = 'بۆ نیشاندانی کاتی 
 with plist_path.open('wb') as f:
     plistlib.dump(data, f, sort_keys=False)
 
-# Replace the generated iOS launcher icon with the project's app logo.
+# Replace generated iOS launcher icons while retaining the template's supported sizes.
 icon_source = Path('assets/images/app_icon.png')
 icon_set = Path('ios/Runner/Assets.xcassets/AppIcon.appiconset')
 icon_set.mkdir(parents=True, exist_ok=True)
 if not icon_source.exists():
     raise SystemExit('assets/images/app_icon.png is missing.')
-subprocess.run([
-    'sips', '-s', 'format', 'png', '-z', '1024', '1024',
-    str(icon_source), '--out', str(icon_set / 'AppIcon.png')
-], check=True)
-(icon_set / 'Contents.json').write_text(json.dumps({
-    'images': [{
-        'filename': 'AppIcon.png',
-        'idiom': 'universal',
-        'platform': 'ios',
-        'size': '1024x1024'
-    }],
-    'info': {'author': 'xcode', 'version': 1}
-}, ensure_ascii=False, indent=2))
+contents_path = icon_set / 'Contents.json'
+if contents_path.exists():
+    contents = json.loads(contents_path.read_text())
+    generated = 0
+    for image in contents.get('images', []):
+        filename = image.get('filename')
+        if not filename:
+            continue
+        dimensions = image.get('size', '1024x1024').split('x')
+        scale = int(str(image.get('scale', '1x')).replace('x', ''))
+        width = int(float(dimensions[0]) * scale)
+        height = int(float(dimensions[1]) * scale)
+        subprocess.run([
+            'sips', '-s', 'format', 'png', '-z', str(height), str(width),
+            str(icon_source), '--out', str(icon_set / filename)
+        ], check=True, stdout=subprocess.DEVNULL)
+        generated += 1
+    if generated == 0:
+        raise SystemExit('No icon image entries were found in AppIcon Contents.json.')
+else:
+    subprocess.run([
+        'sips', '-s', 'format', 'png', '-z', '1024', '1024',
+        str(icon_source), '--out', str(icon_set / 'AppIcon.png')
+    ], check=True)
+    contents_path.write_text(json.dumps({
+        'images': [{
+            'filename': 'AppIcon.png',
+            'idiom': 'universal',
+            'platform': 'ios',
+            'size': '1024x1024'
+        }],
+        'info': {'author': 'xcode', 'version': 1}
+    }, ensure_ascii=False, indent=2))
 
 # Register the short custom notification sound in the iOS app bundle.
 sound_path = Path('ios/Runner/adhan.caf')
