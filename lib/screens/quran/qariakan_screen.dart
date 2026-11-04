@@ -80,12 +80,23 @@ class _QariakanScreenState extends State<QariakanScreen> {
       final url = _url(r);
       final uri = Uri.tryParse(url);
       if (uri == null || uri.host.isEmpty) throw const FormatException('Invalid audio URL');
-      final response = await http.get(uri).timeout(const Duration(minutes: 4));
-      if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
-        throw Exception('Audio download failed: HTTP ${response.statusCode}');
+      final client = http.Client();
+      try {
+        final request = http.Request('GET', uri);
+        final response = await client.send(request).timeout(const Duration(minutes: 4));
+        if (response.statusCode != 200) {
+          throw Exception('Audio download failed: HTTP ${response.statusCode}');
+        }
+        final file = await _audioFile(r);
+        final sink = file.openWrite();
+        await for (final chunk in response.stream) {
+          sink.add(chunk);
+        }
+        await sink.close();
+        if (await file.length() == 0) throw Exception('Downloaded audio is empty');
+      } finally {
+        client.close();
       }
-      final file = await _audioFile(r);
-      await file.writeAsBytes(response.bodyBytes, flush: true);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('دەنگەکە بۆ بەکارهێنانی ئۆفلاین داگیرا ✅')));
