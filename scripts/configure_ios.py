@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply the iOS bundle metadata and privacy usage descriptions."""
+"""Apply iOS bundle metadata, permissions, and notification sound resources."""
 from pathlib import Path
 import plistlib
 import re
@@ -34,44 +34,43 @@ if 'adhan.caf in Resources' not in project:
     file_id = 'DADA00000000000000000002'
     build_entry = (
         f'        {build_id} /* adhan.caf in Resources */ = '
-        f'{{isa = PBXBuildFile; fileRef = {file_id} /* adhan.caf */; }};\\n'
+        f'{{isa = PBXBuildFile; fileRef = {file_id} /* adhan.caf */; }};\n'
     )
     file_entry = (
         f'        {file_id} /* adhan.caf */ = '
         '{isa = PBXFileReference; lastKnownFileType = file; path = adhan.caf; '
-        'sourceTree = "<group>"; };\\n'
+        'sourceTree = "<group>"; };\n'
     )
     project = project.replace(
-        '/* Begin PBXBuildFile section */\\n',
-        '/* Begin PBXBuildFile section */\\n' + build_entry, 1)
+        '/* Begin PBXBuildFile section */\n',
+        '/* Begin PBXBuildFile section */\n' + build_entry, 1)
     project = project.replace(
-        '/* Begin PBXFileReference section */\\n',
-        '/* Begin PBXFileReference section */\\n' + file_entry, 1)
+        '/* Begin PBXFileReference section */\n',
+        '/* Begin PBXFileReference section */\n' + file_entry, 1)
 
     runner_group = re.search(
-        r'([A-F0-9]{24}) /\\* Runner \\*/ = \\{\\s*isa = PBXGroup;.*?children = \\(.*?\\);',
+        r'([A-F0-9]{24}) /\* Runner \*/ = \{\s*isa = PBXGroup;.*?children = \(.*?\);',
         project, re.S)
     if not runner_group:
         raise SystemExit('Could not find the Runner group in project.pbxproj.')
-    group_end = runner_group.end(0)
     group_text = runner_group.group(0)
     group_text = group_text.replace(
         'children = (',
-        'children = (\\n                ' + file_id + ' /* adhan.caf */,', 1)
-    project = project[:runner_group.start(0)] + group_text + project[group_end:]
+        'children = (\n                ' + file_id + ' /* adhan.caf */,', 1)
+    project = (project[:runner_group.start(0)] + group_text
+               + project[runner_group.end(0):])
 
     resources_section = re.search(
-        r'/\\* Begin PBXResourcesBuildPhase section \\*/(.*?)/\\* End PBXResourcesBuildPhase section \\*/',
+        r'/\* Begin PBXResourcesBuildPhase section \*/(.*?)/\* End PBXResourcesBuildPhase section \*/',
         project, re.S)
     if not resources_section:
         raise SystemExit('Could not find PBXResourcesBuildPhase.')
     resources_text = resources_section.group(1)
-    resources_phase = re.search(
-        r'files = \\((.*?)\\);', resources_text, re.S)
+    resources_phase = re.search(r'files = \((.*?)\);', resources_text, re.S)
     if not resources_phase:
         raise SystemExit('Could not find the iOS Resources file list.')
     resources_text = resources_text[:resources_phase.start(1)] + (
-        '\\n                ' + build_id + ' /* adhan.caf in Resources */,'
+        '\n                ' + build_id + ' /* adhan.caf in Resources */,'
         + resources_text[resources_phase.start(1):])
     project = (project[:resources_section.start(1)] + resources_text
                + project[resources_section.end(1):])
