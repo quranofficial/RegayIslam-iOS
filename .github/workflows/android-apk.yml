@@ -37,6 +37,11 @@ jobs:
           mkdir -p android/app/src/main/res/raw
           cp assets/sounds/dang.MP3 android/app/src/main/res/raw/adhan.mp3
 
+      - name: Prepare app launcher icon
+        run: |
+          mkdir -p android/app/src/main/res/drawable-nodpi
+          cp assets/images/app_icon.png android/app/src/main/res/drawable-nodpi/app_icon.png
+
       - name: Configure Android package and desugaring
         run: |
           python3 - <<'PY'
@@ -53,6 +58,8 @@ jobs:
                       r'(<manifest[^>]*>)',
                       lambda match: match.group(1) + f'\n    <uses-permission android:name="{permission}" />',
                       manifest_text, count=1)
+          manifest_text = re.sub(r'android:label="[^"]*"', 'android:label="ڕێگای ئیسلام"', manifest_text, count=1)
+          manifest_text = re.sub(r'android:icon="@[^"]+"', 'android:icon="@drawable/app_icon"', manifest_text, count=1)
           manifest.write_text(manifest_text)
 
           gradle = Path("android/app/build.gradle.kts")
