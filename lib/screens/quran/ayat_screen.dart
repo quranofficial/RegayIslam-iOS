@@ -40,6 +40,17 @@ class _AyatScreenState extends State<AyatScreen> {
     setState(() => _row = a);
   }
 
+  String _audioUrl(Map<String, Object?> row) {
+    final link = row['link']?.toString().trim() ?? '';
+    if (link.isEmpty) throw const FormatException('Ayah audio link is empty');
+    if (link.startsWith('https://') || link.startsWith('http://')) {
+      return link.replaceFirst(RegExp(r'^http://', caseSensitive: false), 'https://');
+    }
+    final file = link.toLowerCase().endsWith('.mp3') ? link : link + '.mp3';
+    final number = file.replaceAll('.mp3', '').padLeft(3, '0');
+    return 'https://download.tvquran.com/download/recitations/343/266/' + number + '.mp3';
+  }
+
   Future<void> _play() async {
     final link = '${_row?['link'] ?? ''}';
     if (link.isEmpty) return;
@@ -47,10 +58,8 @@ class _AyatScreenState extends State<AyatScreen> {
       if (_playing) {
         await _player.pause();
       } else {
-        final sura = (_row?['suraId'] as num?)?.toInt() ?? 1;
-        await _player.play(UrlSource(
-            'https://download.tvquran.com/download/recitations/343/266/'
-            '${sura.toString().padLeft(3, '0')}.mp3'));
+        await _player.stop();
+        await _player.play(UrlSource(_audioUrl(_row!)));
       }
     } catch (_) {
       if (mounted) {
