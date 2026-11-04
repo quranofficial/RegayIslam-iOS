@@ -93,7 +93,7 @@ class PrayerNotifications {
               tz.TZDateTime(tz.local, date.year, date.month, date.day, h, m);
           if (when.isBefore(tz.TZDateTime.now(tz.local))) continue;
           final android = AndroidNotificationDetails(
-              'channel1', 'ڕێگای ئیسلام',
+              'adhan_channel_v2', 'بانگی نوێژ',
               channelDescription: 'دەنگی بانگی نوێژ',
               sound: const RawResourceAndroidNotificationSound('adhan'),
               playSound: true,
