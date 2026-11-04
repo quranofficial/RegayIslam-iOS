@@ -38,21 +38,22 @@ class PrayerNotifications {
   }
 
   Future<void> showNow(String title, String body) async {
-    const android = AndroidNotificationDetails(
-        'adhan_channel_v2', 'بانگی نوێژ',
+    final p = AppPrefs.I;
+    final android = AndroidNotificationDetails(
+        'adhan_channel_v2_${p.adhanSoundEnabled ? 'sound' : 'silent'}', 'بانگی نوێژ',
         channelDescription: 'ئاگادارکردنەوە و دەنگی بانگی نوێژ',
-        sound: RawResourceAndroidNotificationSound('adhan'),
-        playSound: true,
+        sound: p.adhanSoundEnabled ? const RawResourceAndroidNotificationSound('adhan') : null,
+        playSound: p.adhanSoundEnabled,
         importance: Importance.max,
         priority: Priority.high,
         enableLights: true,
-        ledColor: Color(0xFFF44336),
-        enableVibration: true,
+        ledColor: const Color(0xFFF44336),
+        enableVibration: p.adhanVibrationEnabled,
         visibility: NotificationVisibility.public);
     await _plugin.show(
         DateTime.now().millisecondsSinceEpoch ~/ 1000 % 100000,
         title, body,
-        const NotificationDetails(android: android, iOS: DarwinNotificationDetails(presentSound: true, sound: 'adhan.caf')));
+        NotificationDetails(android: android, iOS: DarwinNotificationDetails(presentSound: p.adhanSoundEnabled, sound: p.adhanSoundEnabled ? 'adhan.caf' : null)));
   }
 
   /// Schedule the adhan notification for every prayer of the next 7 days.
@@ -93,18 +94,18 @@ class PrayerNotifications {
               tz.TZDateTime(tz.local, date.year, date.month, date.day, h, m);
           if (when.isBefore(tz.TZDateTime.now(tz.local))) continue;
           final android = AndroidNotificationDetails(
-              'adhan_channel_v2', 'بانگی نوێژ',
+              'adhan_channel_v2_${p.adhanSoundEnabled ? 'sound' : 'silent'}', 'بانگی نوێژ',
               channelDescription: 'دەنگی بانگی نوێژ',
-              sound: const RawResourceAndroidNotificationSound('adhan'),
-              playSound: true,
+              sound: p.adhanSoundEnabled ? const RawResourceAndroidNotificationSound('adhan') : null,
+              playSound: p.adhanSoundEnabled,
               importance: Importance.max,
               priority: Priority.high,
-              enableVibration: true,
+              enableVibration: p.adhanVibrationEnabled,
               visibility: NotificationVisibility.public);
           await _plugin.zonedSchedule(
               id++, names[entry.key] ?? entry.key,
               'ئێستا کاتی ${names[entry.key]}ـە لە ${p.cityName}', when,
-              NotificationDetails(android: android, iOS: const DarwinNotificationDetails(presentSound: true, sound: 'adhan.caf')),
+              NotificationDetails(android: android, iOS: DarwinNotificationDetails(presentSound: p.adhanSoundEnabled, sound: p.adhanSoundEnabled ? 'adhan.caf' : null)),
               androidScheduleMode: _canUseExactAlarms
                   ? AndroidScheduleMode.exactAllowWhileIdle
                   : AndroidScheduleMode.inexactAllowWhileIdle,
