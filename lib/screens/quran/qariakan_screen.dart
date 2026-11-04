@@ -4,6 +4,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'dart:convert';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
+import '../../data/favorites.dart';
 
 /// Original: QariakanActivity — reciters list from dangakan.json; selecting a
 /// reciter plays surah audio (dangakan "url" base + surah number mp3).
@@ -128,11 +129,14 @@ class _QariakanScreenState extends State<QariakanScreen> {
                               ? const Text('داگرتن بەردەستە',
                                   style: TextStyle(fontSize: 11))
                               : const SizedBox(),
-                          trailing: Icon(
-                              _playing && (_selected == (r['id'] is int ? r['id'] : int.tryParse('${r['id']}')))
-                                  ? Icons.pause_circle_rounded
-                                  : Icons.play_circle_rounded,
+                          trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                            FavoriteButton(id: 'reciter::${r['id']}',
+                              title: '${r['name_ar'] ?? 'قاری'}',
+                              content: 'دەنگی قورئان — ${r['name_ar'] ?? ''}'),
+                            Icon(_playing && (_selected == (r['id'] is int ? r['id'] : int.tryParse('${r['id']}')))
+                                ? Icons.pause_circle_rounded : Icons.play_circle_rounded,
                               size: 32, color: AppColors.primaryDark),
+                          ]),
                         ),
                       ),
                   ]),
