@@ -76,6 +76,29 @@ class AppPrefs {
   bool get adhanVibrationEnabled => _p.getBool('adhanVibrationEnabled') ?? true;
   set adhanVibrationEnabled(bool v) => _p.setBool('adhanVibrationEnabled', v);
 
+  // --- quran reciter (QariakanActivity saves pref "url"; SplashActivity
+  //     defaults it to سعد الغامدي) ---
+  String get qariId => _p.getString('qariId') ?? '11';
+  set qariId(String v) => _p.setString('qariId', v);
+  String get qariName => _p.getString('qariName') ?? 'سعد الغامدي';
+  set qariName(String v) => _p.setString('qariName', v);
+  String get qariUrl =>
+      _p.getString('qariUrl') ??
+      'https://github.com/Hiwaselah/audio003/releases/download/Sa3d_ghamdi/';
+  set qariUrl(String v) => _p.setString('qariUrl', v);
+
+  // --- adhan reciter voice (KtebActivity: prefs "bang.name"/"bang.bang",
+  //     default اسلام صبحي(کورت) = file 012 from dangebangbezh.json) ---
+  String get adhanVoiceName =>
+      _p.getString('adhanVoiceName') ?? 'اسلام صبحي (کورت)';
+  set adhanVoiceName(String v) => _p.setString('adhanVoiceName', v);
+  String get adhanVoiceFile => _p.getString('adhanVoiceFile') ?? '012';
+  set adhanVoiceFile(String v) => _p.setString('adhanVoiceFile', v);
+  String adhanVoiceUrl([String? file]) {
+    final f = (file ?? adhanVoiceFile).replaceAll('.mp3', '');
+    return 'https://github.com/quranofficial/DangeBangBezh/raw/main/$f.mp3';
+  }
+
   // --- adhan time offsets in minutes, -60..+60 (BrdnapeshActivity:
   //     دواخستن و پێشخستنی کاتی بانگدان) ---
   int get offsetBayani => _p.getInt('off_bayani') ?? 0;
@@ -116,6 +139,15 @@ class AppPrefs {
   set zikrBody(String v) => _p.setString('zkr', v);
   String get zikrVip => _p.getString('vip') ?? '';
   set zikrVip(String v) => _p.setString('vip', v);
+
+  // --- video comments profile name (ListvideokanActivity pref "nameprofile") ---
+  String get commentName => _p.getString('nameprofile') ?? '';
+  set commentName(String v) => _p.setString('nameprofile', v);
+
+  // --- library books json (MainActivity pref "onlybookme": the fetched
+  //     ktebakan.json, kept offline) ---
+  String get libraryJson => _p.getString('onlybookme') ?? '';
+  set libraryJson(String v) => _p.setString('onlybookme', v);
 
   ThemeData get theme => ThemeData(
         brightness: day ? Brightness.light : Brightness.dark,

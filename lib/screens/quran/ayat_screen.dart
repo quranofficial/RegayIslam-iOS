@@ -49,7 +49,8 @@ class _AyatScreenState extends State<AyatScreen> {
     }
     final file = link.toLowerCase().endsWith('.mp3') ? link : link + '.mp3';
     final number = file.replaceAll('.mp3', '').padLeft(3, '0');
-    return 'https://download.tvquran.com/download/recitations/343/266/' + number + '.mp3';
+    final base = AppPrefs.I.qariUrl;
+    return base.endsWith('/') ? '$base$number.mp3' : '$base/$number.mp3';
   }
 
   Future<void> _play() async {

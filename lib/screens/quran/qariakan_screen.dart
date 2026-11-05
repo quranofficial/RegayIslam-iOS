@@ -20,7 +20,7 @@ class QariakanScreen extends StatefulWidget {
 class _QariakanScreenState extends State<QariakanScreen> {
   List<Map<String, dynamic>> _reciters = [];
   Map<String, Object?>? _surah;
-  int? _selected;
+  int? _selected = int.tryParse(AppPrefs.I.qariId);
   final AudioPlayer _player = AudioPlayer();
   bool _loading = true;
   bool _playing = false;
@@ -121,6 +121,12 @@ class _QariakanScreenState extends State<QariakanScreen> {
         if (uri == null || uri.host.isEmpty) {
           throw const FormatException('Invalid audio URL');
         }
+        // Original: QariakanActivity saves the chosen reciter into pref "url"
+        // so the whole app (mushaf included) uses it.
+        AppPrefs.I.qariId = '${r['id'] ?? ''}';
+        AppPrefs.I.qariName = '${r['name_ar'] ?? 'قاری'}'.trim();
+        AppPrefs.I.qariUrl =
+            '${r['url'] ?? ''}'.replaceFirst(RegExp(r'^http://', caseSensitive: false), 'https://');
         // Some audio/CDN servers reject HEAD although GET streaming works.
         await _player.stop();
         final local = await _audioFile(r);

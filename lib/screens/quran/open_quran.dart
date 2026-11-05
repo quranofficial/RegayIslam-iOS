@@ -68,7 +68,10 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
   String _mp3Url(String link) {
     if (link.startsWith('http')) return link;
     final n = link.replaceAll('.mp3', '').padLeft(3, '0');
-    return 'https://download.tvquran.com/download/recitations/343/266/$n.mp3';
+    // Original: OpenquranActivity plays pref "url" + <surah>.mp3, reciter
+    // chosen in QariakanActivity (default سعد الغامدي from SplashActivity).
+    final base = AppPrefs.I.qariUrl;
+    return base.endsWith('/') ? '$base$n.mp3' : '$base/$n.mp3';
   }
 
   Future<void> _playSurah() async {
@@ -81,7 +84,7 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
       } else if (_currentUrl == url && _state == PlayerState.paused) {
         await _player.resume();
       } else {
-        _timings = await Db.I.timings('${widget.surahId}');
+        _timings = await Db.I.timings(AppPrefs.I.qariId);
         await _player.play(UrlSource(url));
         setState(() => _currentUrl = url);
       }
@@ -250,7 +253,9 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                   size: 36, color: AppColors.primaryDark)),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(_state == PlayerState.playing ? 'دەکرێتەوە...' : 'دەنگی سوورەت',
+              Text(_state == PlayerState.playing
+                      ? 'دەنگی سوورەت • ${AppPrefs.I.qariName}'
+                      : 'دەنگی سوورەت — ${AppPrefs.I.qariName}',
                   style: TextStyle(fontSize: 11, color: txt.withOpacity(.6))),
               LinearProgressIndicator(
                   value: _position.inMilliseconds > 0

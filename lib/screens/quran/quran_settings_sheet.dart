@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
+import 'qariakan_screen.dart';
 
-/// Original: quranview2.xml — Quran reader settings (tafsir, fonts, size).
+/// Original: quranview2.xml — Quran reader settings (tafsir, fonts, size,
+/// reciter via QariakanActivity).
 void showQuranSettingsSheet(BuildContext context, VoidCallback onChange) {
   showModalBottomSheet(
     context: context,
@@ -58,6 +60,31 @@ void showQuranSettingsSheet(BuildContext context, VoidCallback onChange) {
               Wrap(spacing: 6, runSpacing: 6, children: [
                 for (final t in kTafsirs) tafsirChip(t),
               ]),
+              section('دەنگی قورئان'),
+              InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: () {
+                  final nav = Navigator.of(context, rootNavigator: true);
+                  Navigator.pop(context);
+                  nav.push(MaterialPageRoute(
+                      builder: (_) => const QariakanScreen()));
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 10),
+                  child: Row(children: [
+                    const Icon(Icons.record_voice_over_rounded,
+                        size: 20, color: AppColors.primaryDark),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text('هەڵبژاردنی قاری: ${p.qariName}',
+                          style: TextStyle(fontSize: 14, color: txt)),
+                    ),
+                    const Icon(Icons.chevron_left, size: 18,
+                        color: Colors.grey),
+                  ]),
+                ),
+              ),
               section('قەبارەی نووسینی قورئان'),
               Row(children: [
                 IconButton(
