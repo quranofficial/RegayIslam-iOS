@@ -9,6 +9,7 @@ import '../feedback/feedback_screen.dart';
 import '../band/band_screen.dart';
 import '../misc/webview_screen.dart';
 import 'adhan_offset_screen.dart';
+import 'adhan_voice_screen.dart';
 
 /// Original: SettingFragmentActivity — app settings incl. night mode,
 /// fonts, prayer notifications, socials and about.
@@ -80,6 +81,17 @@ class _SettingTabState extends State<SettingTab> {
                     trailing: const Icon(Icons.chevron_left),
                     onTap: () => Navigator.push(context, MaterialPageRoute(
                         builder: (_) => const NwezhiSettingsScreen()))),
+                ListTile(
+                    leading: const Icon(Icons.record_voice_over_rounded,
+                        color: AppColors.primaryDark),
+                    title: Text('دەنگی بانگبێژ',
+                        style: TextStyle(fontSize: 14, color: txt)),
+                    subtitle: Text('دەنگی هەڵبژێردراو : ${p.adhanVoiceName}',
+                        style: TextStyle(fontSize: 11, color: txt.withOpacity(.55))),
+                    trailing: const Icon(Icons.chevron_left),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => const AdhanVoiceScreen()))
+                        .then((_) => setState(() {}))),
                 ListTile(
                     leading: const Icon(Icons.schedule_rounded,
                         color: AppColors.primaryDark),

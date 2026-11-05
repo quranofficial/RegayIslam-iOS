@@ -3,6 +3,7 @@ import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
 import '../../data/prayer_notifications.dart';
+import '../settings/adhan_voice_screen.dart';
 
 /// Original: NwezhiActivity — per-prayer notification switches + city picker.
 class NwezhiSettingsScreen extends StatefulWidget {
@@ -119,6 +120,18 @@ class _NwezhiSettingsScreenState extends State<NwezhiSettingsScreen> {
           const Divider(height: 20),
           _sw('دەنگی بانگ', p.adhanSoundEnabled, (v) { setState(() => p.adhanSoundEnabled = v); _save(); }, txt, dark),
           _sw('لەرزینی مۆبایل', p.adhanVibrationEnabled, (v) { setState(() => p.adhanVibrationEnabled = v); _save(); }, txt, dark),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.record_voice_over_rounded,
+                color: AppColors.primaryDark),
+            title: Text('دەنگی بانگبێژ', style: TextStyle(fontSize: 14, color: txt)),
+            subtitle: Text('دەنگی هەڵبژێردراو : ${p.adhanVoiceName}',
+                style: TextStyle(fontSize: 11, color: txt.withOpacity(.55))),
+            trailing: const Icon(Icons.chevron_left),
+            onTap: () => Navigator.push(context, MaterialPageRoute(
+                builder: (_) => const AdhanVoiceScreen()))
+                .then((_) => setState(() {})),
+          ),
           OutlinedButton.icon(
             onPressed: () => PrayerNotifications.I.showNow(
               'تاقیکردنەوەی بانگ', 'ئەمە تاقیکردنەوەی دەنگی بانگە'),
