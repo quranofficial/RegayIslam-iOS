@@ -4,11 +4,14 @@ import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/rtdb.dart';
 import '../../data/favorites.dart';
+import 'video_player_screen.dart';
 
-/// Original: ListvideokanActivity — video tags from Firebase "videoall",
-/// per-tag videos from "videoNew/<tag>", user video submission to
-/// "feedbackvideo" (reviewed before approval) and per-video comments from
-/// "commentvideo/<id>".
+/// Original: ListvideokanActivity — real Firebase shape:
+///   videoNew/<folder>/<pushKey>/{name,url,comment,like,view,timevideo,date}
+///   videoall  = JSON-string array of {image, name, tag} (the folders)
+/// Videos are mp4 files on github.com/quranofficial/Videokan and play
+/// in-app like PlayvideoActivity. Users submit videos to "feedbackvideo"
+/// for review, and per-video comments live in "commentvideo/<id>".
 class VideosScreen extends StatefulWidget {
   const VideosScreen({super.key});
   @override
@@ -30,13 +33,18 @@ class _VideosScreenState extends State<VideosScreen> {
   }
 
   Future<void> _load() async {
-    var v = (_selectedTag == null || '${_selectedTag!['tag'] ?? ''}'.isEmpty)
-        ? await Rtdb.I.videos()
-        : await Rtdb.I.list('videoNew/${_selectedTag!['tag']}');
-    if (v.isEmpty && _selectedTag == null) v = await Rtdb.I.videoAll();
-    if (_tags.isEmpty) {
-      _tags = await Rtdb.I.videoAll();
-    }
+    if (_tags.isEmpty) _tags = await Rtdb.I.videoTags();
+    List<Map<String, dynamic>> v;
+    final tagKey = _selectedTag == null ? '' : '${_selectedTag!['tag'] ?? ''}';
+    v = tagKey.isEmpty
+        ? await Rtdb.I.videosFlat()
+        : await Rtdb.I.videosOfTag(tagKey);
+    // newest first (date is millis in a string)
+    v.sort((a, b) {
+      final da = int.tryParse('${a['date'] ?? a['key'] ?? 0}') ?? 0;
+      final db = int.tryParse('${b['date'] ?? b['key'] ?? 0}') ?? 0;
+      return db.compareTo(da);
+    });
     if (!mounted) return;
     setState(() {
       _videos = v;
@@ -48,28 +56,41 @@ class _VideosScreenState extends State<VideosScreen> {
   List<Map<String, dynamic>> get _filtered {
     if (_q.isEmpty) return _videos;
     return _videos
-        .where((v) => '${v['title'] ?? v['name'] ?? ''}'
+        .where((v) => '${v['name'] ?? v['title'] ?? ''}'
             .toLowerCase()
             .contains(_q.toLowerCase()))
         .toList();
   }
 
+  String _link(Map<String, dynamic> v) =>
+      '${v['url'] ?? v['link'] ?? v['video'] ?? ''}'.trim();
+
   void _open(Map<String, dynamic> v) {
-    final link = '${v['url'] ?? v['link'] ?? v['video'] ?? v['videoUrl'] ?? v['youtube'] ?? ''}'.trim();
+    final link = _link(v);
     if (link.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لینکی ڤیدیۆ لە Firebase نییە')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('لینکی ڤیدیۆ لە Firebase نییە')));
       return;
     }
-    final uri = Uri.tryParse(link);
+    final uri = Uri.tryParse(Uri.encodeFull(link));
     if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لینکی ڤیدیۆ دروست نییە')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('لینکی ڤیدیۆ دروست نییە')));
       return;
     }
-    launchUrl(uri, mode: LaunchMode.externalApplication);
+    // YouTube links open externally, direct files play in-app.
+    final yt = link.contains('youtube.com') || link.contains('youtu.be');
+    if (yt) {
+      launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      Navigator.push(context, MaterialPageRoute(
+          builder: (_) => VideoPlayerScreen(
+              title: '${v['name'] ?? v['title'] ?? 'ڤیدیۆ'}', url: link)));
+    }
   }
 
-  // Original: the FAB form posts {name, video, device_id, namemamosta} to the
-  // "feedbackvideo" node and tells the user the video will be reviewed.
+  // Original: the FAB form posts {name, video, device_id, namemamosta} to
+  // "feedbackvideo"; the admin reviews before the video is approved.
   Future<void> _postVideo() async {
     final nameC = TextEditingController();
     final linkC = TextEditingController();
@@ -86,8 +107,7 @@ class _VideosScreenState extends State<VideosScreen> {
           TextField(
               controller: linkC,
               decoration: const InputDecoration(
-                  hintText: 'لینکی ڤیدیۆکە (یوتیوب...)',
-                  border: OutlineInputBorder())),
+                  hintText: 'لینکی ڤیدیۆکە', border: OutlineInputBorder())),
           const SizedBox(height: 8),
           const Text(
               'تێبینی: پێش ناردنی ڤیدیۆ ڕەچاوی یاساکانی ئەپەکە بکە، ڤیدیۆکەت پێداچوونەوەی بۆ ئەکرێ پاشان قبووڵ دەکرێت.',
@@ -120,7 +140,8 @@ class _VideosScreenState extends State<VideosScreen> {
       'name': name,
       'video': link,
       'device_id': 'flutter-${DateTime.now().millisecondsSinceEpoch}',
-      'namemamosta': _selectedTag == null ? '' : '${_selectedTag!['name'] ?? ''}',
+      'namemamosta':
+          _selectedTag == null ? '' : '${_selectedTag!['name'] ?? ''}',
     });
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -129,7 +150,7 @@ class _VideosScreenState extends State<VideosScreen> {
   }
 
   void _comments(Map<String, dynamic> v) {
-    final id = '${v['id'] ?? v['tag'] ?? v['name'] ?? 'video'}';
+    final id = '${v['id'] ?? v['name'] ?? 'video'}';
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -171,7 +192,7 @@ class _VideosScreenState extends State<VideosScreen> {
                 : Column(children: [
                     if (_tags.isNotEmpty)
                       SizedBox(
-                        height: 44,
+                        height: 46,
                         child: ListView(
                           scrollDirection: Axis.horizontal,
                           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -180,7 +201,10 @@ class _VideosScreenState extends State<VideosScreen> {
                                 label: const Text('هەموو'),
                                 selected: _selectedTag == null,
                                 selectedColor: AppColors.primaryDark,
-                                labelStyle: const TextStyle(color: Colors.white),
+                                labelStyle: TextStyle(
+                                    color: _selectedTag == null
+                                        ? Colors.white
+                                        : txt),
                                 onSelected: (_) {
                                   setState(() { _selectedTag = null; _loading = true; });
                                   _load();
@@ -190,14 +214,18 @@ class _VideosScreenState extends State<VideosScreen> {
                               Padding(
                                 padding: const EdgeInsets.only(left: 6),
                                 child: ChoiceChip(
-                                    label: Text('${t['name'] ?? t['tag'] ?? ''}'),
+                                    label:
+                                        Text('${t['name'] ?? t['tag'] ?? ''}'),
                                     selected: _selectedTag != null &&
-                                        '${_selectedTag!['tag'] ?? ''}' == '${t['tag'] ?? ''}',
+                                        '${_selectedTag!['tag'] ?? ''}' ==
+                                            '${t['tag'] ?? ''}',
                                     selectedColor: AppColors.primaryDark,
                                     labelStyle: TextStyle(
                                         color: (_selectedTag != null &&
-                                                '${_selectedTag!['tag'] ?? ''}' == '${t['tag'] ?? ''}')
-                                            ? Colors.white : txt),
+                                                '${_selectedTag!['tag'] ?? ''}' ==
+                                                    '${t['tag'] ?? ''}')
+                                            ? Colors.white
+                                            : txt),
                                     onSelected: (_) {
                                       setState(() { _selectedTag = t; _loading = true; });
                                       _load();
@@ -215,7 +243,8 @@ class _VideosScreenState extends State<VideosScreen> {
                           prefixIcon: const Icon(Icons.search_rounded),
                           filled: true,
                           fillColor: dark ? AppColors.nightCard : Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 0),
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
                               borderSide: BorderSide.none),
@@ -228,7 +257,10 @@ class _VideosScreenState extends State<VideosScreen> {
                         itemCount: _filtered.length,
                         itemBuilder: (context, i) {
                           final v = _filtered[i];
-                          final title = '${v['title'] ?? v['name'] ?? 'ڤیدیۆ'}';
+                          final title = '${v['name'] ?? 'ڤیدیۆ'}';
+                          final likes = '${v['like'] ?? ''}';
+                          final comments = '${v['comment'] ?? ''}';
+                          final time = '${v['timevideo'] ?? ''}';
                           return Card(
                             color: dark ? AppColors.nightCard : Colors.white,
                             margin: const EdgeInsets.only(bottom: 10),
@@ -236,31 +268,49 @@ class _VideosScreenState extends State<VideosScreen> {
                                 borderRadius: BorderRadius.circular(14)),
                             child: ListTile(
                               onTap: () => _open(v),
-                              leading: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  width: 64, height: 44,
-                                  color: AppColors.primaryDark.withOpacity(.1),
-                                  child: const Icon(Icons.ondemand_video_rounded,
-                                      color: AppColors.primaryDark))),
+                              leading: Container(
+                                width: 54, height: 54,
+                                decoration: BoxDecoration(
+                                    color:
+                                        AppColors.primaryDark.withOpacity(.1),
+                                    borderRadius: BorderRadius.circular(10)),
+                                child: const Icon(Icons.ondemand_video_rounded,
+                                    color: AppColors.primaryDark)),
                               title: Text(title,
                                   maxLines: 2, overflow: TextOverflow.ellipsis,
                                   style: TextStyle(fontWeight: FontWeight.bold,
                                       fontSize: 13.5, color: txt)),
-                              subtitle: Text('${v['desc'] ?? ''}',
-                                  maxLines: 1, overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(fontSize: 11,
-                                      color: txt.withOpacity(.55))),
+                              subtitle: Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Row(children: [
+                                  if (time.isNotEmpty)
+                                    Text('$time   ',
+                                        style: TextStyle(fontSize: 11,
+                                            color: txt.withOpacity(.55))),
+                                  const Icon(Icons.favorite_rounded,
+                                      size: 13, color: AppColors.primaryDark),
+                                  Text(' $likes   ',
+                                      style: TextStyle(fontSize: 11,
+                                          color: txt.withOpacity(.55))),
+                                  const Icon(Icons.comment_rounded,
+                                      size: 13, color: AppColors.primaryDark),
+                                  Text(' $comments',
+                                      style: TextStyle(fontSize: 11,
+                                          color: txt.withOpacity(.55))),
+                                ]),
+                              ),
                               trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                                 IconButton(
                                   tooltip: 'سەرنجەکان',
                                   onPressed: () => _comments(v),
                                   icon: const Icon(Icons.comment_rounded,
                                       size: 22, color: AppColors.primaryDark)),
-                                FavoriteButton(id: 'video::${v['id'] ?? v['url'] ?? v['link'] ?? title}',
-                                  title: title, content: '${v['desc'] ?? v['url'] ?? v['link'] ?? ''}'),
+                                FavoriteButton(
+                                    id: 'video::${v['id'] ?? title}',
+                                    title: title,
+                                    content: _link(v)),
                                 const Icon(Icons.play_circle_rounded,
-                                  size: 30, color: AppColors.primaryDark),
+                                    size: 30, color: AppColors.primaryDark),
                               ]),
                             ),
                           );
@@ -274,7 +324,7 @@ class _VideosScreenState extends State<VideosScreen> {
 }
 
 /// Original: the comment dialog over "commentvideo" — {userrr, commenttt,
-/// date, comment_key, uid, verify}.
+/// date, comment_key, uid, verify}; stored per video id.
 class _CommentsSheet extends StatefulWidget {
   final String videoId;
   const _CommentsSheet({required this.videoId});
@@ -285,6 +335,7 @@ class _CommentsSheet extends StatefulWidget {
 class _CommentsSheetState extends State<_CommentsSheet> {
   List<Map<String, dynamic>> _items = [];
   bool _loading = true;
+  bool _sending = false;
   final TextEditingController _nameC = TextEditingController();
   final TextEditingController _textC = TextEditingController();
 
@@ -304,7 +355,8 @@ class _CommentsSheetState extends State<_CommentsSheet> {
   Future<void> _send() async {
     final text = _textC.text.trim();
     final name = _nameC.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _sending) return;
+    setState(() => _sending = true);
     AppPrefs.I.commentName = name;
     final key = 'c-${DateTime.now().millisecondsSinceEpoch}';
     await Rtdb.I.sendComment(widget.videoId, {
@@ -314,12 +366,12 @@ class _CommentsSheetState extends State<_CommentsSheet> {
       'comment_key': key,
       'uid': 'flutter',
       'verify': 'true',
+      'video_id': widget.videoId,
     });
     _textC.clear();
+    setState(() => _sending = false);
     await _load();
-    if (mounted) {
-      Navigator.of(context, rootNavigator: true).maybePop();
-    }
+    if (mounted) Navigator.of(context, rootNavigator: true).maybePop();
   }
 
   @override
@@ -354,15 +406,16 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                           itemCount: _items.length,
                           itemBuilder: (context, i) {
                             final m = _items[i];
+                            final user = '${m['userrr'] ?? ''}'.trim();
                             return ListTile(
                               leading: CircleAvatar(
                                   backgroundColor:
                                       AppColors.primaryDark.withOpacity(.12),
                                   child: Text(
-                                      '${(m['userrr'] ?? '?').toString().characters.first}',
+                                      user.isEmpty ? '?' : user.characters.first,
                                       style: const TextStyle(
                                           color: AppColors.primaryDark))),
-                              title: Text('${m['userrr'] ?? ''}',
+                              title: Text(user,
                                   style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 13, color: txt)),
@@ -391,10 +444,15 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                     ),
                   ),
                 ),
-                IconButton(
-                    onPressed: _send,
-                    icon: const Icon(Icons.send_rounded,
-                        color: AppColors.primaryDark)),
+                _sending
+                    ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(width: 20, height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2)))
+                    : IconButton(
+                        onPressed: _send,
+                        icon: const Icon(Icons.send_rounded,
+                            color: AppColors.primaryDark)),
               ]),
             ),
             Padding(

@@ -149,6 +149,11 @@ class AppPrefs {
   String get libraryJson => _p.getString('onlybookme') ?? '';
   set libraryJson(String v) => _p.setString('onlybookme', v);
 
+  // --- downloaded PDF cache (PdfScreen key style "pdf_cache_<url>") ---
+  String? pdfCachePath(String url) => _p.getString('pdf_cache_$url');
+  void setPdfCachePath(String url, String path) =>
+      _p.setString('pdf_cache_$url', path);
+
   ThemeData get theme => ThemeData(
         brightness: day ? Brightness.light : Brightness.dark,
         colorScheme: ColorScheme.fromSeed(

@@ -1,9 +1,12 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
+import '../../data/downloader.dart';
 
 /// Original: KtebActivity — adhan reciter voice selection
 /// (هەڵبژاردنی دەنگی بانگبێژ). The voice list comes from the bundled
@@ -20,7 +23,6 @@ class _AdhanVoiceScreenState extends State<AdhanVoiceScreen> {
   List<Map<String, dynamic>> _voices = [];
   List<Map<String, dynamic>> _filtered = [];
   bool _loading = true;
-  String _q = '';
   String? _busyFile;
   final AudioPlayer _player = AudioPlayer();
   String? _playingFile;
@@ -55,7 +57,6 @@ class _AdhanVoiceScreenState extends State<AdhanVoiceScreen> {
   void _filter(String q) {
     q = q.trim().toLowerCase();
     setState(() {
-      _q = q;
       _filtered = q.isEmpty
           ? _voices
           : _voices
@@ -66,7 +67,19 @@ class _AdhanVoiceScreenState extends State<AdhanVoiceScreen> {
 
   String _url(String file) => AppPrefs.I.adhanVoiceUrl(file);
 
-  Future<void> _select(Map<String, dynamic> v, {bool preview = true}) async {
+  /// Download-first playback (like PRDownloader in the original): cached
+  /// files replay offline, and a local source avoids any streaming quirks.
+  Future<File?> _localFile(String file) async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final f = File('${dir.path}/bang/$file.mp3');
+      return f.existsSync() ? f : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _select(Map<String, dynamic> v) async {
     final file = '${v['text'] ?? ''}'.replaceAll('.mp3', '');
     final name = '${v['title'] ?? ''}'.trim();
     if (file.isEmpty || name.isEmpty) return;
@@ -75,7 +88,7 @@ class _AdhanVoiceScreenState extends State<AdhanVoiceScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('دەنگی بانگبێژ گۆردرا بۆ $name')));
     setState(() {});
-    if (preview) await _play(file);
+    await _play(file);
   }
 
   Future<void> _play(String file) async {
@@ -89,13 +102,15 @@ class _AdhanVoiceScreenState extends State<AdhanVoiceScreen> {
     }
     setState(() => _busyFile = file);
     try {
+      var local = await _localFile(file);
+      local ??= await Downloader.download(_url(file), 'bang/$file.mp3');
       await _player.stop();
-      await _player.play(UrlSource(_url(file)));
+      await _player.play(DeviceFileSource(local.path));
       setState(() => _playingFile = file);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('کێشە لە پەخشکردنی دەنگ، تکایە ئینتەرنێت بپشکنە')));
+            content: Text('کێشە لە داگرتنی دەنگ، تکایە ئینتەرنێت بپشکنە')));
       }
     } finally {
       if (mounted) setState(() => _busyFile = null);
@@ -216,8 +231,14 @@ class _AdhanVoiceScreenState extends State<AdhanVoiceScreen> {
                                 subtitle: selected
                                     ? const Text('هەڵبژێردراو',
                                         style: TextStyle(fontSize: 11))
-                                    : const Text('دەنگی بانگی نوێژ',
-                                        style: TextStyle(fontSize: 11)),
+                                    : FutureBuilder<File?>(
+                                        future: _localFile(file),
+                                        builder: (context, snap) => Text(
+                                            (snap.data != null)
+                                                ? 'دابگیراوە — بە ئۆفلاین بەردەستە'
+                                                : 'دەنگی بانگی نوێژ',
+                                            style:
+                                                const TextStyle(fontSize: 11))),
                                 trailing: busy
                                     ? const SizedBox(
                                         width: 22, height: 22,

@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
+import '../../data/downloader.dart';
 import '../../data/favorites.dart';
 
 /// Original: QariakanActivity — reciters list from dangakan.json; selecting a
@@ -72,31 +73,36 @@ class _QariakanScreenState extends State<QariakanScreen> {
     return File('${folder.path}/${reciter}_${surah}.mp3');
   }
 
+  /// Silent download into the offline cache.
+  Future<void> _fetchToFile(Map<String, dynamic> r) async {
+    final url = Downloader.httpsify(_url(r));
+    final uri = Uri.tryParse(url);
+    if (uri == null || uri.host.isEmpty) throw const FormatException('Invalid audio URL');
+    final client = http.Client();
+    try {
+      final request = http.Request('GET', uri);
+      final response = await client.send(request).timeout(const Duration(minutes: 6));
+      if (response.statusCode != 200) {
+        throw Exception('Audio download failed: HTTP ${response.statusCode}');
+      }
+      final file = await _audioFile(r);
+      final sink = file.openWrite();
+      await for (final chunk in response.stream) {
+        sink.add(chunk);
+      }
+      await sink.close();
+      if (await file.length() == 0) throw Exception('Downloaded audio is empty');
+    } finally {
+      client.close();
+    }
+  }
+
   Future<void> _download(Map<String, dynamic> r) async {
     final id = '${r['id'] ?? r['name_ar'] ?? ''}';
     if (_downloadingId != null) return;
     setState(() => _downloadingId = id);
     try {
-      final url = _url(r);
-      final uri = Uri.tryParse(url);
-      if (uri == null || uri.host.isEmpty) throw const FormatException('Invalid audio URL');
-      final client = http.Client();
-      try {
-        final request = http.Request('GET', uri);
-        final response = await client.send(request).timeout(const Duration(minutes: 4));
-        if (response.statusCode != 200) {
-          throw Exception('Audio download failed: HTTP ${response.statusCode}');
-        }
-        final file = await _audioFile(r);
-        final sink = file.openWrite();
-        await for (final chunk in response.stream) {
-          sink.add(chunk);
-        }
-        await sink.close();
-        if (await file.length() == 0) throw Exception('Downloaded audio is empty');
-      } finally {
-        client.close();
-      }
+      await _fetchToFile(r);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('دەنگەکە بۆ بەکارهێنانی ئۆفلاین داگیرا ✅')));
@@ -112,35 +118,46 @@ class _QariakanScreenState extends State<QariakanScreen> {
   }
 
   Future<void> _play(Map<String, dynamic> r) async {
+    final rid = r['id'] is int ? r['id'] as int : int.tryParse('${r['id']}');
+    final url = _url(r);
+    if (_playing && _selected == rid) {
+      await _player.pause();
+      return;
+    }
     try {
-      final url = _url(r);
-      if (_playing && _selected == r['id']) {
-        await _player.pause();
-      } else {
-        final uri = Uri.tryParse(url);
-        if (uri == null || uri.host.isEmpty) {
-          throw const FormatException('Invalid audio URL');
-        }
-        // Original: QariakanActivity saves the chosen reciter into pref "url"
-        // so the whole app (mushaf included) uses it.
-        AppPrefs.I.qariId = '${r['id'] ?? ''}';
-        AppPrefs.I.qariName = '${r['name_ar'] ?? 'قاری'}'.trim();
-        AppPrefs.I.qariUrl =
-            '${r['url'] ?? ''}'.replaceFirst(RegExp(r'^http://', caseSensitive: false), 'https://');
-        // Some audio/CDN servers reject HEAD although GET streaming works.
-        await _player.stop();
-        final local = await _audioFile(r);
-        if (await local.exists() && await local.length() > 0) {
-          await _player.play(DeviceFileSource(local.path));
-        } else {
-          await _player.play(UrlSource(url));
-        }
-        setState(() => _selected = r['id'] is int ? r['id'] as int : int.tryParse('${r['id']}'));
+      final uri = Uri.tryParse(Downloader.httpsify(url));
+      if (uri == null || uri.host.isEmpty) {
+        throw const FormatException('Invalid audio URL');
       }
+      // Original: QariakanActivity saves the chosen reciter into pref "url"
+      // so the whole app (mushaf included) uses it.
+      AppPrefs.I.qariId = '${r['id'] ?? ''}';
+      AppPrefs.I.qariName = '${r['name_ar'] ?? 'قاری'}'.trim();
+      AppPrefs.I.qariUrl = '${r['url'] ?? ''}'
+          .replaceFirst(RegExp(r'^http://', caseSensitive: false), 'https://');
+      await _player.stop();
+      final local = await _audioFile(r);
+      if (await local.exists() && await local.length() > 0) {
+        await _player.play(DeviceFileSource(local.path));
+      } else {
+        try {
+          await _player.play(UrlSource(Downloader.httpsify(url)));
+        } catch (_) {
+          // streaming refused — download then play, like PRDownloader
+          setState(() => _downloadingId = '${r['id'] ?? ''}');
+          await _fetchToFile(r);
+          await _player.play(DeviceFileSource(local.path));
+        }
+      }
+      setState(() => _selected = rid);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('داگرتن ئەنجام نەدرا — دواتر دووبارە هەوڵبدەرەوە')));
+      }
+    } finally {
+      if (mounted && _downloadingId == '${r['id'] ?? ''}') {
+        setState(() => _downloadingId = null);
       }
     }
   }

@@ -1,10 +1,13 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
+import '../../data/downloader.dart';
 import '../../data/favorites.dart';
 
 /// Original: Hack1Activity — generic article reader over the bundled JSON
@@ -34,6 +37,7 @@ class _JsonArticleScreenState extends State<JsonArticleScreen> {
   final AudioPlayer _zikrPlayer = AudioPlayer();
   String? _zikrUrl;
   PlayerState _zikrState = PlayerState.stopped;
+  bool _zikrBusy = false;
 
   @override
   void initState() {
@@ -56,15 +60,26 @@ class _JsonArticleScreenState extends State<JsonArticleScreen> {
       await _zikrPlayer.resume();
       return;
     }
+    setState(() => _zikrBusy = true);
     try {
+      // Download-first like the original, so the zikr replays offline.
+      final name = Downloader.safeName(url.split('/').last);
+      final dir = await getApplicationDocumentsDirectory();
+      final f = File('${dir.path}/zikr/$name');
+      if (!f.existsSync()) {
+        await Downloader.download(url, 'zikr/$name',
+            timeout: const Duration(minutes: 3));
+      }
       await _zikrPlayer.stop();
-      await _zikrPlayer.play(UrlSource(url));
+      await _zikrPlayer.play(DeviceFileSource(f.path));
       setState(() => _zikrUrl = url);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('کێشە لە پەخشکردنی دەنگ، تکایە ئینتەرنێت بپشکنە')));
+            content: Text('کێشە لە داگرتنی دەنگ، تکایە ئینتەرنێت بپشکنە')));
       }
+    } finally {
+      if (mounted) setState(() => _zikrBusy = false);
     }
   }
 
@@ -175,15 +190,22 @@ class _JsonArticleScreenState extends State<JsonArticleScreen> {
                                             tooltip: 'بیستنی دەنگی زیکر',
                                             padding: EdgeInsets.zero,
                                             constraints: const BoxConstraints(),
-                                            onPressed: () =>
-                                                _playZikr(kZikrAudios[title]!),
-                                            icon: Icon(
-                                                _zikrUrl == kZikrAudios[title] &&
-                                                        _zikrState == PlayerState.playing
-                                                    ? Icons.pause_circle_rounded
-                                                    : Icons.play_circle_rounded,
-                                                size: 26,
-                                                color: AppColors.primaryDark)),
+                                            onPressed: _zikrBusy
+                                                ? null
+                                                : () =>
+                                                    _playZikr(kZikrAudios[title]!),
+                                            icon: _zikrBusy
+                                                ? const SizedBox(
+                                                    width: 18, height: 18,
+                                                    child: CircularProgressIndicator(
+                                                        strokeWidth: 2))
+                                                : Icon(
+                                                    _zikrUrl == kZikrAudios[title] &&
+                                                            _zikrState == PlayerState.playing
+                                                        ? Icons.pause_circle_rounded
+                                                        : Icons.play_circle_rounded,
+                                                    size: 26,
+                                                    color: AppColors.primaryDark)),
                                       const SizedBox(width: 6),
                                       Icon(open
                                           ? Icons.expand_less_rounded

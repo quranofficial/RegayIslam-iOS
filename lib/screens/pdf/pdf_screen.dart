@@ -1,13 +1,15 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
-import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
+import '../../data/downloader.dart';
 
-/// Original: PdfActivity — downloads a PDF and renders it.
+/// Original: PdfActivity — downloads a PDF (with progress) and renders it;
+/// downloaded books reopen offline. The URL is re-encoded because some
+/// ktebakan entries mix raw Kurdish characters with %XX escapes.
 class PdfScreen extends StatefulWidget {
   const PdfScreen({super.key, required this.title, required this.url});
   final String title;
@@ -25,46 +27,52 @@ class _PdfScreenState extends State<PdfScreen> {
   @override
   void initState() {
     super.initState();
-    _download();
+    _load();
   }
 
-  Future<void> _download() async {
-    setState(() { _downloading = true; _error = null; });
+  Future<void> _load() async {
+    setState(() { _downloading = true; _error = null; _progress = 0; });
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final cacheKey = 'pdf_cache_${widget.url}';
-      final cachedPath = prefs.getString(cacheKey);
-      if (cachedPath != null && await File(cachedPath).exists()) {
+      // 1) cached from a previous download (or from the library screen)
+      final cached = AppPrefs.I.pdfCachePath(widget.url);
+      if (cached != null && cached.isNotEmpty && await File(cached).exists()) {
         if (!mounted) return;
-        setState(() { _localPath = cachedPath; _downloading = false; _progress = 100; });
+        setState(() { _localPath = cached; _downloading = false; _progress = 100; });
         return;
       }
-      final dir = await getApplicationDocumentsDirectory();
-      final name = 'pdf_${DateTime.now().millisecondsSinceEpoch}.pdf';
-      final file = File('${dir.path}/$name');
-      final client = http.Client();
-      final req = http.Request('GET', Uri.parse(widget.url));
-      final res = await client.send(req).timeout(const Duration(minutes: 4));
-      if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
-      final total = res.contentLength ?? 0;
-      final sink = file.openWrite();
-      var received = 0;
-      await for (final chunk in res.stream) {
-        received += chunk.length;
-        sink.add(chunk);
-        if (total > 0 && mounted) {
-          setState(() => _progress = (received / total * 100).round());
-        }
-      }
-      await sink.close();
-      client.close();
-      await prefs.setString(cacheKey, file.path);
+      // 2) download with progress, like PRDownloader in the original
+      final file = await Downloader.download(
+        widget.url, 'ktebakan/${Downloader.safeName(widget.title)}.pdf',
+        onProgress: (received, total) {
+          if (mounted) {
+            setState(() => _progress = (received / total * 100).round());
+          }
+        });
+      AppPrefs.I.setPdfCachePath(widget.url, file.path);
       if (!mounted) return;
       setState(() { _localPath = file.path; _downloading = false; _progress = 100; });
-    } catch (e) {
+    } catch (_) {
+      // maybe a stale cache entry pointing to a deleted file
+      AppPrefs.I.setPdfCachePath(widget.url, '');
       if (!mounted) return;
-      setState(() { _downloading = false; _error = 'داگرتن سەرکەوتوو نەبوو — دواتر دووبارە هەوڵبدەرەوە'; });
+      setState(() {
+        _downloading = false;
+        _error = 'داگرتن سەرکەوتوو نەبوو — تکایە پەیوەندی ئینتەرنێت بپشکنە';
+      });
     }
+  }
+
+  Future<void> _openExternally() async {
+    // flutter_pdfview is Android-only; on iOS hand the file to the system.
+    final path = _localPath;
+    if (path == null) return;
+    try {
+      if (Platform.isIOS) {
+        await Share.shareXFiles([XFile(path)], text: widget.title);
+      } else {
+        await launchUrl(Uri.file(path), mode: LaunchMode.externalApplication);
+      }
+    } catch (_) {}
   }
 
   @override
@@ -78,31 +86,73 @@ class _PdfScreenState extends State<PdfScreen> {
           backgroundColor: dark ? AppColors.nightCard : AppColors.primaryDark,
           title: Text(widget.title,
               style: const TextStyle(color: Colors.white, fontSize: 16)),
+          actions: [
+            if (!_downloading && _localPath == null)
+              IconButton(
+                  onPressed: _load,
+                  icon: const Icon(Icons.refresh_rounded, color: Colors.white)),
+            if (_localPath != null)
+              IconButton(
+                  tooltip: 'کردنەوە بە ئەپی تر',
+                  onPressed: _openExternally,
+                  icon: const Icon(Icons.open_in_new_rounded,
+                      color: Colors.white)),
+          ],
         ),
         body: _downloading
             ? Center(child: Column(
                 mainAxisAlignment: MainAxisAlignment.center, children: [
-                CircularProgressIndicator(value: _progress > 0 ? _progress / 100 : null),
+                CircularProgressIndicator(
+                    value: _progress > 0 ? _progress / 100 : null),
                 const SizedBox(height: 14),
                 Text(_progress > 0 ? 'داگرتن... $_progress%' : 'داگرتن...',
                     style: TextStyle(color: dark ? Colors.white70 : Colors.black54)),
               ]))
             : _error != null
-                ? Center(child: Text(_error!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.red)))
+                ? Center(child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(Icons.cloud_off_rounded, size: 44,
+                        color: Colors.red.withOpacity(.7)),
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 28),
+                      child: Text(_error!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.red)),
+                    ),
+                    const SizedBox(height: 14),
+                    ElevatedButton.icon(
+                        onPressed: _load,
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('دووبارە هەوڵبدەرەوە')),
+                  ]))
                 : _localPath == null
                     ? const SizedBox()
-                    : PDFView(
-                        filePath: _localPath,
-                        enableSwipe: true,
-                        swipeHorizontal: false,
-                        autoSpacing: true,
-                        pageFling: true,
-                        onError: (e) => setState(
-                            () => _error = 'کردنەوەی فایلەکە سەرکەوتوو نەبوو'),
-                      ),
+                    : Platform.isIOS
+                        ? _iosNotice()
+                        : PDFView(
+                            filePath: _localPath,
+                            enableSwipe: true,
+                            swipeHorizontal: false,
+                            autoSpacing: true,
+                            pageFling: true,
+                            onError: (e) => setState(
+                                () => _error = 'کردنەوەی فایلەکە سەرکەوتوو نەبوو'),
+                          ),
       ),
     );
+  }
+
+  Widget _iosNotice() {
+    final dark = !AppPrefs.I.day;
+    return Center(child: Column(
+        mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(Icons.picture_as_pdf_rounded, size: 44,
+            color: dark ? Colors.white70 : AppColors.primaryDark),
+        const SizedBox(height: 12),
+        Text('کتێبەکە دابگیرا. بۆ کردنەوەی لە ئایفۆن دوگمەی "کردنەوە بە ئەپی تر" لە سەرەوە بەکاربهێنە.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: dark ? Colors.white70 : Colors.black54)),
+      ]));
   }
 }

@@ -83,6 +83,100 @@ class Rtdb {
     } catch (_) {}
   }
 
+  /// Merge fields into an existing node (Firebase PATCH via REST).
+  Future<void> patch(String path, Map<String, dynamic> data) async {
+    try {
+      await http
+          .patch(Uri.parse('$base/$path.json'),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode(data))
+          .timeout(const Duration(seconds: 12));
+    } catch (_) {}
+  }
+
+  /// Sketchware saved some nodes as whole JSON arrays inside a string
+  /// ("videoall" -> {videoall: '[{image,name,tag},...]'}, "Live" likewise).
+  dynamic _unwrap(dynamic v) {
+    if (v is String && v.trim().startsWith('[{')) {
+      try {
+        return jsonDecode(v);
+      } catch (_) {
+        return v;
+      }
+    }
+    if (v is Map && v.length == 1) {
+      return _unwrap(v.values.first);
+    }
+    return v;
+  }
+
+  /// videoNew/<folder>/<pushKey>/{name,url,...} — folders are tag ids from
+  /// "videoall". Flatten to one row per video (136+ videos live there).
+  Future<List<Map<String, dynamic>>> videosFlat() async {
+    final v = await get('videoNew');
+    final out = <Map<String, dynamic>>[];
+    if (v is Map) {
+      v.forEach((folder, items) {
+        if (items is Map) {
+          items.forEach((key, video) {
+            if (video is Map) {
+              out.add({
+                'id': '${video['key'] ?? key}',
+                'folder': '$folder',
+                ...Map<String, dynamic>.from(video),
+              });
+            }
+          });
+        }
+      });
+    }
+    return out;
+  }
+
+  /// Per-tag videos: videoNew/<tag> is one folder.
+  Future<List<Map<String, dynamic>>> videosOfTag(String tag) async {
+    final v = await get('videoNew/$tag');
+    final out = <Map<String, dynamic>>[];
+    if (v is Map) {
+      v.forEach((key, video) {
+        if (video is Map) {
+          out.add({
+            'id': '${video['key'] ?? key}',
+            'folder': tag,
+            ...Map<String, dynamic>.from(video),
+          });
+        }
+      });
+    }
+    return out;
+  }
+
+  /// videoall = the tag list [{image, name, tag}, ...].
+  Future<List<Map<String, dynamic>>> videoTags() async {
+    final v = await get('videoall');
+    final arr = _unwrap(v);
+    if (arr is List) {
+      return arr
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    return [];
+  }
+
+  /// Live = the HLS channel list [{image, name, url}, ...].
+  Future<List<Map<String, dynamic>>> liveChannels() async {
+    final v = await get('Live');
+    final arr = _unwrap(v);
+    if (arr is List) {
+      return arr
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    return [];
+  }
+
   // --- original RTDB paths used by the Sketchware events ---
   Future<List<Map<String, dynamic>>> quiz() => list('quiz');
   Future<List<Map<String, dynamic>>> videos() => list('videoNew');

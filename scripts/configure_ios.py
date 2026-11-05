@@ -17,6 +17,9 @@ data['CFBundleDisplayName'] = 'ڕێگای ئیسلام'
 data['CFBundleName'] = 'RegayIslam'
 data['CFBundleIdentifier'] = 'com.nwezhakanm.regayislam'
 data['NSLocationWhenInUseUsageDescription'] = 'بۆ نیشاندانی کاتی نوێژ و ئاراستەی قیبلە، شوێنی ئێستات بەکاردەهێنین.'
+# Some reciter hosts (archive.org mirrors, quranicaudio) still serve plain
+# http:// — without this exception iOS blocks those audio streams (ATS).
+data['NSAppTransportSecurity'] = {'NSAllowsArbitraryLoads': True}
 
 with plist_path.open('wb') as f:
     plistlib.dump(data, f, sort_keys=False)

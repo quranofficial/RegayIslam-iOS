@@ -1,10 +1,13 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
+import '../../data/downloader.dart';
 import '../../data/favorites.dart';
 import 'quran_settings_sheet.dart';
 
@@ -74,10 +77,23 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
     return base.endsWith('/') ? '$base$n.mp3' : '$base/$n.mp3';
   }
 
+  /// Offline cache path for the current reciter + surah.
+  Future<File?> _cachedAudio() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final f = File('${dir.path}/quran_audio/'
+          '${Downloader.safeName(AppPrefs.I.qariId)}_'
+          '${widget.surahId.toString().padLeft(3, '0')}.mp3');
+      return f.existsSync() && f.lengthSync() > 0 ? f : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _playSurah() async {
     final link = _ayat.isEmpty ? '' : '${_ayat.first['link'] ?? ''}';
     if (link.isEmpty) return;
-    final url = _mp3Url(link);
+    final url = Downloader.httpsify(_mp3Url(link));
     try {
       if (_currentUrl == url && _state == PlayerState.playing) {
         await _player.pause();
@@ -85,13 +101,26 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
         await _player.resume();
       } else {
         _timings = await Db.I.timings(AppPrefs.I.qariId);
-        await _player.play(UrlSource(url));
+        final cached = await _cachedAudio();
+        if (cached != null) {
+          await _player.play(DeviceFileSource(cached.path));
+        } else {
+          try {
+            await _player.play(UrlSource(url));
+          } catch (_) {
+            // streaming refused — download then play, like the original
+            final file = await Downloader.download(url,
+                'quran_audio/${Downloader.safeName(AppPrefs.I.qariId)}_'
+                '${widget.surahId.toString().padLeft(3, '0')}.mp3');
+            await _player.play(DeviceFileSource(file.path));
+          }
+        }
         setState(() => _currentUrl = url);
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('کێشە لە پەخشکردنی دەنگ، تکایە ئینتەرنێت بپشکنە')));
+            content: Text('کێشە لە داگرتنی دەنگ، تکایە ئینتەرنێت بپشکنە')));
       }
     }
   }

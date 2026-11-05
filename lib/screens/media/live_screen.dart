@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/rtdb.dart';
 import '../../data/favorites.dart';
 import '../misc/webview_screen.dart';
+import 'video_player_screen.dart';
 
-/// Original: LiveActivity — live streams from Firebase RTDB "Live"/"livemuslim".
+/// Original: LiveActivity — HLS channels (مەککە، مەدینە…) from the "Live"
+/// node (stored as a JSON string array) played in-app with video_player.
 class LiveScreen extends StatefulWidget {
   const LiveScreen({super.key});
   @override
@@ -25,20 +26,20 @@ class _LiveScreenState extends State<LiveScreen> {
   }
 
   Future<void> _load() async {
-    var l = await Rtdb.I.live();
-    if (l.isEmpty) l = await Rtdb.I.liveMuslim();
+    var l = await Rtdb.I.liveChannels();
+    l = l.where((s) => '${s['url'] ?? s['link'] ?? ''}'.trim().isNotEmpty || '${s['name'] ?? ''}'.isNotEmpty).toList();
     if (!mounted) return;
     setState(() { _streams = l; _loading = false; _error = l.isEmpty ? 'پەخشێک بەردەست نییە — دواتر دووبارە هەوڵبدەرەوە' : null; });
   }
 
   void _open(Map<String, dynamic> s) {
-    final link = '${s['link'] ?? s['url'] ?? s['video'] ?? s['videoUrl'] ?? s['stream'] ?? s['youtube'] ?? ''}'.trim();
+    final link = '${s['url'] ?? s['link'] ?? s['video'] ?? s['stream'] ?? ''}'.trim();
     final title = '${s['name'] ?? s['title'] ?? 'پەخشی ڕاستەوخۆ'}';
     if (link.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لینکی پەخش لە Firebase نییە')));
       return;
     }
-    final uri = Uri.tryParse(link);
+    final uri = Uri.tryParse(Uri.encodeFull(link));
     if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لینکی پەخش دروست نییە')));
       return;
@@ -48,7 +49,8 @@ class _LiveScreenState extends State<LiveScreen> {
       Navigator.push(context, MaterialPageRoute(
           builder: (_) => WebViewScreen(title: title, url: link)));
     } else {
-      launchUrl(uri, mode: LaunchMode.externalApplication);
+      Navigator.push(context, MaterialPageRoute(
+          builder: (_) => VideoPlayerScreen(title: title, url: link)));
     }
   }
 
@@ -81,21 +83,23 @@ class _LiveScreenState extends State<LiveScreen> {
                               borderRadius: BorderRadius.circular(14)),
                           child: ListTile(
                             onTap: () => _open(s),
-                            leading: const CircleAvatar(
-                                backgroundColor: Color(0xFFD32F2F),
-                                child: Icon(Icons.wifi_tethering_rounded,
-                                    color: Colors.white)),
+                            leading: CircleAvatar(
+                                backgroundColor: const Color(0xFFD32F2F),
+                                backgroundImage:
+                                    '${s['image'] ?? ''}'.startsWith('http')
+                                        ? NetworkImage('${s['image']}')
+                                        : null,
+                                child: '${s['image'] ?? ''}'.startsWith('http')
+                                    ? null
+                                    : const Icon(Icons.wifi_tethering_rounded,
+                                        color: Colors.white)),
                             title: Text(
                                 '${s['name'] ?? s['title'] ?? 'پەخش'}',
                                 style: TextStyle(fontWeight: FontWeight.bold,
                                     color: txt)),
-                            subtitle: Text('${s['desc'] ?? s['text'] ?? ''}',
-                                maxLines: 1, overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 12,
-                                    color: txt.withOpacity(.55))),
                             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                              FavoriteButton(id: 'live::${s['id'] ?? s['url'] ?? s['link'] ?? s['name'] ?? 'live_stream'}',
-                                title: '${s['name'] ?? s['title'] ?? 'پەخش'}', content: '${s['desc'] ?? s['url'] ?? s['link'] ?? ''}'),
+                              FavoriteButton(id: 'live::${s['url'] ?? s['name'] ?? 'live_stream'}',
+                                title: '${s['name'] ?? s['title'] ?? 'پەخش'}', content: '${s['url'] ?? s['link'] ?? ''}'),
                               const Icon(Icons.play_circle_rounded,
                                 color: Color(0xFFD32F2F), size: 30),
                             ]),

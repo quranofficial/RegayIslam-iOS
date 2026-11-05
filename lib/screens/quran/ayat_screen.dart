@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:flutter/services.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
+import '../../data/downloader.dart';
 import '../../data/favorites.dart';
 import 'open_quran.dart' show toArabicDigits;
 
@@ -61,7 +62,16 @@ class _AyatScreenState extends State<AyatScreen> {
         await _player.pause();
       } else {
         await _player.stop();
-        await _player.play(UrlSource(_audioUrl(_row!)));
+        final url = Downloader.httpsify(_audioUrl(_row!));
+        try {
+          await _player.play(UrlSource(url));
+        } catch (_) {
+          // streaming refused — download then play
+          final file = await Downloader.download(
+              url, 'ayat/${Downloader.safeName(link)}',
+              timeout: const Duration(minutes: 3));
+          await _player.play(DeviceFileSource(file.path));
+        }
       }
     } catch (_) {
       if (mounted) {
