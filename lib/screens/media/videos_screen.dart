@@ -5,8 +5,10 @@ import '../../core/prefs.dart';
 import '../../data/rtdb.dart';
 import '../../data/favorites.dart';
 
-/// Original: ListvideokanActivity — video list from Firebase "videoNew",
-/// with comment count; opens PlayvideoActivity-equivalent.
+/// Original: ListvideokanActivity — video tags from Firebase "videoall",
+/// per-tag videos from "videoNew/<tag>", user video submission to
+/// "feedbackvideo" (reviewed before approval) and per-video comments from
+/// "commentvideo/<id>".
 class VideosScreen extends StatefulWidget {
   const VideosScreen({super.key});
   @override
@@ -15,6 +17,8 @@ class VideosScreen extends StatefulWidget {
 
 class _VideosScreenState extends State<VideosScreen> {
   List<Map<String, dynamic>> _videos = [];
+  List<Map<String, dynamic>> _tags = [];
+  Map<String, dynamic>? _selectedTag;
   bool _loading = true;
   String? _error;
   String _q = '';
@@ -26,8 +30,13 @@ class _VideosScreenState extends State<VideosScreen> {
   }
 
   Future<void> _load() async {
-    var v = await Rtdb.I.videos();
-    if (v.isEmpty) v = await Rtdb.I.videoAll();
+    var v = (_selectedTag == null || '${_selectedTag!['tag'] ?? ''}'.isEmpty)
+        ? await Rtdb.I.videos()
+        : await Rtdb.I.list('videoNew/${_selectedTag!['tag']}');
+    if (v.isEmpty && _selectedTag == null) v = await Rtdb.I.videoAll();
+    if (_tags.isEmpty) {
+      _tags = await Rtdb.I.videoAll();
+    }
     if (!mounted) return;
     setState(() {
       _videos = v;
@@ -59,6 +68,78 @@ class _VideosScreenState extends State<VideosScreen> {
     launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
+  // Original: the FAB form posts {name, video, device_id, namemamosta} to the
+  // "feedbackvideo" node and tells the user the video will be reviewed.
+  Future<void> _postVideo() async {
+    final nameC = TextEditingController();
+    final linkC = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('ناردنی ڤیدیۆ'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(
+              controller: nameC,
+              decoration: const InputDecoration(
+                  hintText: 'ناوی ڤیدیۆکە', border: OutlineInputBorder())),
+          const SizedBox(height: 10),
+          TextField(
+              controller: linkC,
+              decoration: const InputDecoration(
+                  hintText: 'لینکی ڤیدیۆکە (یوتیوب...)',
+                  border: OutlineInputBorder())),
+          const SizedBox(height: 8),
+          const Text(
+              'تێبینی: پێش ناردنی ڤیدیۆ ڕەچاوی یاساکانی ئەپەکە بکە، ڤیدیۆکەت پێداچوونەوەی بۆ ئەکرێ پاشان قبووڵ دەکرێت.',
+              style: TextStyle(fontSize: 11)),
+        ]),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: const Text('لابردن')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(c, true),
+              child: const Text('باشە')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final name = nameC.text.trim();
+    final link = linkC.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تکایە سەرەتا ناوی ڤیدیۆکە بنووسە')));
+      return;
+    }
+    if (link.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تکایە سەرەتا لینکی ڤیدیۆکە بنووسە')));
+      return;
+    }
+    await Rtdb.I.push('feedbackvideo', {
+      'name': name,
+      'video': link,
+      'device_id': 'flutter-${DateTime.now().millisecondsSinceEpoch}',
+      'namemamosta': _selectedTag == null ? '' : '${_selectedTag!['name'] ?? ''}',
+    });
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+            'ناردن سەرکەوتوو بوو. چاوەروان بە بەزووترین کات پێداچوونەوە بۆ ڤیدیۆکە ئەکرێ و قبووڵ ئەکرێت.')));
+  }
+
+  void _comments(Map<String, dynamic> v) {
+    final id = '${v['id'] ?? v['tag'] ?? v['name'] ?? 'video'}';
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppPrefs.I.day ? Colors.white : AppColors.nightCard,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (c) => _CommentsSheet(videoId: id),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = !AppPrefs.I.day;
@@ -72,6 +153,14 @@ class _VideosScreenState extends State<VideosScreen> {
           title: const Text('ڤیدیۆی ئاینی',
               style: TextStyle(color: Colors.white, fontSize: 17,
                   fontWeight: FontWeight.bold)),
+          actions: [
+            IconButton(
+              tooltip: 'ناردنی ڤیدیۆ',
+              onPressed: _postVideo,
+              icon: const Icon(Icons.add_circle_outline_rounded,
+                  color: Colors.white),
+            ),
+          ],
         ),
         body: _loading
             ? const Center(child: CircularProgressIndicator())
@@ -80,6 +169,43 @@ class _VideosScreenState extends State<VideosScreen> {
                     textAlign: TextAlign.center,
                     style: TextStyle(color: txt.withOpacity(.6))))
                 : Column(children: [
+                    if (_tags.isNotEmpty)
+                      SizedBox(
+                        height: 44,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          children: [
+                            ChoiceChip(
+                                label: const Text('هەموو'),
+                                selected: _selectedTag == null,
+                                selectedColor: AppColors.primaryDark,
+                                labelStyle: const TextStyle(color: Colors.white),
+                                onSelected: (_) {
+                                  setState(() { _selectedTag = null; _loading = true; });
+                                  _load();
+                                }),
+                            const SizedBox(width: 6),
+                            for (final t in _tags)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 6),
+                                child: ChoiceChip(
+                                    label: Text('${t['name'] ?? t['tag'] ?? ''}'),
+                                    selected: _selectedTag != null &&
+                                        '${_selectedTag!['tag'] ?? ''}' == '${t['tag'] ?? ''}',
+                                    selectedColor: AppColors.primaryDark,
+                                    labelStyle: TextStyle(
+                                        color: (_selectedTag != null &&
+                                                '${_selectedTag!['tag'] ?? ''}' == '${t['tag'] ?? ''}')
+                                            ? Colors.white : txt),
+                                    onSelected: (_) {
+                                      setState(() { _selectedTag = t; _loading = true; });
+                                      _load();
+                                    }),
+                              ),
+                          ],
+                        ),
+                      ),
                     Padding(
                       padding: const EdgeInsets.all(12),
                       child: TextField(
@@ -126,6 +252,11 @@ class _VideosScreenState extends State<VideosScreen> {
                                   style: TextStyle(fontSize: 11,
                                       color: txt.withOpacity(.55))),
                               trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                                IconButton(
+                                  tooltip: 'سەرنجەکان',
+                                  onPressed: () => _comments(v),
+                                  icon: const Icon(Icons.comment_rounded,
+                                      size: 22, color: AppColors.primaryDark)),
                                 FavoriteButton(id: 'video::${v['id'] ?? v['url'] ?? v['link'] ?? title}',
                                   title: title, content: '${v['desc'] ?? v['url'] ?? v['link'] ?? ''}'),
                                 const Icon(Icons.play_circle_rounded,
@@ -137,6 +268,149 @@ class _VideosScreenState extends State<VideosScreen> {
                       ),
                     ),
                   ]),
+      ),
+    );
+  }
+}
+
+/// Original: the comment dialog over "commentvideo" — {userrr, commenttt,
+/// date, comment_key, uid, verify}.
+class _CommentsSheet extends StatefulWidget {
+  final String videoId;
+  const _CommentsSheet({required this.videoId});
+  @override
+  State<_CommentsSheet> createState() => _CommentsSheetState();
+}
+
+class _CommentsSheetState extends State<_CommentsSheet> {
+  List<Map<String, dynamic>> _items = [];
+  bool _loading = true;
+  final TextEditingController _nameC = TextEditingController();
+  final TextEditingController _textC = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _nameC.text = AppPrefs.I.commentName;
+    _load();
+  }
+
+  Future<void> _load() async {
+    final v = await Rtdb.I.comments(widget.videoId);
+    if (!mounted) return;
+    setState(() { _items = v.reversed.toList(); _loading = false; });
+  }
+
+  Future<void> _send() async {
+    final text = _textC.text.trim();
+    final name = _nameC.text.trim();
+    if (text.isEmpty) return;
+    AppPrefs.I.commentName = name;
+    final key = 'c-${DateTime.now().millisecondsSinceEpoch}';
+    await Rtdb.I.sendComment(widget.videoId, {
+      'userrr': name,
+      'commenttt': text,
+      'date': DateTime.now().millisecondsSinceEpoch.toString(),
+      'comment_key': key,
+      'uid': 'flutter',
+      'verify': 'true',
+    });
+    _textC.clear();
+    await _load();
+    if (mounted) {
+      Navigator.of(context, rootNavigator: true).maybePop();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = !AppPrefs.I.day;
+    final txt = dark ? Colors.white : Colors.black;
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Padding(
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * .72,
+          child: Column(children: [
+            const SizedBox(height: 10),
+            Container(width: 42, height: 4,
+                decoration: BoxDecoration(color: Colors.grey,
+                    borderRadius: BorderRadius.circular(4))),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Text('سەرنجەکان', style: TextStyle(
+                  fontWeight: FontWeight.bold, fontSize: 16, color: txt)),
+            ),
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _items.isEmpty
+                      ? Center(child: Text('هێشتا هیچ سەرنجێک نییە',
+                          style: TextStyle(color: txt.withOpacity(.5))))
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          itemCount: _items.length,
+                          itemBuilder: (context, i) {
+                            final m = _items[i];
+                            return ListTile(
+                              leading: CircleAvatar(
+                                  backgroundColor:
+                                      AppColors.primaryDark.withOpacity(.12),
+                                  child: Text(
+                                      '${(m['userrr'] ?? '?').toString().characters.first}',
+                                      style: const TextStyle(
+                                          color: AppColors.primaryDark))),
+                              title: Text('${m['userrr'] ?? ''}',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13, color: txt)),
+                              subtitle: Text('${m['commenttt'] ?? ''}',
+                                  style: TextStyle(fontSize: 13, color: txt)),
+                            );
+                          },
+                        ),
+            ),
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Row(children: [
+                Expanded(
+                  child: TextField(
+                    controller: _textC,
+                    decoration: InputDecoration(
+                      hintText: 'سەرنجەکەت بنووسە...',
+                      filled: true,
+                      fillColor: dark ? AppColors.nightBg : Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 0),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          borderSide: BorderSide.none),
+                    ),
+                  ),
+                ),
+                IconButton(
+                    onPressed: _send,
+                    icon: const Icon(Icons.send_rounded,
+                        color: AppColors.primaryDark)),
+              ]),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+              child: TextField(
+                controller: _nameC,
+                decoration: const InputDecoration(
+                  hintText: 'ناوی خۆت (بۆ سەرنجەکان)',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
+          ]),
+        ),
       ),
     );
   }

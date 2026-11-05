@@ -2,13 +2,22 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/favorites.dart';
 
 /// Original: Hack1Activity — generic article reader over the bundled JSON
 /// files (zikrakan, duha, agr, bahasht, xawn, wta, ...), with live search,
-/// copy and share of each item.
+/// copy and share of each item. The four time-of-day zikrs carry their own
+/// recitation audio, streamed exactly like the Android MediaPlayer.
+const kZikrAudios = <String, String>{
+  'زیکری لەخەو هەستان': 'https://github.com/quranofficial/swrat/raw/main/hastan.mp3',
+  'زیکری بەیانیان': 'https://github.com/sahanddler/dang/raw/main/bayani.mp3',
+  'زیکری ئێواران': 'https://github.com/quranofficial/swrat/raw/main/ewara.mp3',
+  'زیکری خەوتن': 'https://github.com/quranofficial/swrat/raw/main/sleep.mp3',
+};
+
 class JsonArticleScreen extends StatefulWidget {
   const JsonArticleScreen({super.key, required this.file, required this.title});
   final String file;
@@ -22,11 +31,47 @@ class _JsonArticleScreenState extends State<JsonArticleScreen> {
   List<Map<String, dynamic>> _filtered = [];
   bool _loading = true;
   int? _open;
+  final AudioPlayer _zikrPlayer = AudioPlayer();
+  String? _zikrUrl;
+  PlayerState _zikrState = PlayerState.stopped;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _zikrPlayer.onPlayerStateChanged.listen((s) {
+      if (mounted) setState(() => _zikrState = s);
+    });
+    _zikrPlayer.onPlayerComplete.listen((_) {
+      if (mounted) setState(() => _zikrUrl = null);
+    });
+  }
+
+  Future<void> _playZikr(String url) async {
+    if (_zikrUrl == url && _zikrState == PlayerState.playing) {
+      await _zikrPlayer.pause();
+      return;
+    }
+    if (_zikrUrl == url && _zikrState == PlayerState.paused) {
+      await _zikrPlayer.resume();
+      return;
+    }
+    try {
+      await _zikrPlayer.stop();
+      await _zikrPlayer.play(UrlSource(url));
+      setState(() => _zikrUrl = url);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('کێشە لە پەخشکردنی دەنگ، تکایە ئینتەرنێت بپشکنە')));
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _zikrPlayer.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -125,6 +170,21 @@ class _JsonArticleScreenState extends State<JsonArticleScreen> {
                                             style: TextStyle(fontWeight: FontWeight.bold,
                                                 fontSize: 14, color: txt)),
                                       ),
+                                      if (kZikrAudios[title] != null)
+                                        IconButton(
+                                            tooltip: 'بیستنی دەنگی زیکر',
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(),
+                                            onPressed: () =>
+                                                _playZikr(kZikrAudios[title]!),
+                                            icon: Icon(
+                                                _zikrUrl == kZikrAudios[title] &&
+                                                        _zikrState == PlayerState.playing
+                                                    ? Icons.pause_circle_rounded
+                                                    : Icons.play_circle_rounded,
+                                                size: 26,
+                                                color: AppColors.primaryDark)),
+                                      const SizedBox(width: 6),
                                       Icon(open
                                           ? Icons.expand_less_rounded
                                           : Icons.expand_more_rounded,
