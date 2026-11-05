@@ -31,6 +31,7 @@ class _AyatulKursiScreenState extends State<AyatulKursiScreen> {
   @override
   void initState() {
     super.initState();
+    AudioSetup.prepare(_player); // item 2: steady full volume everywhere
     _player.onPlayerStateChanged.listen((s) {
       if (mounted) setState(() => _playing = s == PlayerState.playing);
     });

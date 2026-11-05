@@ -44,6 +44,7 @@ class _AyahRangeScreenState extends State<AyahRangeScreen> {
   @override
   void initState() {
     super.initState();
+    AudioSetup.prepare(_player); // item 2: steady full volume everywhere
     _load();
     _player.onPlayerStateChanged.listen((s) {
       if (mounted) setState(() => _playing = s == PlayerState.playing);
@@ -134,7 +135,10 @@ class _AyahRangeScreenState extends State<AyahRangeScreen> {
     final sid = ((_surah?['soraid'] ?? 1) as num).toInt();
     try {
       if (_timingsBase != sid) {
-        _timings = await Db.I.timings(AppPrefs.I.qariId);
+        // Item 3: use the timings db of the reciter selected in the picker
+        // (assets/db/<id>.db), not just the globally saved one.
+        _timings = await Db.I.timings(
+            '${_reciter?['id'] ?? AppPrefs.I.qariId}');
         _timingsBase = sid;
       }
       await _player.stop();
@@ -296,7 +300,10 @@ class _AyahRangeScreenState extends State<AyahRangeScreen> {
               hint: 'قاری هەڵبژێرە',
               items: _reciters,
               label: (v) => '${v['name_ar'] ?? ''}'.trim(),
-              onChanged: (v) => setState(() => _reciter = v),
+              onChanged: (v) => setState(() {
+                _reciter = v;
+                _timingsBase = -1; // reload timings for the new reciter
+              }),
             )),
             const SizedBox(width: 8),
             Expanded(child: _dropdown<Map<String, Object?>>(

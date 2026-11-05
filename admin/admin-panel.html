@@ -96,6 +96,16 @@
     <div id="dlgMsg" class="msg"></div>
   </details>
 
+  <details><summary>🔔 ناردنی ئاگادارکردنەوە بۆ بەکارهێنەران (notification)</summary>
+    <div class="row">
+      <div><label>ناونیشان (title)</label><input id="n_title"></div>
+      <div><label>چالاک؟ (open=true/false)</label><input id="n_open" value="true"></div>
+    </div>
+    <label>دەق (text)</label><textarea id="n_text"></textarea>
+    <button onclick="sendNotification()">🔔 ناردنی ئاگادارکردنەوە</button>
+    <div id="notifMsg" class="msg"></div>
+  </details>
+
   <details><summary>🎬 زیادکردنی ڤیدیۆ (videoNew/&lt;folder&gt;)</summary>
     <div class="row">
       <div><label>فۆڵدەر (tag id لە videoall)</label><input id="v_folder" placeholder="20252405032442"></div>
@@ -247,6 +257,16 @@ async function saveDialog(){
   const r = await putJSON('dialogg/dialog', val);
   msg('dlgMsg', r.ok?'دایەلاگ پاشەکەوت کرا ✅ (وەشانی نوێ = یەکجار پیشان دەدرێت)':'هەڵەی HTTP '+r.status, r.ok?'ok':'err');
 }
+async function sendNotification(){
+  try{
+    const val = { title: $('n_title').value.trim(), text: $('n_text').value.trim(),
+      date: String(Date.now()), open: $('n_open').value.trim() || 'true' };
+    const r = await fetch(`${dbBase()}/notification.json`, {method:'PATCH', body:JSON.stringify(val)});
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    msg('notifMsg','ئاگادارکردنەوە نێردرا ✅ — لە کردنەوەی دواتری ئەپەکە بەکارهێنەران بە نامەی سیستەم وەریدەگرن','ok');
+  }catch(e){ msg('notifMsg','هەڵە: '+e.message,'err'); }
+}
+
 async function addVideo(){
   const folder = $('v_folder').value.trim();
   const name = $('v_name').value.trim();

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
+import '../../core/ui.dart' show bottomInset;
 import '../articles/json_article_screen.dart';
 import 'sahih_muslim_screen.dart';
 
@@ -29,7 +30,9 @@ class FarmwdaScreen extends StatelessWidget {
               style: TextStyle(color: Colors.white, fontSize: 17,
                   fontWeight: FontWeight.bold)),
         ),
-        body: ListView(padding: const EdgeInsets.all(12), children: [
+        body: ListView(
+            padding: EdgeInsets.fromLTRB(12, 12, 12, bottomInset(context, extra: 14)),
+            children: [
           for (final it in items)
             Card(
               color: dark ? AppColors.nightCard : Colors.white,

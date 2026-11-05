@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants.dart';
 import '../../../core/prefs.dart';
 import '../../../main.dart' show toggleDayNight;
+import '../../../core/ui.dart' show bottomInset, sharePage;
 import '../../articles/info_screen.dart';
 import '../../misc/zikr_detail_screen.dart';
 import '../../nwezh/prayers_month.dart';
@@ -89,13 +90,19 @@ class NwezhHubScreen extends StatelessWidget {
               style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           actions: [
             IconButton(
+                tooltip: 'هاوبەشی',
+                onPressed: () => sharePage(
+                    'نوێژکردن — شێواز، مەحڕەمەکان و دوعاکانی نوێژ',
+                    title: 'نوێژکردن'),
+                icon: const Icon(Icons.share_rounded, color: Colors.white)),
+            IconButton(
                 onPressed: toggleDayNight,
                 icon: Icon(dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
                     color: Colors.white)),
           ],
         ),
         body: GridView.count(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.fromLTRB(12, 12, 12, bottomInset(context, extra: 14)),
           crossAxisCount: 2,
           mainAxisSpacing: 10,
           crossAxisSpacing: 10,

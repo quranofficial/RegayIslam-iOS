@@ -4,7 +4,7 @@ import '../../core/constants.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/services.dart';
 import '../../core/prefs.dart';
-import '../../core/ui.dart';
+import '../../core/ui.dart' show AudioSetup, copyPage, sharePage, suraLabel;
 import '../../data/db.dart';
 import '../../data/downloader.dart';
 import '../../data/favorites.dart';
@@ -26,6 +26,8 @@ class _AyatScreenState extends State<AyatScreen> {
   @override
   void initState() {
     super.initState();
+    AudioSetup.prepare(_player); // item 2: steady full volume everywhere
+    _zoom = AppPrefs.I.ayahFontSize.toDouble(); // item 6: keep last size
     _load();
     _player.onPlayerStateChanged.listen((s) {
       if (mounted) setState(() => _playing = s == PlayerState.playing);
@@ -124,8 +126,8 @@ class _AyatScreenState extends State<AyatScreen> {
                         const Spacer(),
                         FavoriteButton(
                           id: 'daily_ayah::${r['suraId']}::${r['ayah']}',
-                          title: '${r['sura_name_ar']} • ئایەتی ${toArabicDigits((r['ayah'] as num?)?.toInt() ?? 0)}',
-                          content: '${r['text']}\\n\\n${r[AppPrefs.I.tafsir] ?? ''}',
+                          title: '${suraLabel('${r['sura_name_ar']}')} • ئایەتی ${toArabicDigits((r['ayah'] as num?)?.toInt() ?? 0)}',
+                          content: '${r['text']}\n\n${r[AppPrefs.I.tafsir] ?? ''}',
                           color: dark ? AppColors.gold : AppColors.primaryDark),
                         Text('ڕێگای ئیسلام',
                             style: TextStyle(
@@ -176,15 +178,19 @@ class _AyatScreenState extends State<AyatScreen> {
         bottomNavigationBar: SafeArea(
           child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             IconButton(
-                onPressed: () =>
-                    setState(() => _zoom = (_zoom - 2).clamp(14, 60)),
+                onPressed: () => setState(() {
+                  _zoom = (_zoom - 2).clamp(14, 60);
+                  AppPrefs.I.ayahFontSize = _zoom.round();
+                }),
                 icon: const Icon(Icons.remove_circle_outline_rounded,
                     color: Colors.white70)),
             Text('قەبارەی نووسین: ${_zoom.round()}',
                 style: const TextStyle(color: Colors.white70, fontSize: 12)),
             IconButton(
-                onPressed: () =>
-                    setState(() => _zoom = (_zoom + 2).clamp(14, 60)),
+                onPressed: () => setState(() {
+                  _zoom = (_zoom + 2).clamp(14, 60);
+                  AppPrefs.I.ayahFontSize = _zoom.round();
+                }),
                 icon: const Icon(Icons.add_circle_outline_rounded,
                     color: Colors.white70)),
           ]),

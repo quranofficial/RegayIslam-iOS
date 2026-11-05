@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants.dart';
 import '../core/prefs.dart';
+import '../core/ui.dart' show sharePage, bottomInset;
 import '../data/downloader.dart';
 import '../data/db.dart';
 import '../screens/media/video_player_screen.dart';
@@ -130,13 +131,21 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         appBar: AppBar(
           backgroundColor: dark ? AppColors.nightCard : AppColors.primaryDark,
           title: const Text('دڵخوازەکان', style: TextStyle(color: Colors.white)),
+          actions: [
+            IconButton(
+                tooltip: 'هاوبەشی ئەپ',
+                icon: const Icon(Icons.share_rounded, color: Colors.white),
+                onPressed: () => sharePage('دڵخوازەکانی من لە ئەپی ڕێگای ئیسلام',
+                    title: 'دڵخوازەکان')),
+          ],
         ),
         body: _loading ? const Center(child: CircularProgressIndicator())
           : _items.isEmpty
             ? Center(child: Text('هیچ بابەتێک لە دڵخوازەکانت نییە',
                 style: TextStyle(color: txt.withOpacity(.6))))
+            // Item 7: fixed-height tiles — never overflow or fall apart.
             : ListView.separated(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                padding: EdgeInsets.fromLTRB(12, 12, 12, bottomInset(context, extra: 16)),
                 itemCount: _items.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 8),
                 itemBuilder: (context, i) {
@@ -144,39 +153,56 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   final kind = _kindOf(item.id);
                   return Card(
                     color: dark ? AppColors.nightCard : Colors.white,
+                    margin: EdgeInsets.zero,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14)),
-                    child: ListTile(
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
                       onTap: () => _open(context, item),
-                      leading: CircleAvatar(
-                        backgroundColor:
-                            dark ? AppColors.gold.withOpacity(.15) : AppColors.primaryDark.withOpacity(.08),
-                        child: Icon(kind.icon,
-                            size: 20,
-                            color: dark ? AppColors.gold : AppColors.primaryDark)),
-                      title: Text(item.title.isEmpty ? kind.label : item.title,
-                        maxLines: 1, overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontWeight: FontWeight.bold, color: txt)),
-                      subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(kind.label,
-                                style: TextStyle(fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: dark ? AppColors.gold : AppColors.primaryDark)),
-                            if (item.content.isNotEmpty &&
-                                !item.content.startsWith('http'))
-                              Text(item.content, maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 12,
-                                    color: txt.withOpacity(.6))),
-                          ]),
-                      isThreeLine: true,
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
-                        onPressed: () async {
-                          await FavoritesStore.remove(item.id);
-                          _load();
-                        },
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+                        child: Row(crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                          CircleAvatar(
+                            radius: 20,
+                            backgroundColor: dark
+                                ? AppColors.gold.withOpacity(.15)
+                                : AppColors.primaryDark.withOpacity(.08),
+                            child: Icon(kind.icon, size: 20,
+                                color: dark ? AppColors.gold : AppColors.primaryDark)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(crossAxisAlignment:
+                                CrossAxisAlignment.start, children: [
+                              Text(item.title.isEmpty ? kind.label : item.title,
+                                maxLines: 2, overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontWeight: FontWeight.bold,
+                                    fontSize: 13.5, color: txt)),
+                              const SizedBox(height: 2),
+                              Text(kind.label,
+                                  style: TextStyle(fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: dark ? AppColors.gold : AppColors.primaryDark)),
+                              if (item.content.isNotEmpty &&
+                                  !item.content.startsWith('http')) ...[
+                                const SizedBox(height: 4),
+                                Text(item.content, maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 12, height: 1.4,
+                                      color: txt.withOpacity(.6))),
+                              ],
+                            ]),
+                          ),
+                          IconButton(
+                            visualDensity: VisualDensity.compact,
+                            icon: const Icon(Icons.delete_outline_rounded,
+                                color: Colors.red),
+                            onPressed: () async {
+                              await FavoritesStore.remove(item.id);
+                              _load();
+                            },
+                          ),
+                        ]),
                       ),
                     ),
                   );

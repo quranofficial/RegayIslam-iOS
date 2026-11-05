@@ -120,7 +120,11 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: dark ? AppColors.nightBg : const Color(0xFFF4F5F7),
       body: SafeArea(
-        child: ListView(padding: const EdgeInsets.all(12), children: [
+        top: true,
+        bottom: false,
+        child: ListView(
+            padding: EdgeInsets.fromLTRB(12, 12, 12, bottomInset(context, extra: 14)),
+            children: [
           _header(dark, txt),
           const SizedBox(height: 10),
           _ayatBanner(card, txt, dark),
@@ -196,9 +200,28 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: dark ? AppColors.gold : Colors.white70,
                         fontSize: 12, fontWeight: FontWeight.bold)),
                 const Spacer(),
-                Icon(Icons.refresh_rounded, color: Colors.white70, size: 18),
+                // Item 6: bigger/smaller — only the ayah text size changes.
+                IconButton(visualDensity: VisualDensity.compact,
+                    tooltip: 'بچووککردنەوەی نووسین',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => setState(() => AppPrefs.I.ayahFontSize =
+                        (AppPrefs.I.ayahFontSize - 2).clamp(14, 60)),
+                    icon: const Icon(Icons.remove_circle_outline_rounded,
+                        color: Colors.white70, size: 19)),
+                const SizedBox(width: 4),
+                IconButton(visualDensity: VisualDensity.compact,
+                    tooltip: 'گەورەکردنی نووسین',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => setState(() => AppPrefs.I.ayahFontSize =
+                        (AppPrefs.I.ayahFontSize + 2).clamp(14, 60)),
+                    icon: const Icon(Icons.add_circle_outline_rounded,
+                        color: Colors.white70, size: 19)),
+                const SizedBox(width: 4),
+                const Icon(Icons.refresh_rounded, color: Colors.white70, size: 18),
                 const SizedBox(width: 6),
-                Icon(Icons.chevron_left, color: Colors.white70, size: 18),
+                const Icon(Icons.chevron_left, color: Colors.white70, size: 18),
               ]),
               const SizedBox(height: 8),
               if (r != null)
@@ -208,6 +231,21 @@ class _HomeScreenState extends State<HomeScreen> {
                       style: TextStyle(
                           color: dark ? AppColors.gold : Colors.white70,
                           fontSize: 11, fontWeight: FontWeight.bold)),
+                  const Spacer(),
+                  FavoriteButton(
+                    id: 'daily_ayah::${r['suraId'] ?? ''}::${r['ayah'] ?? ''}',
+                    title: '${suraLabel('${r['sura_name_ar'] ?? ''}')} • ئایەتی ${r['ayah'] ?? ''}',
+                    content: '${r['text'] ?? ''}\n\n${r[AppPrefs.I.tafsir] ?? ''}',
+                    color: Colors.white70),
+                  IconButton(visualDensity: VisualDensity.compact,
+                    tooltip: 'هاوبەشی',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => sharePage(
+                        '${r['text'] ?? ''}\n\n${r[AppPrefs.I.tafsir] ?? ''}',
+                        title: suraLabel('${r['sura_name_ar'] ?? ''}')),
+                    icon: const Icon(Icons.share_rounded,
+                        color: Colors.white70, size: 19)),
                 ]),
               if (r != null) const SizedBox(height: 6),
               Directionality(
@@ -216,7 +254,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: TextStyle(
                         color: Colors.white,
                         fontFamily: 'Quran',
-                        fontSize: 18, height: 1.8)),
+                        fontSize: AppPrefs.I.ayahFontSize.toDouble(),
+                        height: 1.8)),
               ),
               if (tafsir.trim().isNotEmpty) ...[
                 const SizedBox(height: 6),
@@ -384,6 +423,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ]);
 
   Widget _grid(bool dark, Color card, Color txt) {
+    final names = AppPrefs.I.homeNames; // item 8: renamed sections
     final items = _ordered(<_G>[
       _G('دڵخوازەکان', Icons.bookmarks_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesScreen()))),
@@ -492,14 +532,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         Icon(g.icon, size: 30,
                             color: dark ? AppColors.gold : AppColors.primaryDark),
                         const SizedBox(height: 8),
-                        Text(g.label,
+                        Text(names[g.label] ?? g.label,
                             textAlign: TextAlign.center, maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(fontSize: 11.5, height: 1.3, color: txt)),
                       ])),
                       Positioned(top: -8, left: -8,
                         child: FavoriteButton(id: 'section::${g.label}',
-                          title: g.label, content: 'بەشی ${g.label} لە ئەپی ڕێگای ئیسلام')),
+                          title: names[g.label] ?? g.label,
+                          content: 'بەشی ${names[g.label] ?? g.label} لە ئەپی ڕێگای ئیسلام')),
                     ]))),
         ]);
   }

@@ -33,6 +33,7 @@ class _QariakanScreenState extends State<QariakanScreen> {
   @override
   void initState() {
     super.initState();
+    AudioSetup.prepare(_player); // item 2: steady full volume everywhere
     _load();
     _player.onPlayerStateChanged.listen((s) {
       if (mounted) setState(() => _playing = s == PlayerState.playing);
@@ -234,6 +235,13 @@ class _QariakanScreenState extends State<QariakanScreen> {
           title: const Text('دەنگی قورئان',
               style: TextStyle(color: Colors.white, fontSize: 17,
                   fontWeight: FontWeight.bold)),
+          actions: [
+            IconButton(
+                tooltip: 'هاوبەشی',
+                icon: const Icon(Icons.share_rounded, color: Colors.white),
+                onPressed: () => sharePage('دەنگی قورئان بە دەنگی قارئەکان',
+                    title: 'دەنگی قورئان')),
+          ],
         ),
         body: _loading
             ? const Center(child: CircularProgressIndicator())

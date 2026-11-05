@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
+import '../../core/ui.dart' show bottomInset;
 import '../../data/db.dart';
 import '../../data/favorites.dart';
 
@@ -29,7 +30,7 @@ class DasalatakanScreen extends StatelessWidget {
             }
             final rows = snap.data!;
             return ListView.separated(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.fromLTRB(12, 12, 12, bottomInset(context, extra: 14)),
               itemCount: rows.length,
               separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (context, i) {

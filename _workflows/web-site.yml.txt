@@ -1,0 +1,61 @@
+name: RegayIslam Website (docs/ on main)
+
+# Item 23: the website stays online 24/7 for free — every push to main
+# rebuilds the Flutter web app and refreshes the docs/ folder that GitHub
+# Pages serves (Settings → Pages → Deploy from branch: main /docs).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: regayislam-web
+  cancel-in-progress: true
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Build Flutter Web
+        run: flutter build web --release --base-href "/RegayIslam-iOS/"
+
+      - name: Refresh docs/ with the new build
+        run: |
+          rm -rf docs
+          mkdir -p docs
+          cp -r build/web/* docs/
+          cp README_KU.md docs/README_KU.md || true
+
+      - name: Commit the new website
+        run: |
+          git config user.name "regayislam-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs
+          if git diff --cached --quiet; then
+            echo "No website changes to commit"
+          else
+            git commit -m "website: rebuild Flutter web (docs/)"
+            git push
+          fi
+
+      - name: Upload web build as artifact (backup)
+        uses: actions/upload-artifact@v4
+        with:
+          name: RegayIslam-Web
+          path: build/web
+          if-no-files-found: error

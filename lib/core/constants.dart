@@ -17,7 +17,7 @@ class AppColors {
 /// Names of the five daily prayers as used in the app (time2.db columns).
 const Map<String, String> kPrayerNames = {
   'bayani': 'بەیانی',
-  'xorhalatn': 'گزشتن',
+  'xorhalatn': 'گزنک',
   'niwaro': 'نیوەڕۆ',
   'asr': 'عەسر',
   'eywara': 'ئێوارە',
@@ -25,6 +25,10 @@ const Map<String, String> kPrayerNames = {
 };
 
 const String kDbUrl = 'https://regayislam-1-default-rtdb.firebaseio.com';
+
+/// Item 22: password of the in-app admin panel (ڕێکخستن → پانێلی بەڕێوەبەر).
+/// Change it here before shipping a release.
+const String kAdminPassword = 'regayislam';
 
 const List<String> kTafsirs = [
   'rebar',

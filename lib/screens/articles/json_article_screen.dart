@@ -7,6 +7,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
+import '../../core/ui.dart' show bottomInset;
 import '../../data/downloader.dart';
 import '../../data/favorites.dart';
 
@@ -153,7 +154,7 @@ class _JsonArticleScreenState extends State<JsonArticleScreen> {
                       ? Center(child: Text('هیچ نەدۆزرایەوە',
                           style: TextStyle(color: txt.withOpacity(.5))))
                       : ListView.builder(
-                          padding: const EdgeInsets.all(12),
+                          padding: EdgeInsets.fromLTRB(12, 12, 12, bottomInset(context, extra: 14)),
                           itemCount: _filtered.length,
                           itemBuilder: (context, i) {
                             final m = _filtered[i];

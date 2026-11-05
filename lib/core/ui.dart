@@ -14,7 +14,9 @@ const String kRepoUrl = 'https://github.com/quranofficial/RegayIslam-iOS';
 /// existing prefix before composing.
 String suraLabel(String name) {
   final n = name.trim();
-  final stripped = n.replaceFirst(RegExp(r'^(سوڕەتی|سوورەتی|سورة|سورۃ|سُورَةُ)\s*'), '');
+  var stripped = n.replaceFirst(RegExp(r'^(سوڕەتی|سوورەتی|سورەتی|سورة|سورۃ|سُورَةُ)\s*'), '');
+  stripped = stripped.replaceFirst(
+      RegExp(r'^(سوڕەتی|سوورەتی|سورەتی|سورة|سورۃ)\s*'), '');
   return 'سوڕەتی $stripped';
 }
 
@@ -129,7 +131,6 @@ class _AudioPlayerBarState extends State<AudioPlayerBar> {
                             enabledThumbRadius: 7),
                         overlayShape: const RoundSliderOverlayShape(
                             overlayRadius: 12),
-                        padding: EdgeInsets.zero,
                       ),
                       child: Slider(
                         value: posMs.toDouble(),
@@ -165,5 +166,51 @@ class _AudioPlayerBarState extends State<AudioPlayerBar> {
         ]),
       ),
     );
+  }
+}
+
+
+/// Extra bottom padding that keeps lists/buttons above the system
+/// navigation bar (item 9: دوگمەکانی خوارەوە لەبەر ناڤی مۆبایل دیار نەبوون).
+double bottomInset(BuildContext context, {double extra = 12}) {
+  final mq = MediaQuery.of(context);
+  final bottom = mq.viewPadding.bottom > mq.padding.bottom
+      ? mq.viewPadding.bottom
+      : mq.padding.bottom;
+  return bottom + extra;
+}
+
+/// One shared audio configuration so every sound in the app plays at a
+/// steady, full volume on both Android and iPhone (item 2).
+class AudioSetup {
+  AudioSetup._();
+
+  static bool _globalDone = false;
+
+  /// Call once per player (initState) before first use.
+  static Future<void> prepare(AudioPlayer player) async {
+    try {
+      if (!_globalDone) {
+        // Audio focus + media routing via the global scope so the volume
+        // matches other apps (lowLatency mode is quiet on some devices).
+        await AudioPlayer.global.setAudioContext(AudioContext(
+          android: AudioContextAndroid(
+            isSpeakerphoneOn: false,
+            stayAwake: true,
+            contentType: AndroidContentType.music,
+            usageType: AndroidUsageType.media,
+            audioFocus: AndroidAudioFocus.gain,
+          ),
+          iOS: AudioContextIOS(
+            category: AVAudioSessionCategory.playback,
+            options: {AVAudioSessionOptions.defaultToSpeaker},
+          ),
+        ));
+        _globalDone = true;
+      }
+      await player.setPlayerMode(PlayerMode.mediaPlayer);
+      await player.setReleaseMode(ReleaseMode.stop);
+      await player.setVolume(1.0);
+    } catch (_) {}
   }
 }

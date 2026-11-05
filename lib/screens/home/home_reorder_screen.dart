@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
+import '../../core/ui.dart' show bottomInset;
 
 /// Item 8: "بتوانم دەستکاری بەشەکانە لە پەڕەی یەکەم بکەم" — reorder the
 /// home feature grid up/down and persist the arrangement.
@@ -93,6 +94,49 @@ class _HomeReorderScreenState extends State<HomeReorderScreen> {
     _save();
   }
 
+  /// Item 8: گۆڕینی ناوی بەشەکان — empty text restores the original name.
+  Future<void> _rename(_Item it) async {
+    final c = TextEditingController(
+        text: AppPrefs.I.homeNames[it.label] ?? it.label);
+    final ok = await showDialog<Object>(
+      context: context,
+      builder: (d) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: Text('ناوی «${it.label}» بگۆڕە'),
+          content: TextField(
+              controller: c,
+              autofocus: true,
+              decoration: const InputDecoration(
+                  hintText: 'ناوی نوێ', border: OutlineInputBorder())),
+          actions: [
+            if (AppPrefs.I.homeNames.containsKey(it.label))
+              TextButton(
+                  onPressed: () => Navigator.pop(d, 'reset'),
+                  child: const Text('گەڕانەوە بۆ ناوی ئەسلی')),
+            TextButton(
+                onPressed: () => Navigator.pop(d, false),
+                child: const Text('لابردن')),
+            ElevatedButton(
+                onPressed: () => Navigator.pop(d, true),
+                child: const Text('پاشەکەوت')),
+          ],
+        ),
+      ),
+    );
+    if (ok == null) return;
+    if (ok == 'reset') {
+      AppPrefs.I.setHomeName(it.label, null);
+    } else if (ok == true) {
+      AppPrefs.I.setHomeName(it.label, c.text.trim());
+    }
+    setState(() {});
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('ناوی بەش پاشەکەوت کرا ✅'),
+        duration: Duration(seconds: 1)));
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = !AppPrefs.I.day;
@@ -118,7 +162,7 @@ class _HomeReorderScreenState extends State<HomeReorderScreen> {
                 ),
                 Expanded(
                   child: ReorderableListView.builder(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                    padding: EdgeInsets.fromLTRB(12, 0, 12, bottomInset(context, extra: 12)),
                     itemCount: _items.length,
                     onReorder: (oldIndex, newIndex) {
                       setState(() {
@@ -138,6 +182,7 @@ class _HomeReorderScreenState extends State<HomeReorderScreen> {
                     ),
                     itemBuilder: (context, i) {
                       final it = _items[i];
+                      final shown = AppPrefs.I.homeNames[it.label] ?? it.label;
                       return Container(
                         key: ValueKey(it.label),
                         margin: const EdgeInsets.only(bottom: 8),
@@ -150,9 +195,19 @@ class _HomeReorderScreenState extends State<HomeReorderScreen> {
                           dense: true,
                           leading: Icon(it.icon,
                               color: dark ? AppColors.gold : AppColors.primaryDark),
-                          title: Text(it.label,
+                          title: Text(shown,
                               style: TextStyle(fontSize: 13.5, color: txt)),
                           trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                            // Item 8: rename any section from the first page.
+                            IconButton(
+                                visualDensity: VisualDensity.compact,
+                                tooltip: 'گۆڕینی ناوی بەش',
+                                onPressed: () => _rename(it),
+                                icon: Icon(Icons.edit_rounded,
+                                    size: 20,
+                                    color: dark
+                                        ? AppColors.gold
+                                        : AppColors.primaryDark)),
                             IconButton(
                                 visualDensity: VisualDensity.compact,
                                 onPressed: i == 0 ? null : () => _move(i, i - 1),

@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
+import '../../core/ui.dart' show bottomInset;
 import '../../data/downloader.dart';
 import '../pdf/pdf_screen.dart';
 
@@ -411,7 +412,9 @@ class _BookDetailScreenState extends State<_BookDetailScreen> {
                 icon: const Icon(Icons.share_rounded, color: Colors.white)),
           ],
         ),
-        body: ListView(padding: const EdgeInsets.all(14), children: [
+        body: ListView(
+            padding: EdgeInsets.fromLTRB(14, 14, 14, bottomInset(context, extra: 14)),
+            children: [
           Center(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(14),

@@ -1,5 +1,7 @@
+import 'dart:math';
 import 'package:home_widget/home_widget.dart';
 import '../core/prefs.dart';
+import '../core/ui.dart' show suraLabel;
 import 'db.dart';
 
 /// Item 4: home-screen widgets for prayer times ("کاتەکانی بانگ") and the
@@ -52,6 +54,28 @@ class HomeWidgets {
       await HomeWidget.updateWidget(
           qualifiedAndroidName:
               'com.nwezhakanm.PrayerWidgetProvider');
+    } catch (_) {}
+  }
+
+  /// Item 5: the Quran widget must always carry one ayah of the day —
+  /// pushed once per calendar day at splash, using the exact same
+  /// deterministic pick the home banner uses so both stay in sync.
+  static Future<void> pushDailyAyah() async {
+    try {
+      final now = DateTime.now();
+      final dayKey = '${now.year}-${now.month}-${now.day}';
+      if (AppPrefs.I.widgetAyahDay == dayKey) return;
+      final sura = Random(now.day).nextInt(114) + 1;
+      final pool = await Db.I.ayat(sura, AppPrefs.I.tafsir);
+      if (pool.isEmpty) return;
+      final idx = Random(now.day).nextInt(pool.length);
+      final row = pool[idx];
+      await updateAyah(
+        text: '${row['text'] ?? ''}',
+        reference:
+            '${suraLabel('${row['sura_name_ar'] ?? ''}')} — ئایەتی ${row['ayah'] ?? ''}',
+      );
+      AppPrefs.I.widgetAyahDay = dayKey;
     } catch (_) {}
   }
 

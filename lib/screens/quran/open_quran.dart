@@ -48,6 +48,7 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
   @override
   void initState() {
     super.initState();
+    AudioSetup.prepare(_player); // item 2: steady full volume everywhere
     _tafsir = AppPrefs.I.tafsir;
     _load();
     _player.onPlayerStateChanged.listen((s) {

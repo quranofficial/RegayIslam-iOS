@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/downloader.dart';
+import '../../core/ui.dart' show AudioSetup;
 
 /// Original: KtebActivity — adhan reciter voice selection
 /// (هەڵبژاردنی دەنگی بانگبێژ). The voice list comes from the bundled
@@ -31,6 +33,7 @@ class _AdhanVoiceScreenState extends State<AdhanVoiceScreen> {
   @override
   void initState() {
     super.initState();
+    AudioSetup.prepare(_player); // item 2: steady full volume everywhere
     _load();
     _player.onPlayerStateChanged.listen((s) {
       if (mounted) setState(() => _state = s);
@@ -76,6 +79,66 @@ class _AdhanVoiceScreenState extends State<AdhanVoiceScreen> {
       return f.existsSync() ? f : null;
     } catch (_) {
       return null;
+    }
+  }
+
+  bool _allBusy = false;
+
+  /// Item 12: داگرتنی هەموو دەنگەکانی بانگبێژ — every voice lands in the
+  /// offline cache so the adhan works with no internet at all.
+  Future<void> _downloadAll() async {
+    if (_allBusy || _voices.isEmpty) return;
+    _allBusy = true;
+    final done = ValueNotifier<int>(0);
+    final failed = ValueNotifier<int>(0);
+    final total = ValueNotifier<int>(_voices.length);
+    final ctx = context;
+    unawaited(showDialog(
+      context: ctx,
+      barrierDismissible: false,
+      builder: (c) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('داگرتنی هەموو دەنگەکان'),
+          content: AnimatedBuilder(
+              animation: Listenable.merge([done, failed, total]),
+              builder: (context, _) => Column(mainAxisSize: MainAxisSize.min,
+                  children: [
+                    LinearProgressIndicator(
+                        value: total.value > 0
+                            ? (done.value + failed.value) / total.value
+                            : null),
+                    const SizedBox(height: 10),
+                    Text(
+                        '${done.value + failed.value} لە ${total.value} دەنگ داگیرا'
+                        '${failed.value > 0 ? ' • ${failed.value} سەرکەوتوو نەبوو' : ''}',
+                        style: const TextStyle(fontSize: 12.5)),
+                  ])),
+        ),
+      ),
+    ));
+    for (final v in _voices) {
+      final file = '${v['text'] ?? ''}'.replaceAll('.mp3', '');
+      if (file.isEmpty) continue;
+      try {
+        final local = await _localFile(file);
+        if (local == null) {
+          await Downloader.download(_url(file), 'bang/$file.mp3');
+        }
+        done.value++;
+      } catch (_) {
+        failed.value++;
+      }
+    }
+    _allBusy = false;
+    if (ctx.mounted) Navigator.of(ctx, rootNavigator: true).pop();
+    if (mounted) setState(() {});
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(done.value > 0
+              ? 'تەواو بوو ✅ ${done.value} دەنگ بەردەستە بۆ ئۆفلاین'
+              : 'داگرتن سەرکەوتوو نەبوو — ئینتەرنێت بپشکنە'),
+          duration: const Duration(seconds: 3)));
     }
   }
 
@@ -138,6 +201,13 @@ class _AdhanVoiceScreenState extends State<AdhanVoiceScreen> {
               style: TextStyle(color: Colors.white, fontSize: 16,
                   fontWeight: FontWeight.bold)),
           actions: [
+            // Item 12: batch-download every adhan voice for offline use.
+            IconButton(
+              tooltip: 'داگرتنی هەموو دەنگەکان بۆ ئۆفلاین',
+              onPressed: _allBusy ? null : _downloadAll,
+              icon: const Icon(Icons.download_for_offline_rounded,
+                  color: Colors.white),
+            ),
             // Original: "تاقیکردنەوەی بانگدان" button.
             TextButton.icon(
               onPressed: () => _play(AppPrefs.I.adhanVoiceFile),

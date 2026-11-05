@@ -1,0 +1,146 @@
+name: Build RegayIslam Android APK
+
+# Item 23: free 24/7 builds — every push to main gets a fresh release APK
+# (artifact on this run), and it can still be triggered manually.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: regayislam-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Get Flutter packages
+        run: flutter pub get
+
+      - name: Generate Android platform
+        run: flutter create --platforms=android --org com.nwezhakanm --project-name regayislam .
+
+      - name: Prepare Adhan notification sound
+        run: |
+          mkdir -p android/app/src/main/res/raw
+          cp assets/sounds/dang.MP3 android/app/src/main/res/raw/adhan.mp3
+
+      - name: Prepare app launcher icon
+        run: |
+          mkdir -p android/app/src/main/res/drawable-nodpi
+          cp assets/images/app_icon.png android/app/src/main/res/drawable-nodpi/app_icon.png
+
+      - name: Configure Android package and desugaring
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          if not manifest.exists():
+              raise SystemExit("AndroidManifest.xml not found")
+          manifest_text = manifest.read_text()
+          for permission in ("android.permission.POST_NOTIFICATIONS", "android.permission.SCHEDULE_EXACT_ALARM", "android.permission.RECEIVE_BOOT_COMPLETED", "android.permission.ACCESS_FINE_LOCATION", "android.permission.ACCESS_COARSE_LOCATION"):
+              if permission not in manifest_text:
+                  manifest_text = re.sub(
+                      r'(<manifest[^>]*>)',
+                      lambda match: match.group(1) + f'\n    <uses-permission android:name="{permission}" />',
+                      manifest_text, count=1)
+          manifest_text = re.sub(r'android:label="[^"]*"', 'android:label="ڕێگای ئیسلام"', manifest_text, count=1)
+          manifest_text = re.sub(r'android:icon="@[^"]+"', 'android:icon="@drawable/app_icon"', manifest_text, count=1)
+          manifest_text = re.sub(r'android:roundIcon="@[^"]+"', 'android:roundIcon="@drawable/app_icon"', manifest_text, count=1)
+          if "ScheduledNotificationReceiver" not in manifest_text:
+              receiver_xml = """    <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+              <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+                  <intent-filter>
+                      <action android:name="android.intent.action.BOOT_COMPLETED" />
+                      <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                      <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                      <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+                  </intent-filter>
+              </receiver>
+          """
+              manifest_text = manifest_text.replace("</application>", receiver_xml + "    </application>", 1)
+          manifest.write_text(manifest_text)
+
+          gradle = Path("android/app/build.gradle.kts")
+          if not gradle.exists():
+              raise SystemExit("Android Gradle file not found")
+
+          text = gradle.read_text()
+
+          if not re.search(r'(?m)^\s*namespace\s*=', text):
+              raise SystemExit("namespace declaration not found")
+          if not re.search(r'(?m)^\s*applicationId\s*=', text):
+              raise SystemExit("applicationId declaration not found")
+
+          text = re.sub(r'(?m)^\s*namespace\s*=\s*"[^"]+"',
+                        '    namespace = "com.nwezhakanm"', text, count=1)
+          text = re.sub(r'(?m)^\s*applicationId\s*=\s*"[^"]+"',
+                        '        applicationId = "com.nwezhakanm"', text, count=1)
+
+          if "isCoreLibraryDesugaringEnabled" not in text:
+              text, count = re.subn(r'compileOptions\s*\{',
+                                    'compileOptions {\n        isCoreLibraryDesugaringEnabled = true',
+                                    text, count=1)
+              if count != 1:
+                  raise SystemExit("compileOptions block not found")
+
+          if "coreLibraryDesugaring(" not in text:
+              text = text.rstrip() + '''
+
+          dependencies {
+              coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+          }
+          '''
+
+          gradle.write_text(text)
+
+          root = Path("android/app/src/main")
+          activity = next(root.rglob("MainActivity.kt"), None)
+          if activity is None:
+              raise SystemExit("MainActivity.kt not found")
+
+          source = re.sub(r'(?m)^package\s+.*$',
+                          'package com.nwezhakanm',
+                          activity.read_text(), count=1)
+          target = root / "kotlin/com/nwezhakanm/MainActivity.kt"
+          target.parent.mkdir(parents=True, exist_ok=True)
+          target.write_text(source)
+          if activity != target:
+              activity.unlink()
+
+          print("Configured package com.nwezhakanm and core library desugaring.")
+          PY
+
+      - name: Verify Android desugaring configuration
+        run: |
+          grep -n "isCoreLibraryDesugaringEnabled" android/app/build.gradle.kts
+          grep -n "coreLibraryDesugaring" android/app/build.gradle.kts
+          grep -n 'applicationId = "com.nwezhakanm"' android/app/build.gradle.kts
+
+      - name: Build Release APK
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: RegayIslam-Android-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error

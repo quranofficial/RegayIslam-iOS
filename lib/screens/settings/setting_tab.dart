@@ -11,6 +11,7 @@ import '../misc/webview_screen.dart';
 import 'adhan_offset_screen.dart';
 import '../home/home_reorder_screen.dart';
 import 'adhan_voice_screen.dart';
+import '../admin/admin_screen.dart';
 
 /// Original: SettingFragmentActivity — app settings incl. night mode,
 /// fonts, prayer notifications, socials and about.
@@ -21,6 +22,46 @@ class SettingTab extends StatefulWidget {
 }
 
 class _SettingTabState extends State<SettingTab> {
+
+  void _openAdmin(BuildContext c) {
+    final c1 = TextEditingController();
+    showDialog<void>(
+      context: c,
+      builder: (d) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('پانێلی بەڕێوەبەر'),
+          content: TextField(
+            controller: c1,
+            obscureText: true,
+            autofocus: true,
+            decoration: const InputDecoration(
+                hintText: 'وشەی نهێنی', border: OutlineInputBorder()),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(d),
+                child: const Text('لابردن')),
+            ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryDark,
+                    foregroundColor: Colors.white),
+                onPressed: () {
+                  if (c1.text.trim() == kAdminPassword) {
+                    Navigator.pop(d);
+                    Navigator.push(c, MaterialPageRoute(
+                        builder: (_) => const AdminScreen()));
+                  } else {
+                    ScaffoldMessenger.of(c).showSnackBar(const SnackBar(
+                        content: Text('وشەی نهێنی هەڵەیە')));
+                  }
+                },
+                child: const Text('چوونەژوورەوە')),
+          ],
+        ),
+      ),
+    );
+  }
 
   void _openUrl(BuildContext c, String url) {
     final fixed = url.startsWith('http') ? url : 'https://$url';
@@ -160,6 +201,14 @@ class _SettingTabState extends State<SettingTab> {
                             url: 'https://regayislam-1-default-rtdb.firebaseio.com')))),
               ])),
           const SizedBox(height: 16),
+          // Item 22: discreet admin entry — password protected.
+          ListTile(
+              leading: Icon(Icons.admin_panel_settings_rounded,
+                  color: dark ? AppColors.gold : AppColors.primaryDark),
+              title: Text('پانێلی بەڕێوەبەر',
+                  style: TextStyle(fontSize: 14, color: txt)),
+              trailing: const Icon(Icons.chevron_left),
+              onTap: () => _openAdmin(context)),
           Center(child: Text('ڕێگای ئیسلام — v70.1',
               style: TextStyle(fontSize: 12, color: txt.withOpacity(.4)))),
           const SizedBox(height: 20),

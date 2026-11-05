@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
+import '../../core/ui.dart' show AudioSetup;
 import '../../data/favorites.dart';
 import 'ruqya_screen.dart';
 
@@ -32,6 +33,7 @@ class _RuqyaAudioScreenState extends State<RuqyaAudioScreen> {
   @override
   void initState() {
     super.initState();
+    AudioSetup.prepare(_player); // item 2: steady full volume everywhere
     _load();
     _player.onPlayerStateChanged.listen((s) {
       if (mounted) setState(() => _playing = s == PlayerState.playing);

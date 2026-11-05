@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'constants.dart';
@@ -166,6 +167,50 @@ class AppPrefs {
   void setPdfCachePath(String url, String path) =>
       _p.setString('pdf_cache_$url', path);
 
+  // --- item 8: renamed home sections (default label -> custom name) ---
+  String get homeNamesJson => _p.getString('homeNames') ?? '';
+  set homeNamesJson(String v) => _p.setString('homeNames', v);
+  Map<String, String> get homeNames {
+    try {
+      return (jsonDecode(homeNamesJson) as Map)
+          .map((k, v) => MapEntry('$k', '$v'));
+    } catch (_) {
+      return <String, String>{};
+    }
+  }
+
+  void setHomeName(String key, String? value) {
+    final m = homeNames;
+    if (value == null || value.trim().isEmpty || value.trim() == key) {
+      m.remove(key);
+    } else {
+      m[key] = value.trim();
+    }
+    homeNamesJson = jsonEncode(m);
+  }
+
+  // --- item 17: per-device liked videos (survive restarts) ---
+  List<String> get likedVideos => _p.getStringList('likedVideos') ?? <String>[];
+  bool isVideoLiked(String id) => likedVideos.contains(id);
+  void setVideoLiked(String id, bool v) {
+    final l = likedVideos;
+    if (v && !l.contains(id)) l.add(id);
+    if (!v) l.remove(id);
+    _p.setStringList('likedVideos', l);
+  }
+
+  // --- item 22: stamp of the last admin notification shown ---
+  String get notifSeen => _p.getString('notifSeen') ?? '';
+  set notifSeen(String v) => _p.setString('notifSeen', v);
+
+  // --- item 6: daily-ayah font size (only the ayah text) ---
+  int get ayahFontSize => _p.getInt('ayahSize') ?? 24;
+  set ayahFontSize(int v) => _p.setInt('ayahSize', v);
+
+  // --- item 6: stamp of the day the widget ayah was last pushed ---
+  String get widgetAyahDay => _p.getString('widgetAyahDay') ?? '';
+  set widgetAyahDay(String v) => _p.setString('widgetAyahDay', v);
+
   ThemeData get theme => ThemeData(
         brightness: day ? Brightness.light : Brightness.dark,
         colorScheme: ColorScheme.fromSeed(
@@ -176,5 +221,42 @@ class AppPrefs {
         cardColor: day ? Colors.white : AppColors.nightCard,
         fontFamily: fontUi,
         useMaterial3: true,
+        // Item 14: night mode everywhere — dialogs, sheets, snackbars,
+        // app bars and dividers included.
+        appBarTheme: AppBarTheme(
+            backgroundColor:
+                day ? AppColors.primaryDark : AppColors.nightCard,
+            foregroundColor: Colors.white,
+            elevation: 0),
+        dialogBackgroundColor: day ? Colors.white : AppColors.nightCard,
+        dialogTheme: DialogThemeData(
+            backgroundColor: day ? Colors.white : AppColors.nightCard,
+            titleTextStyle: TextStyle(
+                color: day ? Colors.black : Colors.white,
+                fontWeight: FontWeight.bold, fontSize: 17),
+            contentTextStyle: TextStyle(
+                color: day ? Colors.black87 : Colors.white70,
+                fontSize: 14, height: 1.6),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16))),
+        bottomSheetTheme: BottomSheetThemeData(
+            backgroundColor: day ? Colors.white : AppColors.nightCard,
+            modalBackgroundColor: day ? Colors.white : AppColors.nightCard),
+        snackBarTheme: SnackBarThemeData(
+            backgroundColor: day ? AppColors.primaryDark : AppColors.gold,
+            contentTextStyle: TextStyle(color: Colors.white, fontSize: 13),
+            behavior: SnackBarBehavior.floating),
+        dividerColor: day ? Colors.black12 : Colors.white10,
+        switchTheme: SwitchThemeData(
+            thumbColor: WidgetStateProperty.resolveWith((s) =>
+                s.contains(WidgetState.selected)
+                    ? (day ? AppColors.primaryDark : AppColors.gold)
+                    : null),
+            trackColor: WidgetStateProperty.resolveWith((s) =>
+                s.contains(WidgetState.selected)
+                    ? (day
+                        ? AppColors.primaryDark.withOpacity(.4)
+                        : AppColors.gold.withOpacity(.4))
+                    : (day ? Colors.black26 : Colors.white24))),
       );
 }

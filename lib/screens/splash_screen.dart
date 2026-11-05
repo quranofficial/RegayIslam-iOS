@@ -37,13 +37,37 @@ class _SplashScreenState extends State<SplashScreen> {
       await PrayerNotifications.I.requestPermission();
       await PrayerNotifications.I.scheduleAll();
       await HomeWidgets.updatePrayer();
+      // Item 5: the Quran widget always carries one fresh ayah of the day.
+      await HomeWidgets.pushDailyAyah();
     } catch (_) {}
+    _checkAdminNotification();
     if (!mounted) return;
     await Future.delayed(const Duration(milliseconds: 900));
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const MainScreen()));
     _maybeShowDialog();
+  }
+
+  /// Item 22: the admin panel writes {title, text, date, open} to the
+  /// "notification" node; new messages arrive as a real system
+  /// notification (no FCM key needed — the app polls on start).
+  Future<void> _checkAdminNotification() async {
+    try {
+      final rows = await Rtdb.I.list('notification');
+      if (rows.isEmpty || !mounted) return;
+      final n = rows.last;
+      if ('${n['open'] ?? ''}'.toLowerCase() == 'false') return;
+      final title = '${n['title'] ?? ''}'.trim();
+      final text = '${n['text'] ?? ''}'.trim();
+      if (title.isEmpty && text.isEmpty) return;
+      final stamp = '${n['date'] ?? ''}|$title'.trim();
+      if (stamp.isNotEmpty && AppPrefs.I.notifSeen == stamp) return;
+      await PrayerNotifications.I.showNow(
+          title.isEmpty ? 'ڕێگای ئیسلام' : title,
+          text.isEmpty ? 'پەیامێکی نوێ هەیە' : text);
+      AppPrefs.I.notifSeen = stamp;
+    } catch (_) {}
   }
 
   /// dialogg/dialog = {open, only, title, text, url, close, ver, random}.
