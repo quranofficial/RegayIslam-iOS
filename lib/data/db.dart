@@ -156,4 +156,15 @@ class Db {
   /// Books (garanawa.db).
   Future<List<Map<String, Object?>>> books() async =>
       _garanawa!.query('babatakan', orderBy: '_id');
+
+  /// One garanawa.db section table (bochetawbabkain, chontawbabkam,
+  /// marjakanitawba, neshanayqbulitawba) for the tawba book reader.
+  Future<List<Map<String, Object?>>> garanawaTable(String table) async {
+    const allowed = [
+      'babatakan', 'bochetawbabkain', 'chontawbabkam',
+      'marjakanitawba', 'neshanayqbulitawba'
+    ];
+    if (!allowed.contains(table)) return [];
+    return _garanawa!.query(table, orderBy: '_id');
+  }
 }

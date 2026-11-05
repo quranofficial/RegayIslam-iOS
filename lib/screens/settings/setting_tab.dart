@@ -8,6 +8,7 @@ import '../nwezh/nwezhi_settings.dart';
 import '../feedback/feedback_screen.dart';
 import '../band/band_screen.dart';
 import '../misc/webview_screen.dart';
+import 'adhan_offset_screen.dart';
 
 /// Original: SettingFragmentActivity — app settings incl. night mode,
 /// fonts, prayer notifications, socials and about.
@@ -79,6 +80,14 @@ class _SettingTabState extends State<SettingTab> {
                     trailing: const Icon(Icons.chevron_left),
                     onTap: () => Navigator.push(context, MaterialPageRoute(
                         builder: (_) => const NwezhiSettingsScreen()))),
+                ListTile(
+                    leading: const Icon(Icons.schedule_rounded,
+                        color: AppColors.primaryDark),
+                    title: Text('دواخستن و پێشخستنی کاتی بانگدان',
+                        style: TextStyle(fontSize: 14, color: txt)),
+                    trailing: const Icon(Icons.chevron_left),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => const AdhanOffsetScreen()))),
               ])),
           _section('پەیوەندی', dark, txt),
           Card(color: dark ? AppColors.nightCard : Colors.white,

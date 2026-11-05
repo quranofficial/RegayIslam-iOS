@@ -96,8 +96,11 @@ class PrayerNotifications {
           if (parts.length < 2) continue;
           final h = int.tryParse(parts[0]); final m = int.tryParse(parts[1]);
           if (h == null || m == null) continue;
-          final when =
-              tz.TZDateTime(tz.local, date.year, date.month, date.day, h, m);
+          // BrdnapeshActivity: per-prayer offset in minutes
+          // (negative = دواخستن, positive = پێشخستن).
+          final offset = p.adhanOffset(entry.key);
+          final when = tz.TZDateTime(tz.local, date.year, date.month,
+                  date.day, h, m).add(Duration(minutes: offset));
           if (when.isBefore(tz.TZDateTime.now(tz.local))) continue;
           final android = AndroidNotificationDetails(
               'adhan_channel_v2_${p.adhanSoundEnabled ? 'sound' : 'silent'}', 'بانگی نوێژ',

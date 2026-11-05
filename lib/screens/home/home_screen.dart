@@ -22,11 +22,14 @@ import '../settings/question_screen.dart';
 import '../tasbih/tasbih_counter.dart';
 import '../qibla_screen.dart';
 import '../books/kteb_screen.dart';
-import '../nwezh/ruqya_screen.dart';
+import '../books/farmwda_screen.dart';
+import '../books/tawba_screen.dart';
+import '../nwezh/ruqya_audio_screen.dart';
 import '../nwezh/prayers_month.dart';
 import '../nwezh/prayer_times_screen.dart';
 import '../nwezh/dasalatakan_screen.dart';
 import '../settings/tawanakanm_screen.dart';
+import '../settings/women_screen.dart';
 import 'prayer/nwezh_hub.dart';
 
 /// Original: HomeFragmentActivity — 186 widgets: banners, tasbih counter,
@@ -335,19 +338,19 @@ class _HomeScreenState extends State<HomeScreen> {
       _G('کتێبخانە', Icons.local_library_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KtebScreen()))),
       _G('ڕوقیەی شەرعی', Icons.healing_rounded,
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RuqyaScreen()))),
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RuqyaAudioScreen()))),
       _G('زیکرەکان', Icons.self_improvement_rounded,
           () => _openJson('assets/data/zikrakan.json', 'زیکرەکان')),
       _G('فەرموودەکان', Icons.format_quote_rounded,
-          () => _openJson('assets/data/farmwda.json', 'فەرموودەکان')),
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FarmwdaScreen()))),
       _G('مانگی ڕەمەزان', Icons.dark_mode_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RamazanScreen()))),
       _G('ئافرەتان', Icons.face_3_rounded,
-          () => _openJson('assets/data/girlss.json', 'ئافرەتان')),
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WomenScreen()))),
       _G('دوعا و پاڕانەوە', Icons.volunteer_activism_rounded,
           () => _openJson('assets/data/duha.json', 'دوعا و پاڕانەوە')),
       _G('چۆن تۆبە بکەم', Icons.change_circle_rounded,
-          () => _openJson('assets/data/taybat.json', 'چۆن تۆبە بکەم')),
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TawbaScreen()))),
       _G('حەج و عومرە', Icons.flight_land_rounded,
           () => _openJson('assets/data/hajw.json', 'حەج و عومرە')),
       _G('ئەهلی ئاگر', Icons.local_fire_department_rounded,

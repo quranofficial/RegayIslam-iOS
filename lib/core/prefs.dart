@@ -76,6 +76,28 @@ class AppPrefs {
   bool get adhanVibrationEnabled => _p.getBool('adhanVibrationEnabled') ?? true;
   set adhanVibrationEnabled(bool v) => _p.setBool('adhanVibrationEnabled', v);
 
+  // --- adhan time offsets in minutes, -60..+60 (BrdnapeshActivity:
+  //     دواخستن و پێشخستنی کاتی بانگدان) ---
+  int get offsetBayani => _p.getInt('off_bayani') ?? 0;
+  set offsetBayani(int v) => _p.setInt('off_bayani', v);
+  int get offsetNiwaro => _p.getInt('off_niwaro') ?? 0;
+  set offsetNiwaro(int v) => _p.setInt('off_niwaro', v);
+  int get offsetAsr => _p.getInt('off_asr') ?? 0;
+  set offsetAsr(int v) => _p.setInt('off_asr', v);
+  int get offsetEywara => _p.getInt('off_eywara') ?? 0;
+  set offsetEywara(int v) => _p.setInt('off_eywara', v);
+  int get offsetIsha => _p.getInt('off_esha') ?? 0;
+  set offsetIsha(int v) => _p.setInt('off_esha', v);
+
+  int adhanOffset(String prayerKey) => switch (prayerKey) {
+        'bayani' => offsetBayani,
+        'niwaro' => offsetNiwaro,
+        'asr' => offsetAsr,
+        'eywara' => offsetEywara,
+        'esha' => offsetIsha,
+        _ => 0,
+      };
+
   // --- tasbih counters (TasbihFragmentActivity) ---
   List<String> get tasbihList => _p.getStringList('tasbihlist') ??
       <String>['سوبحان الله|33', 'الحمد لله|33', 'الله أكبر|34'];
@@ -94,18 +116,6 @@ class AppPrefs {
   set zikrBody(String v) => _p.setString('zkr', v);
   String get zikrVip => _p.getString('vip') ?? '';
   set zikrVip(String v) => _p.setString('vip', v);
-
-  // manual prayer times (DastnwezhActivity)
-  Map<String, String> manualTimes() {
-    return {
-      for (final k in kPrayerNames.keys) k: _p.getString('m_$k') ?? '',
-    };
-  }
-
-  void setManualTime(String k, String v) => _p.setString('m_$k', v);
-
-  bool get useManual => _p.getBool('usemanual') ?? false;
-  set useManual(bool v) => _p.setBool('usemanual', v);
 
   ThemeData get theme => ThemeData(
         brightness: day ? Brightness.light : Brightness.dark,
