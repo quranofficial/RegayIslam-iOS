@@ -194,11 +194,27 @@ class Rtdb {
   Future<List<Map<String, dynamic>>> liveMuslim() => list('livemuslim');
   Future<List<Map<String, dynamic>>> dialogg() => list('dialogg');
   Future<List<Map<String, dynamic>>> ramadan() => list('ramadan');
+  /// The real node in the DB is "CommentVideo" (capital C and V).
   Future<List<Map<String, dynamic>>> comments(String videoId) =>
-      list('commentvideo/$videoId');
+      list('CommentVideo/$videoId');
 
   Future<void> sendFeedback(Map<String, dynamic> data) =>
       push('feedback', data);
   Future<void> sendComment(String videoId, Map<String, dynamic> data) =>
-      push('commentvideo/$videoId', data);
+      push('CommentVideo/$videoId', data);
+
+  /// Item 17: the like counter lives on the video row (field "like");
+  /// increment it in the DB and return the new value, keeping the
+  /// per-device "already liked" guard in prefs.
+  Future<int?> likeVideo(String folder, String videoKey, String field) async {
+    try {
+      final v = await get('videoNew/$folder/$videoKey/$field');
+      final cur = int.tryParse('$v') ?? 0;
+      final next = cur + 1;
+      await patch('videoNew/$folder/$videoKey', {field: '$next'});
+      return next;
+    } catch (_) {
+      return null;
+    }
+  }
 }

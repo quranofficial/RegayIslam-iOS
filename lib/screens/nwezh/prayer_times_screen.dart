@@ -80,16 +80,19 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                   if (_cities.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      value: _cities.any((c) => '${c['name']}' == AppPrefs.I.cityId)
+                      value: _cities.any((c) => '${c['id']}' == AppPrefs.I.cityId)
                         ? AppPrefs.I.cityId : null,
                       decoration: const InputDecoration(labelText: 'گۆڕینی شار'),
                       items: [for (final c in _cities)
-                        DropdownMenuItem(value: '${c['name']}',
+                        DropdownMenuItem(value: '${c['id']}',
                           child: Text('${c['name']}'))],
                       onChanged: (v) async {
                         if (v == null) return;
                         AppPrefs.I.cityId = v;
-                        AppPrefs.I.cityName = v;
+                        AppPrefs.I.cityName = _cities
+                            .where((c) => '${c['id']}' == v)
+                            .map((c) => '${c['name']}')
+                            .join();
                         await _load();
                       },
                     ),

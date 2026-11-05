@@ -1,13 +1,18 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../core/ui.dart';
+import 'home_reorder_screen.dart';
+import '../quran/quran_creator_screen.dart';
+import '../quran/ayah_range_screen.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
 import '../../data/rtdb.dart';
+import '../../data/home_widgets.dart';
 import '../../data/favorites.dart';
 import '../../main.dart' show toggleDayNight;
 import '../articles/json_article_screen.dart';
-import '../articles/info_screen.dart';
 import '../misc/zikr_detail_screen.dart';
 import '../media/live_screen.dart';
 import '../media/videos_screen.dart';
@@ -46,6 +51,8 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _timesError = false;
   Map<String, dynamic>? _ramadanDay;
   List<Map<String, dynamic>> _live = [];
+  Map<String, Object?>? _bannerAyah;
+  List<Map<String, Object?>>? _bannerPool;
 
   @override
   void initState() {
@@ -68,16 +75,41 @@ class _HomeScreenState extends State<HomeScreen> {
       final l = await Rtdb.I.liveMuslim();
       if (mounted) setState(() => _live = l);
     } catch (_) {}
+    _loadBannerAyah();
+  }
+
+  /// Daily ayah for the home banner: deterministic day-of-year pick, and
+  /// every tap loads the next random one (item 5).
+  Future<void> _loadBannerAyah() async {
+    try {
+      final sura = Random(DateTime.now().day).nextInt(114) + 1;
+      final pool = await Db.I.ayat(sura, AppPrefs.I.tafsir);
+      if (pool.isEmpty || !mounted) return;
+      final seed = AppPrefs.I.ayahBannerSeed;
+      final idx = seed >= 0 && seed < pool.length ? seed : Random(DateTime.now().day).nextInt(pool.length);
+      setState(() { _bannerPool = pool; _bannerAyah = pool[idx]; });
+      HomeWidgets.updateAyah(
+        text: '${pool[idx]['text'] ?? ''}',
+        reference: '${pool[idx]['sura_name_ar'] ?? ''} — ئایەتی ${pool[idx]['ayah'] ?? ''}');
+    } catch (_) {}
+  }
+
+  void _nextBannerAyah() {
+    final pool = _bannerPool;
+    if (pool == null || pool.length < 2) return;
+    final idx = Random().nextInt(pool.length);
+    AppPrefs.I.ayahBannerSeed = idx;
+    setState(() => _bannerAyah = pool[idx]);
+  }
+
+  void _openReorder() {
+    Navigator.push(context,
+        MaterialPageRoute(builder: (_) => const HomeReorderScreen()));
   }
 
   void _openJson(String file, String title) {
     Navigator.push(context, MaterialPageRoute(
         builder: (_) => JsonArticleScreen(file: file, title: title)));
-  }
-
-  void _openInfo(String key, String title) {
-    Navigator.push(context, MaterialPageRoute(
-        builder: (_) => InfoScreen(screenKey: key, title: title)));
   }
 
   @override
@@ -128,15 +160,27 @@ class _HomeScreenState extends State<HomeScreen> {
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: txt)),
         const Spacer(),
         IconButton(
+            tooltip: 'هاوبەشی ئەپ',
+            onPressed: () => sharePage('ڕێگای ئیسلام — قورئان، کاتەکانی نوێژ، زیکر و زانیاری ئاینی'),
+            icon: Icon(Icons.share_rounded, size: 20,
+                color: txt.withOpacity(.6))),
+        IconButton(
             onPressed: toggleDayNight,
             icon: Icon(dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
                 color: txt)),
       ]);
 
-  Widget _ayatBanner(Color card, Color txt, bool dark) => InkWell(
+  Widget _ayatBanner(Color card, Color txt, bool dark) {
+    final r = _bannerAyah;
+    final tafsir = r == null ? '' : '${r[AppPrefs.I.tafsir] ?? ''}';
+    final body = r == null
+        ? 'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ'
+        : '${r['text'] ?? ''}';
+    return InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => Navigator.push(context,
+        onLongPress: () => Navigator.push(context,
             MaterialPageRoute(builder: (_) => const AyatScreen())),
+        onTap: _nextBannerAyah,
         child: Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -152,19 +196,41 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: dark ? AppColors.gold : Colors.white70,
                         fontSize: 12, fontWeight: FontWeight.bold)),
                 const Spacer(),
+                Icon(Icons.refresh_rounded, color: Colors.white70, size: 18),
+                const SizedBox(width: 6),
                 Icon(Icons.chevron_left, color: Colors.white70, size: 18),
               ]),
               const SizedBox(height: 8),
+              if (r != null)
+                Row(children: [
+                  Text(suraLabel('${r['sura_name_ar'] ?? ''}') +
+                      ' • ئایەتی ${(r['ayah'] ?? 0)}',
+                      style: TextStyle(
+                          color: dark ? AppColors.gold : Colors.white70,
+                          fontSize: 11, fontWeight: FontWeight.bold)),
+                ]),
+              if (r != null) const SizedBox(height: 6),
               Directionality(
                 textDirection: TextDirection.rtl,
-                child: Text(
-                    'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ',
+                child: Text(body,
                     style: TextStyle(
                         color: Colors.white,
                         fontFamily: 'Quran',
                         fontSize: 18, height: 1.8)),
               ),
+              if (tafsir.trim().isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Directionality(
+                  textDirection: TextDirection.rtl,
+                  child: Text(tafsir,
+                      maxLines: 3, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: Colors.white.withOpacity(.75),
+                          fontSize: 12, height: 1.7)),
+                ),
+              ],
             ])));
+  }
 
   Widget _banner({required IconData icon, required String title,
       required String sub, required Color color, required VoidCallback onTap}) =>
@@ -301,7 +367,7 @@ class _HomeScreenState extends State<HomeScreen> {
             else
               Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
                 _t('بەیانی', _times!['bayani'], txt, dark),
-                _t('گزشتن', _times!['xorhalatn'], txt, dark),
+                _t('گزنک', _times!['xorhalatn'], txt, dark),
                 _t('نیوەڕۆ', _times!['niwaro'], txt, dark),
                 _t('عەسر', _times!['asr'], txt, dark),
                 _t('ئێوارە', _times!['eywara'], txt, dark),
@@ -318,7 +384,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ]);
 
   Widget _grid(bool dark, Color card, Color txt) {
-    final items = <_G>[
+    final items = _ordered(<_G>[
       _G('دڵخوازەکان', Icons.bookmarks_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesScreen()))),
       _G('ئیدیتی قورئان', Icons.edit_note_rounded,
@@ -395,7 +461,12 @@ class _HomeScreenState extends State<HomeScreen> {
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DasalatakanScreen()))),
       _G('کاتەکانی مانگ', Icons.calendar_month_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PrayersMonthScreen()))),
-    ];
+      _G('خوێندنی ئایەتەکان', Icons.surround_sound_rounded,
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AyahRangeScreen()))),
+      _G('دروستکردنی ڤیدیۆ و وێنە', Icons.movie_creation_rounded,
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuranCreatorScreen()))),
+      _G('ڕێکخستنی بەشەکان', Icons.swap_vert_rounded, _openReorder),
+    ], dark, card, txt);
     return GridView.count(
         crossAxisCount: 3,
         shrinkWrap: true,
@@ -407,6 +478,7 @@ class _HomeScreenState extends State<HomeScreen> {
           for (final g in items)
             InkWell(
                 onTap: g.onTap,
+                onLongPress: _openReorder,
                 borderRadius: BorderRadius.circular(14),
                 child: Container(
                     padding: const EdgeInsets.all(8),
@@ -430,6 +502,21 @@ class _HomeScreenState extends State<HomeScreen> {
                           title: g.label, content: 'بەشی ${g.label} لە ئەپی ڕێگای ئیسلام')),
                     ]))),
         ]);
+  }
+
+  /// Item 8: user-arranged section order (persisted; unknown items keep
+  /// their default position at the end).
+  List<_G> _ordered(List<_G> all, bool dark, Color card, Color txt) {
+    final order = AppPrefs.I.homeOrder;
+    if (order.isEmpty) return all;
+    final byLabel = {for (final g in all) g.label: g};
+    final out = <_G>[];
+    for (final l in order) {
+      final g = byLabel.remove(l);
+      if (g != null) out.add(g);
+    }
+    out.addAll(byLabel.values);
+    return out;
   }
 }
 

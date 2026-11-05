@@ -244,16 +244,47 @@ class _AdhanVoiceScreenState extends State<AdhanVoiceScreen> {
                                         width: 22, height: 22,
                                         child: CircularProgressIndicator(
                                             strokeWidth: 2))
-                                    : IconButton(
-                                        tooltip: playingThis
-                                            ? 'وەستان' : 'بیستنی دەنگ',
-                                        onPressed: () => _play(file),
-                                        icon: Icon(
-                                            playingThis
-                                                ? Icons.pause_circle_rounded
-                                                : Icons.play_circle_rounded,
-                                            size: 30,
-                                            color: AppColors.primaryDark)),
+                                    : Row(mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          FutureBuilder<File?>(
+                                            future: _localFile(file),
+                                            builder: (context, snap) {
+                                              final got = snap.data != null;
+                                              return IconButton(
+                                                tooltip: got
+                                                    ? 'داگیراوە بۆ ئۆفلاین — دووبارە داگرتن'
+                                                    : 'داگرتنی دەنگ بۆ بەکارهێنانی بێ ئینتەرنێت',
+                                                onPressed: () async {
+                                                  await Downloader.download(
+                                                      _url(file), 'bang/$file.mp3');
+                                                  if (!context.mounted) return;
+                                                  ScaffoldMessenger.of(context)
+                                                      .showSnackBar(SnackBar(
+                                                          content: Text(got
+                                                              ? 'دووبارە داگیرا ✅'
+                                                              : 'داگیرا ✅ — ئێستا بێ ئینتەرنێت کاردەکات')));
+                                                  setState(() {});
+                                                },
+                                                icon: Icon(
+                                                    got
+                                                        ? Icons.download_done_rounded
+                                                        : Icons.download_rounded,
+                                                    size: 22,
+                                                    color: AppColors.primaryDark));
+                                            },
+                                          ),
+                                          IconButton(
+                                              tooltip: playingThis
+                                                  ? 'وەستان'
+                                                  : 'بیستنی دەنگ',
+                                              onPressed: () => _play(file),
+                                              icon: Icon(
+                                                  playingThis
+                                                      ? Icons.pause_circle_rounded
+                                                      : Icons.play_circle_rounded,
+                                                  size: 30,
+                                                  color: AppColors.primaryDark)),
+                                        ]),
                               ),
                             );
                           },

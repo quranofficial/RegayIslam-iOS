@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>پانێلی بەڕێوەبردن — ڕێگای ئیسلام</title>
+<style>
+  :root{--bg:#0d1117;--card:#161b22;--line:#21262d;--txt:#e6edf3;--dim:#8b949e;--green:#2ea043;--red:#f85149;--gold:#d4a72c;--blue:#58a6ff}
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',Tahoma,sans-serif;margin:0;padding:16px;font-size:14px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--dim);font-size:12px;margin-bottom:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+  .card h2{font-size:15px;margin:0 0 10px;color:var(--gold)}
+  label{display:block;font-size:12px;color:var(--dim);margin:8px 0 4px}
+  input,textarea,select{width:100%;background:#0a0d12;border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:8px 10px;font-size:13px;font-family:inherit}
+  textarea{min-height:90px;resize:vertical;font-family:ui-monospace,monospace;direction:ltr;text-align:left}
+  button{background:var(--green);border:none;color:#fff;border-radius:8px;padding:9px 16px;font-size:13px;font-family:inherit;cursor:pointer;margin-top:8px}
+  button.gray{background:#30363d}
+  button.red{background:var(--red)}
+  button.blue{background:var(--blue);color:#0d1117}
+  button:disabled{opacity:.5;cursor:wait}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .row>*{flex:1;min-width:140px}
+  .msg{font-size:12px;margin-top:8px;padding:8px;border-radius:8px;white-space:pre-wrap;word-break:break-all}
+  .ok{background:#12261e;color:#7ee2a8}
+  .err{background:#2d1517;color:#ffb0aa}
+  .info{color:var(--dim)}
+  a{color:var(--blue)}
+  .tree{font-family:ui-monospace,monospace;font-size:12px;direction:ltr;text-align:left;max-height:420px;overflow:auto;background:#0a0d12;border:1px solid var(--line);border-radius:8px;padding:10px}
+  .node{margin-left:0}
+  .k{color:var(--blue)}
+  .v{color:#7ee2a8}
+  .caret{cursor:pointer;color:var(--dim);user-select:none}
+  .tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+  .tabs button{margin:0;background:#21262d}
+  .tabs button.on{background:var(--green)}
+  details{margin:6px 0}
+  summary{cursor:pointer;color:var(--gold);font-size:13px}
+</style>
+</head>
+<body>
+<h1>⚙️ پانێلی بەڕێوەبردنی ڕێگای ئیسلام</h1>
+<div class="sub">داتابەیسی Firebase + بارکردنی فایل بۆ GitHub — هەموو شتێک لە یەک لاپەڕەدا</div>
+
+<div class="tabs">
+  <button id="tab-db" class="on" onclick="switchTab('db')">🗄️ داتابەیس</button>
+  <button id="tab-quick" onclick="switchTab('quick')">⚡ ئامرازی خێرا</button>
+  <button id="tab-gh" onclick="switchTab('gh')">⬆️ بارکردن بۆ GitHub</button>
+</div>
+
+<!-- ================= DATABASE TAB ================= -->
+<div id="pane-db" class="card">
+  <h2>داتابەیسی Firebase (خوێندن و نوێکردنەوە)</h2>
+  <label>ناونیشانی داتابەیس</label>
+  <input id="dbUrl" value="https://regayislam-1-default-rtdb.firebaseio.com">
+  <label>ڕێچکەی نۆد (بۆ نموونە: dialogg/dialog یان videoNew)</label>
+  <div class="row">
+    <input id="dbPath" value="" placeholder="بەتاڵ = هەموو داتابەیس">
+    <button onclick="loadTree()">گەڕان بەدوای نۆد</button>
+  </div>
+  <div id="dbMsg" class="msg info">نۆدێک بگەڕێ بۆ کردنەوەی دارەکە</div>
+  <div id="tree" class="tree" style="display:none"></div>
+  <details open>
+    <summary>دەستکاریکردنی نۆدێک (JSON دابنێ و پاشەکەوت بکە)</summary>
+    <label>ڕێچکە</label>
+    <input id="editPath" placeholder="dialogg/dialog">
+    <label>نرخی JSON (بۆ نووسین: PUT — "خۆپشکنین" بە null سڕینەوەیە)</label>
+    <textarea id="editVal" placeholder='{"open":"true","title":"...","text":"..."}'></textarea>
+    <div class="row">
+      <button onclick="saveNode()">💾 پاشەکەوتکردن (PUT)</button>
+      <button class="blue" onclick="pushNode()">➕ زیادکردنی بابەتی نوێ (POST)</button>
+      <button class="red" onclick="deleteNode()">🗑️ سڕینەوەی نۆد</button>
+    </div>
+    <div id="editMsg" class="msg"></div>
+  </details>
+</div>
+
+<!-- ================= QUICK TAB ================= -->
+<div id="pane-quick" style="display:none" class="card">
+  <h2>ئامرازی خێرا (هەمان ئەو شتانەی ئەپ بەکاریدەهێنێت)</h2>
+
+  <details open><summary>📢 دایەلاگی سەرەتای ئەپ (dialogg/dialog)</summary>
+    <div class="row">
+      <div><label>ناونیشان (title)</label><input id="d_title"></div>
+      <div><label>لینک (url)</label><input id="d_url"></div>
+    </div>
+    <label>دەق (text)</label><textarea id="d_text"></textarea>
+    <div class="row">
+      <div><label>کردنەوە؟ (open=true/false)</label><input id="d_open" value="true"></div>
+      <div><label>دوگمەی داخستن (close)</label><input id="d_close" value="داخستن"></div>
+      <div><label>وەشان (ver)</label><input id="d_ver" placeholder="99.9"></div>
+    </div>
+    <button onclick="saveDialog()">💾 پاشەکەوتکردنی دایەلاگ</button>
+    <button class="gray" onclick="fillDialog()">هێنانەوەی نرخی ئێستا</button>
+    <div id="dlgMsg" class="msg"></div>
+  </details>
+
+  <details><summary>🎬 زیادکردنی ڤیدیۆ (videoNew/&lt;folder&gt;)</summary>
+    <div class="row">
+      <div><label>فۆڵدەر (tag id لە videoall)</label><input id="v_folder" placeholder="20252405032442"></div>
+      <div><label>ناونیشان (name)</label><input id="v_name"></div>
+    </div>
+    <div class="row">
+      <div><label>لینکی ڤیدیۆ (url)</label><input id="v_url"></div>
+      <div><label>کات (timevideo)</label><input id="v_time" placeholder="2:18"></div>
+    </div>
+    <button onclick="addVideo()">➕ زیادکردنی ڤیدیۆ</button>
+    <div id="vidMsg" class="msg"></div>
+  </details>
+
+  <details><summary>🌙 بەشی ڕەمەزان (ramadan)</summary>
+    <div class="row">
+      <div><label>ڕۆژ (day)</label><input id="r_day" type="number"></div>
+      <div><label>مانگ (month)</label><input id="r_month" type="number"></div>
+      <div><label>چالاک؟ (state=true/false)</label><input id="r_state" value="true"></div>
+    </div>
+    <button onclick="saveRamadan()">💾 پاشەکەوتکردنی ڕەمەزان</button>
+    <div id="ramMsg" class="msg"></div>
+  </details>
+
+  <details><summary>❓ پرسیار و وەڵام (quiz)</summary>
+    <label>لیستی پرسیارەکان (JSON array: [{"question":"...","answer1":"...","answer2":"...","answer3":"...","correct":"1"}])</label>
+    <textarea id="q_json" placeholder="[]"></textarea>
+    <button onclick="saveQuiz()">💾 پاشەکەوتکردنی پرسیارەکان</button>
+    <div id="quizMsg" class="msg"></div>
+  </details>
+</div>
+
+<!-- ================= GITHUB TAB ================= -->
+<div id="pane-gh" style="display:none" class="card">
+  <h2>بارکردنی وێنە/فایل/ڤیدیۆ بۆ GitHub (بۆ لینکی ئەپ)</h2>
+  <label>GitHub Personal Access Token (تەنها لەم وێبگەڕەکەتدا هەڵدەگیرێت)</label>
+  <input id="ghToken" type="password" placeholder="ghp_...">
+  <div class="row">
+    <div><label>خاوەن (owner)</label><input id="ghOwner" value="quranofficial"></div>
+    <div><label>Repo</label><input id="ghRepo" value="RegayIslam-iOS"></div>
+    <div><label>Branch</label><input id="ghBranch" value="main"></div>
+  </div>
+  <label>ڕێچکەی مەبەست (ئەگەر فۆڵدەر بوونی نەبێت دروست دەکرێت)</label>
+  <input id="ghPath" value="upload/2026/11/">
+  <label>فایل</label>
+  <input id="ghFile" type="file">
+  <label>ناوی فایل لە GitHub (بەتاڵ = هەمان ناو)</label>
+  <input id="ghName" placeholder="image.png">
+  <button onclick="upload()">⬆️ بارکردن بۆ GitHub</button>
+  <div id="ghMsg" class="msg"></div>
+  <div id="ghLink" class="msg"></div>
+</div>
+
+<div class="sub" style="margin-top:20px">تێبینی: ئەم پانێلە ڕاستەوخۆ لەگەڵ Firebase REST API و GitHub Contents API کاردەکات؛ هیچ داتایەک نانێتە سێرڤەرێکی تر.</div>
+
+<script>
+const $ = id => document.getElementById(id);
+function msg(id, text, cls){ const el=$(id); el.className='msg '+(cls||''); el.textContent=text; }
+function switchTab(t){
+  for (const k of ['db','quick','gh']){
+    $('pane-'+k).style.display = k===t ? '' : 'none';
+    $('tab-'+k).classList.toggle('on', k===t);
+  }
+}
+$('ghToken').value = localStorage.getItem('gh_token') || '';
+$('ghToken').oninput = e => localStorage.setItem('gh_token', e.target.value);
+const dbBase = () => $('dbUrl').value.replace(/\/+$/,'');
+const cleanPath = p => p.split('/').filter(x=>x).map(encodeURIComponent).join('/');
+
+async function loadTree(){
+  try{
+    const p = cleanPath($('dbPath').value);
+    const r = await fetch(`${dbBase()}/${p}.json`);
+    const v = await r.json();
+    if (v===null){ msg('dbMsg','ئەم نۆدە بەتاڵە یان بوونی نییە','err'); $('tree').style.display='none'; return; }
+    $('tree').style.display='';
+    $('tree').innerHTML='';
+    $('tree').appendChild(renderNode(v, true));
+    msg('dbMsg','بارکرا ✅ — کلیک لە ▸ بکە بۆ کردنەوەی لقەکان','ok');
+    $('editPath').value = $('dbPath').value;
+    $('editVal').value = JSON.stringify(v, null, 2);
+  }catch(e){ msg('dbMsg','هەڵە: '+e.message,'err'); }
+}
+function renderNode(v, open){
+  const d = document.createElement('div'); d.className='node';
+  if (v && typeof v==='object'){
+    const keys = Object.keys(v);
+    const c = document.createElement('span'); c.className='caret'; c.textContent = (open?'▾':'▸')+` {${keys.length}} `;
+    c.onclick=()=>{ body.style.display = body.style.display==='none'?'':'none'; c.textContent = (body.style.display==='none'?'▸':'▾')+` {${keys.length}} `; };
+    d.appendChild(c);
+    const body = document.createElement('div'); body.style.display = open?'':'none';
+    for (const k of keys){
+      const line = document.createElement('div'); line.style.marginLeft='14px';
+      const kk = document.createElement('span'); kk.className='k'; kk.textContent = k+': ';
+      line.appendChild(kk);
+      line.appendChild(renderNode(v[k], false));
+      body.appendChild(line);
+    }
+    d.appendChild(body);
+  } else {
+    const s = document.createElement('span'); s.className='v';
+    s.textContent = JSON.stringify(v); d.appendChild(s);
+  }
+  return d;
+}
+async function saveNode(){
+  const p = cleanPath($('editPath').value);
+  if (!p) return msg('editMsg','ڕێچکە بنووسە','err');
+  let val; try{ val = JSON.parse($('editVal').value); }catch(e){ return msg('editMsg','JSON هەڵەیە: '+e.message,'err'); }
+  try{
+    const r = await fetch(`${dbBase()}/${p}.json`, {method:'PUT', body:JSON.stringify(val)});
+    msg('editMsg', r.ok?'پاشەکەوت کرا ✅':'هەڵەی HTTP '+r.status, r.ok?'ok':'err');
+  }catch(e){ msg('editMsg','هەڵە: '+e.message,'err'); }
+}
+async function pushNode(){
+  const p = cleanPath($('editPath').value);
+  if (!p) return msg('editMsg','ڕێچکە بنووسە','err');
+  let val; try{ val = JSON.parse($('editVal').value); }catch(e){ return msg('editMsg','JSON هەڵەیە','err'); }
+  try{
+    const r = await fetch(`${dbBase()}/${p}.json`, {method:'POST', body:JSON.stringify(val)});
+    const j = await r.json();
+    msg('editMsg','زیادکرا ✅ — کلیدی نوێ: '+(j&&j.name),'ok');
+  }catch(e){ msg('editMsg','هەڵە: '+e.message,'err'); }
+}
+async function deleteNode(){
+  const p = cleanPath($('editPath').value);
+  if (!p) return msg('editMsg','ڕێچکە بنووسە','err');
+  if (!confirm('دڵنیایی لە سڕینەوەی '+$('editPath').value+'؟')) return;
+  const r = await fetch(`${dbBase()}/${p}.json`, {method:'DELETE'});
+  msg('editMsg', r.ok?'سڕدرایەوە ✅':'هەڵەی HTTP '+r.status, r.ok?'ok':'err');
+}
+async function getJSON(p){ const r = await fetch(`${dbBase()}/${cleanPath(p)}.json`); return r.json(); }
+async function putJSON(p, val){ return fetch(`${dbBase()}/${cleanPath(p)}.json`, {method:'PUT', body:JSON.stringify(val)}); }
+
+// ---- quick tools ----
+async function fillDialog(){
+  const v = await getJSON('dialogg/dialog');
+  if (!v || typeof v!=='object') return msg('dlgMsg','نۆد بەتاڵە','err');
+  $('d_title').value=v.title||''; $('d_url').value=v.url||''; $('d_text').value=v.text||'';
+  $('d_open').value=v.open||'true'; $('d_close').value=v.close||'داخستن'; $('d_ver').value=v.ver||'';
+  msg('dlgMsg','هێنراوە — دەتوانیت بگۆڕیت و پاشەکەوت بکەیت','ok');
+}
+async function saveDialog(){
+  const old = await getJSON('dialogg/dialog') || {};
+  const val = Object.assign({}, old, {
+    title:$('d_title').value, text:$('d_text').value, url:$('d_url').value,
+    open:$('d_open').value||'true', close:$('d_close').value||'داخستن', ver:$('d_ver').value||'',
+    random: String(Date.now())
+  });
+  const r = await putJSON('dialogg/dialog', val);
+  msg('dlgMsg', r.ok?'دایەلاگ پاشەکەوت کرا ✅ (وەشانی نوێ = یەکجار پیشان دەدرێت)':'هەڵەی HTTP '+r.status, r.ok?'ok':'err');
+}
+async function addVideo(){
+  const folder = $('v_folder').value.trim();
+  const name = $('v_name').value.trim();
+  const url = $('v_url').value.trim();
+  if (!folder||!name||!url) return msg('vidMsg','فۆڵدەر، ناو و لینک پێویستن','err');
+  const val = {name, url, like:'0', comment:'0', date:String(Date.now()), timevideo:$('v_time').value||'', key:''};
+  const r = await fetch(`${dbBase()}/${cleanPath('videoNew/'+folder)}.json`, {method:'POST', body:JSON.stringify(val)});
+  const j = await r.json();
+  if (r.ok && j&&j.name){
+    await fetch(`${dbBase()}/${cleanPath(`videoNew/${folder}/${j.name}`)}.json`, {method:'PATCH', body:JSON.stringify({key:j.name})});
+  }
+  msg('vidMsg', r.ok?'ڤیدیۆ زیادکرا ✅':'هەڵەی HTTP '+r.status, r.ok?'ok':'err');
+}
+async function saveRamadan(){
+  const val = {day: Number($('r_day').value)||0, month: Number($('r_month').value)||0, state:$('r_state').value||'true'};
+  const r = await putJSON('ramadan/ramadan', val);
+  msg('ramMsg', r.ok?'ڕەمەزان نوێکرایەوە ✅':'هەڵەی HTTP '+r.status, r.ok?'ok':'err');
+}
+async function saveQuiz(){
+  let val; try{ val = JSON.parse($('q_json').value); }catch(e){ return msg('quizMsg','JSON هەڵەیە','err'); }
+  const r = await putJSON('quiz/quiz', JSON.stringify(val));
+  msg('quizMsg', r.ok?'پرسیارەکان پاشەکەوت کران ✅':'هەڵەی HTTP '+r.status, r.ok?'ok':'err');
+}
+
+// ---- github upload ----
+async function upload(){
+  const t = $('ghToken').value.trim();
+  const f = $('ghFile').files[0];
+  if (!t || !f) return msg('ghMsg','Token و فایل پێویستن','err');
+  const owner=$('ghOwner').value.trim(), repo=$('ghRepo').value.trim(), branch=$('ghBranch').value.trim()||'main';
+  let path=$('ghPath').value.trim().replace(/^\/+|\/+$/g,'');
+  const name = ($('ghName').value.trim() || f.name);
+  const full = path ? `${path}/${name}` : name;
+  msg('ghMsg','بارکردن... ('+full+')','info');
+  try{
+    const buf = new Uint8Array(await f.arrayBuffer());
+    let bin=''; const chunk=0x8000;
+    for (let i=0;i<buf.length;i+=chunk) bin += String.fromCharCode.apply(null, buf.subarray(i,i+chunk));
+    const b64 = btoa(bin);
+    const api = `https://api.github.com/repos/${owner}/${repo}/contents/${full}`;
+    let sha = null;
+    const ex = await fetch(`${api}?ref=${branch}`, {headers:{'Authorization':'token '+t}});
+    if (ex.status===200){ sha = (await ex.json()).sha; }
+    const r = await fetch(api, {
+      method:'PUT',
+      headers:{'Authorization':'token '+t,'Content-Type':'application/json'},
+      body: JSON.stringify({message:`upload ${name} (admin panel)`, content:b64, branch, sha})
+    });
+    const j = await r.json();
+    if (!r.ok) return msg('ghMsg','هەڵەی GitHub: '+JSON.stringify(j.message||j),'err');
+    const raw = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${full}`;
+    $('ghLink').innerHTML = '✅ بارکرا — لینکەکان:<br>'
+      + `<input value="${raw}" onclick="this.select()">`
+      + `<br>(لینکەکە کۆپی بکە و لە خشتەی داتابەیس یان ئامرازە خێراکان دابنێ)`;
+    msg('ghMsg','تەواو بوو ✅','ok');
+  }catch(e){ msg('ghMsg','هەڵە: '+e.message,'err'); }
+}
+</script>
+</body>
+</html>

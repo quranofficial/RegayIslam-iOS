@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import '../../core/prefs.dart';
+import '../../core/ui.dart';
 import '../../data/db.dart';
 import '../../data/downloader.dart';
 import '../../data/favorites.dart';
@@ -27,6 +28,7 @@ class _QariakanScreenState extends State<QariakanScreen> {
   bool _playing = false;
   String? _error;
   String? _downloadingId;
+  bool _cancelAll = false;
 
   @override
   void initState() {
@@ -162,6 +164,57 @@ class _QariakanScreenState extends State<QariakanScreen> {
     }
   }
 
+  /// Item 18: "داگرتنی هەموو سوورەتەکان" — batch-download all surahs of one
+  /// reciter into the offline cache with progress + cancel.
+  Future<void> _downloadAll(Map<String, dynamic> r) async {
+    if (_downloadingId != null) return;
+    final name = '${r['name_ar'] ?? 'قاری'}'.trim();
+    final done = ValueNotifier<int>(0);
+    final failed = ValueNotifier<int>(0);
+    final total = ValueNotifier<int>(114);
+    _cancelAll = false;
+    _downloadingId = 'all';
+    final ctx = context;
+    showDialog(
+      context: ctx,
+      barrierDismissible: false,
+      builder: (c) => _DownloadAllDialog(
+          name: name, done: done, failed: failed, total: total,
+          onCancel: () { _cancelAll = true; Navigator.pop(c); }),
+    );
+    try {
+      final surahs = await Db.I.surahs();
+      total.value = surahs.length;
+      final old = _surah;
+      for (final surah in surahs) {
+        if (_cancelAll) break;
+        _surah = surah;
+        try {
+          final file = await _audioFile(r);
+          if (!file.existsSync() || file.lengthSync() == 0) {
+            await _fetchToFile(r);
+          }
+          done.value++;
+        } catch (_) {
+          failed.value++;
+        }
+        if (mounted) setState(() {});
+      }
+      _surah = old;
+    } catch (_) {}
+    _downloadingId = null;
+    if (mounted) setState(() {});
+    if (ctx.mounted) Navigator.of(ctx, rootNavigator: true).pop();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(_cancelAll
+            ? 'داگرتن هەڵوەشێندرا — ${done.value} سوورەت داگیرا'
+            : 'تەواو بوو ✅ ${done.value} سوورەت داگیرا'
+              '${failed.value > 0 ? '، ${failed.value} سەرکەوتوو نەبوو' : ''}'),
+        duration: const Duration(seconds: 3)));
+    }
+  }
+
   @override
   void dispose() {
     _player.dispose();
@@ -186,7 +239,8 @@ class _QariakanScreenState extends State<QariakanScreen> {
             ? const Center(child: CircularProgressIndicator())
             : _error != null
                 ? Center(child: Text(_error!, style: TextStyle(color: txt)))
-                : ListView(padding: const EdgeInsets.all(12), children: [
+                : Column(children: [
+                Expanded(child: ListView(padding: const EdgeInsets.all(12), children: [
                     _surahPicker(dark, txt),
                     const SizedBox(height: 10),
                     for (final r in _reciters)
@@ -228,13 +282,42 @@ class _QariakanScreenState extends State<QariakanScreen> {
                                     color: AppColors.primaryDark));
                               },
                             ),
+                            IconButton(
+                              tooltip: 'داگرتنی هەموو سوورەتەکانی ئەم قارییە',
+                              onPressed: _downloadingId != null
+                                  ? null
+                                  : () => _downloadAll(r),
+                              icon: Icon(_downloadingId == 'all'
+                                  ? Icons.downloading_rounded
+                                  : Icons.download_for_offline_rounded,
+                                  size: 22, color: AppColors.primaryDark)),
                             Icon(_playing && (_selected == (r['id'] is int ? r['id'] : int.tryParse('${r['id']}')))
                                 ? Icons.pause_circle_rounded : Icons.play_circle_rounded,
                               size: 32, color: AppColors.primaryDark),
                           ]),
                         ),
                       ),
-                  ]),
+                ]),
+                ),
+                if (_selected != null)
+                  Builder(builder: (context) {
+                    final rec = _reciters
+                        .where((r) => '${r['id']}' == '$_selected')
+                        .toList();
+                    final name = rec.isNotEmpty
+                        ? '${rec.first['name_ar'] ?? ''}'.trim()
+                        : '';
+                    return AudioPlayerBar(
+                      player: _player,
+                      dark: dark,
+                      title: 'دەنگی سوورەت — $name',
+                      onPlayPause: () {
+                        if (rec.isNotEmpty) _play(rec.first);
+                      },
+                      playing: _playing,
+                    );
+                  }),
+                ]),
       ),
     );
   }
@@ -265,4 +348,72 @@ class _QariakanScreenState extends State<QariakanScreen> {
             ),
           );
         });
+}
+
+/// Progress dialog for the batch surah download.
+class _DownloadAllDialog extends StatefulWidget {
+  const _DownloadAllDialog({
+    required this.name,
+    required this.done,
+    required this.failed,
+    required this.total,
+    required this.onCancel,
+  });
+  final String name;
+  final ValueNotifier<int> done;
+  final ValueNotifier<int> failed;
+  final ValueNotifier<int> total;
+  final VoidCallback onCancel;
+
+  @override
+  State<_DownloadAllDialog> createState() => _DownloadAllDialogState();
+}
+
+class _DownloadAllDialogState extends State<_DownloadAllDialog> {
+  @override
+  void initState() {
+    super.initState();
+    for (final n in [widget.done, widget.failed, widget.total]) {
+      n.addListener(_changed);
+    }
+  }
+
+  void _changed() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    for (final n in [widget.done, widget.failed, widget.total]) {
+      n.removeListener(_changed);
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: AlertDialog(
+        title: const Text('داگرتنی هەموو سوورەتەکان'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text(widget.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          LinearProgressIndicator(
+              value: widget.total.value > 0
+                  ? widget.done.value / widget.total.value
+                  : null),
+          const SizedBox(height: 10),
+          Text(
+              '${widget.done.value} لە ${widget.total.value} سوورەت داگیرا'
+              '${widget.failed.value > 0 ? ' • ${widget.failed.value} سەرکەوتوو نەبوو' : ''}',
+              style: const TextStyle(fontSize: 12.5)),
+        ]),
+        actions: [
+          TextButton(onPressed: widget.onCancel,
+              child: const Text('هەڵوەشاندنەوە')),
+        ],
+      ),
+    );
+  }
 }

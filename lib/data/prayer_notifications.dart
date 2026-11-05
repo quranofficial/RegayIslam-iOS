@@ -59,7 +59,14 @@ class PrayerNotifications {
     await _plugin.show(
         DateTime.now().millisecondsSinceEpoch ~/ 1000 % 100000,
         title, body,
-        NotificationDetails(android: android, iOS: DarwinNotificationDetails(presentSound: p.adhanSoundEnabled, sound: p.adhanSoundEnabled ? 'adhan.caf' : null)));
+        NotificationDetails(android: android, iOS: DarwinNotificationDetails(presentSound: p.adhanSoundEnabled)));
+  }
+
+  /// Item 2: fire one immediate notification so the user can verify the
+  /// adhan pipeline (channel, sound, vibration) with a single tap.
+  Future<void> testNotification() async {
+    await showNow('ئەزموونی بانگ — ڕێگای ئیسلام',
+        'ئەگەر ئەم ئاگادارکردنەوەیە بینیت، بانگی نوێژ بە دەنگ کاردەکات ✅');
   }
 
   /// Schedule the adhan notification for every prayer of the next 7 days.
@@ -114,7 +121,7 @@ class PrayerNotifications {
           await _plugin.zonedSchedule(
               id++, names[entry.key] ?? entry.key,
               'ئێستا کاتی ${names[entry.key]}ـە لە ${p.cityName}', when,
-              NotificationDetails(android: android, iOS: DarwinNotificationDetails(presentSound: p.adhanSoundEnabled, sound: p.adhanSoundEnabled ? 'adhan.caf' : null)),
+              NotificationDetails(android: android, iOS: DarwinNotificationDetails(presentSound: p.adhanSoundEnabled)),
               androidScheduleMode: _canUseExactAlarms
                   ? AndroidScheduleMode.exactAllowWhileIdle
                   : AndroidScheduleMode.inexactAllowWhileIdle,

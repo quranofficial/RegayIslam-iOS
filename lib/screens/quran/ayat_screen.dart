@@ -2,9 +2,9 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:flutter/services.dart';
 import '../../core/prefs.dart';
+import '../../core/ui.dart';
 import '../../data/db.dart';
 import '../../data/downloader.dart';
 import '../../data/favorites.dart';
@@ -116,7 +116,7 @@ class _AyatScreenState extends State<AyatScreen> {
                     child: Column(children: [
                       Row(children: [
                         Text(AppPrefs.I.showQuranSurahName
-                          ? 'سوڕەتی ${r['sura_name_ar']} • ئایەتی ${toArabicDigits((r['ayah'] as num?)?.toInt() ?? 0)}'
+                          ? '${suraLabel('${r['sura_name_ar']}')} • ئایەتی ${toArabicDigits((r['ayah'] as num?)?.toInt() ?? 0)}'
                           : 'ئایەتی ${toArabicDigits((r['ayah'] as num?)?.toInt() ?? 0)}',
                             style: TextStyle(fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -141,7 +141,7 @@ class _AyatScreenState extends State<AyatScreen> {
                                 fontSize: _zoom, height: 2.1, color: txt)),
                       ),
                       const SizedBox(height: 14),
-                      if (AppPrefs.I.showQuranTafsir) Container(
+                      if ('${r[AppPrefs.I.tafsir] ?? ''}'.trim().isNotEmpty) Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
@@ -158,14 +158,16 @@ class _AyatScreenState extends State<AyatScreen> {
                   ),
                   const SizedBox(height: 14),
                   Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    _btn(Icons.copy_rounded, 'کۆپی', () {
-                      Clipboard.setData(ClipboardData(
-                          text: '${r['text']}\n\n${r[AppPrefs.I.tafsir] ?? ''}\n\n#ڕێگای ئیسلام'));
+                    _btn(Icons.copy_rounded, 'کۆپی', () async {
+                      await copyPage(
+                          '${r['text']}\n\n${r[AppPrefs.I.tafsir] ?? ''}');
+                      if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('کۆپی کرا')));
                     }),
-                    _btn(Icons.share_rounded, 'هاوبەشی', () => Share.share(
-                        '${r['text']}\n\n${r[AppPrefs.I.tafsir] ?? ''}\n\n#ڕێگای ئیسلام')),
+                    _btn(Icons.share_rounded, 'هاوبەشی', () => sharePage(
+                        '${r['text']}\n\n${r[AppPrefs.I.tafsir] ?? ''}',
+                        title: suraLabel('${r['sura_name_ar']}'))),
                     _btn(_playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
                         'دەنگ', _play),
                   ]),

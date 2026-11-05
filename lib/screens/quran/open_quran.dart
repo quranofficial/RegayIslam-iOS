@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
+import '../../core/ui.dart';
 import '../../data/db.dart';
 import '../../data/downloader.dart';
 import '../../data/favorites.dart';
@@ -41,8 +41,9 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
   String? _currentUrl;
   int? _playingAyah;
   PlayerState _state = PlayerState.stopped;
-  Duration _position = Duration.zero;
   Map<String, int> _timings = {};
+  final ScrollController _scroll = ScrollController();
+  bool _mushaf = false;
 
   @override
   void initState() {
@@ -54,7 +55,6 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
     });
     _player.onPositionChanged.listen((p) {
       if (!mounted) return;
-      setState(() => _position = p);
       _highlightByTime(p);
     });
     _player.onPlayerComplete.listen((_) {
@@ -134,13 +134,31 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
       final t = _timings[key];
       if (t != null && t <= ms) cur = (a['ayah'] as num).toInt();
     }
-    if (cur != null && cur != _playingAyah) setState(() => _playingAyah = cur);
+    if (cur != null && cur != _playingAyah) {
+      setState(() => _playingAyah = cur);
+      _scrollToAyah(cur);
+    }
   }
 
   @override
   void dispose() {
     _player.dispose();
+    _scroll.dispose();
     super.dispose();
+  }
+
+  /// Auto-scroll the ayah list to the currently recited ayah (item 20).
+  void _scrollToAyah(int ayahNum) {
+    if (!_scroll.hasClients) return;
+    final itemIndex = _ayat.indexWhere(
+        (a) => ((a['ayah'] as num?)?.toInt() ?? 0) == ayahNum);
+    if (itemIndex < 0) return;
+    const itemExtent = 170.0;
+    final target = (itemIndex * itemExtent).clamp(
+        0.0, _scroll.position.maxScrollExtent);
+    _scroll.animateTo(target,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOut);
   }
 
   @override
@@ -156,7 +174,7 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
           backgroundColor: dark ? AppColors.nightCard : AppColors.primaryDark,
           title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             if (AppPrefs.I.showQuranSurahName)
-              Text('سوڕەتی ${widget.surahName}',
+              Text(suraLabel(widget.surahName),
                 style: const TextStyle(color: Colors.white, fontSize: 17,
                     fontWeight: FontWeight.bold)),
             Text('${widget.place} • ${widget.juz}',
@@ -169,17 +187,25 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                       setState(() {}); // refresh font prefs
                     })),
             IconButton(
+                tooltip: 'مەشەف',
+                icon: Icon(_mushaf
+                    ? Icons.menu_book_rounded
+                    : Icons.menu_book_outlined, color: Colors.white),
+                onPressed: () => setState(() => _mushaf = !_mushaf)),
+            IconButton(
                 icon: const Icon(Icons.share_rounded, color: Colors.white),
-                onPressed: () => Share.share(
-                    '${widget.surahName} — ڕێگای ئیسلام')),
+                onPressed: () => sharePage(
+                    '${suraLabel(widget.surahName)} — ئەپی ڕێگای ئیسلام')),
           ],
         ),
         body: _loading
             ? const Center(child: CircularProgressIndicator())
             : Column(children: [
-                Expanded(
+                if (_mushaf) Expanded(child: _mushafView(dark, txt))
+                else Expanded(
                   child: ListView.separated(
-                    padding: const EdgeInsets.all(12),
+                    controller: _scroll,
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
                     itemCount: _ayat.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 6),
                     itemBuilder: (context, i) {
@@ -222,10 +248,10 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                               if (AppPrefs.I.showQuranAyahNumbers) const Spacer(),
                               FavoriteButton(
                                 id: 'quran::${widget.surahId}::$ayahNum',
-                                title: 'سوڕەتی ${widget.surahName} • ئایەتی ${toArabicDigits(ayahNum)}',
+                                title: '${suraLabel(widget.surahName)} • ئایەتی ${toArabicDigits(ayahNum)}',
                                 content: '$ayahText\n\n$tafsir',
                                 color: dark ? AppColors.gold : AppColors.primaryDark),
-                              if (AppPrefs.I.showQuranAyahNumbers) Text('سوڕەتی ${widget.surahName} • ئایەتی ${toArabicDigits(ayahNum)}',
+                              if (AppPrefs.I.showQuranAyahNumbers) Text('${suraLabel(widget.surahName)} • ئایەتی ${toArabicDigits(ayahNum)}',
                                 style: TextStyle(fontSize: 10,
                                   color: txt.withOpacity(.55),
                                   fontWeight: FontWeight.w600)),
@@ -262,46 +288,67 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                     },
                   ),
                 ),
-                _playerBar(dark, card, txt),
+                AudioPlayerBar(
+                  player: _player,
+                  dark: dark,
+                  card: card,
+                  title: 'دەنگی سوورەت — ${AppPrefs.I.qariName}',
+                  onPlayPause: _playSurah,
+                  playing: _state == PlayerState.playing,
+                ),
               ]),
       ),
     );
   }
 
-  Widget _playerBar(bool dark, Color card, Color txt) => Container(
-        decoration: BoxDecoration(
-            color: card,
-            border: Border(top: BorderSide(color: dark ? Colors.white10 : Colors.black12))),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Row(children: [
-          IconButton(
-              onPressed: _playSurah,
-              icon: Icon(_state == PlayerState.playing
-                  ? Icons.pause_circle_rounded
-                  : Icons.play_circle_rounded,
-                  size: 36, color: AppColors.primaryDark)),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(_state == PlayerState.playing
-                      ? 'دەنگی سوورەت • ${AppPrefs.I.qariName}'
-                      : 'دەنگی سوورەت — ${AppPrefs.I.qariName}',
-                  style: TextStyle(fontSize: 11, color: txt.withOpacity(.6))),
-              LinearProgressIndicator(
-                  value: _position.inMilliseconds > 0
-                      ? (_position.inMilliseconds /
-                          ((_timings['${widget.surahId}:${widget.ayaCount}'] ?? 60000)
-                              .toDouble()))
-                      : null,
-                  minHeight: 3,
-                  color: AppColors.primaryDark,
-                  backgroundColor: dark ? Colors.white10 : Colors.black12),
-            ]),
+  /// Item 3: mushaf page of the first/current ayah (bundled page images
+  /// cover a subset; otherwise fall back to a friendly notice).
+  Widget _mushafView(bool dark, Color txt) {
+    final focus = _playingAyah ??
+        ((_ayat.isNotEmpty
+            ? ((_ayat.first['ayah'] as num?)?.toInt() ?? 1)
+            : 1));
+    return FutureBuilder<int?>(
+      future: Db.I.ayahPage(widget.surahId, focus),
+      builder: (context, snap) {
+        final page = snap.data;
+        final path = page == null ? null : 'assets/images/mushaf/$page.png';
+        final exists = path != null;
+        if (!exists) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.menu_book_rounded, size: 44,
+                    color: dark ? AppColors.gold : AppColors.primaryDark),
+                const SizedBox(height: 12),
+                Text('وێنەی لاپەڕەی مەشەف بۆ ئەم ئایەتە بەردەست نییە',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: txt.withOpacity(.7), fontSize: 13)),
+                const SizedBox(height: 6),
+                Text('دەتوانیت دەقەکە لە دۆخی ئاسایی بخوێنیتەوە',
+                    style: TextStyle(color: txt.withOpacity(.45), fontSize: 12)),
+              ]),
+            ),
+          );
+        }
+        return InteractiveViewer(
+          maxScale: 4,
+          child: Center(
+            child: Image.asset(path,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => Text(
+                    'لاپەڕە $page بارنەبوو',
+                    style: TextStyle(color: txt))),
           ),
-        ]),
-      );
+        );
+      },
+    );
+  }
 
-  void _copyAyah(String ayah, String tafsir) {
-    Clipboard.setData(ClipboardData(text: '$ayah\n\n$tafsir\n\n#ڕێگای ئیسلام'));
+  void _copyAyah(String ayah, String tafsir) async {
+    await copyPage('$ayah\n\n$tafsir');
+    if (!mounted) return;
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text('کۆپی کرا')));
   }

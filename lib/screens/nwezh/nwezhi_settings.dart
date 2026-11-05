@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
+import '../../data/home_widgets.dart';
 import '../../data/prayer_notifications.dart';
 import '../settings/adhan_voice_screen.dart';
 
@@ -31,6 +32,7 @@ class _NwezhiSettingsScreenState extends State<NwezhiSettingsScreen> {
 
   Future<void> _save() async {
     await PrayerNotifications.I.scheduleAll();
+    await HomeWidgets.updatePrayer();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('ئاگادارکردنەوەکان نوێکرانەوە ✅')));
@@ -46,6 +48,20 @@ class _NwezhiSettingsScreenState extends State<NwezhiSettingsScreen> {
         ? 'ئاگادارکردنەوەی کاتی ورد چالاک کرا ✅'
         : 'مۆڵەتی کاتی ورد نەدرا؛ ئاگادارکردنەوەکان بە شێوەی ئاسایی دادەنرێن'),
     ));
+  }
+
+  /// Item 2: verify the whole notification pipeline with one tap.
+  Future<void> _testAdhan() async {
+    try {
+      await PrayerNotifications.I.testNotification();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('نۆتیفیکێشنی تاقیکردنەوە نێردرا — سەیری ئاگادارکردنەوەکان بکە')));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('نۆتیفیکێشن سەرکەوتوو نەبوو')));
+    }
   }
 
   @override
@@ -73,18 +89,25 @@ class _NwezhiSettingsScreenState extends State<NwezhiSettingsScreen> {
                 borderRadius: BorderRadius.circular(12)),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
-                value: p.cityId,
+                value: _cities.any((c) => '${c['id']}' == p.cityId)
+                    ? p.cityId : null,
                 isExpanded: true,
                 items: [
                   for (final c in _cities)
                     DropdownMenuItem(
-                        value: '${c['name']}',
+                        value: '${c['id']}',
                         child: Text('${c['name']}',
                             style: TextStyle(color: txt, fontSize: 13))),
                 ],
                 onChanged: (v) async {
                   if (v == null) return;
-                  setState(() { p.cityId = v; p.cityName = v; });
+                  setState(() {
+                    p.cityId = v;
+                    p.cityName = _cities
+                        .where((c) => '${c['id']}' == v)
+                        .map((c) => '${c['name']}')
+                        .join();
+                  });
                   final t = await Db.I.prayerTimes(v, DateTime.now());
                   if (!mounted) return;
                   setState(() => _today = t);
@@ -133,8 +156,7 @@ class _NwezhiSettingsScreenState extends State<NwezhiSettingsScreen> {
                 .then((_) => setState(() {})),
           ),
           OutlinedButton.icon(
-            onPressed: () => PrayerNotifications.I.showNow(
-              'تاقیکردنەوەی بانگ', 'ئەمە تاقیکردنەوەی دەنگی بانگە'),
+            onPressed: _testAdhan,
             icon: const Icon(Icons.volume_up_rounded),
             label: const Text('تاقیکردنەوەی دەنگی بانگ'),
           ),

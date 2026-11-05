@@ -11,6 +11,7 @@
     <application
         android:label="ڕێگای ئیسلام"
         android:name="${applicationName}"
+        android:windowOptOutEdgeToEdgeEnforcement="true"
         android:icon="@drawable/app_icon">
         <activity
             android:name=".MainActivity"
@@ -46,6 +47,20 @@
             <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             <action android:name="android.intent.action.QUICKBOOT_POWERON" />
         </intent-filter>
+    </receiver>
+    <receiver android:exported="false" android:name="com.nwezhakanm.PrayerWidgetProvider">
+        <intent-filter>
+            <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+        </intent-filter>
+        <meta-data android:name="android.appwidget.provider"
+            android:resource="@xml/widget_prayer_info" />
+    </receiver>
+    <receiver android:exported="false" android:name="com.nwezhakanm.AyahWidgetProvider">
+        <intent-filter>
+            <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+        </intent-filter>
+        <meta-data android:name="android.appwidget.provider"
+            android:resource="@xml/widget_ayah_info" />
     </receiver>
     </application>
     <!-- Required to query activities that can process text, see:

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart';
@@ -18,6 +19,7 @@ class Db {
   Database? _duha; // duha.db        (du3a list)
   Database? _garanawa; // garanawa.db (books chapters)
   Database? _ramazanew; // ramazanew.db
+  Database? _info; // ayah_info.db   (mushaf glyph layout: ayah -> page)
 
   Future<Database> _open(String file) async {
     final dir = await getDatabasesPath();
@@ -41,6 +43,7 @@ class Db {
     _duha = await _open('duha.db');
     _garanawa = await _open('garanawa.db');
     _ramazanew = await _open('ramazanew.db');
+    _info = await _open('ayah_info.db');
   }
 
   /// 114 surah rows: soraid, name, aya, place, juz, link
@@ -127,9 +130,59 @@ class Db {
     return _times!.query(cityId, where: 'D LIKE ?', whereArgs: [key], orderBy: 'D');
   }
 
-  Future<List<Map<String, Object?>>> cities() async =>
-      _times!.query('sqlite_master',
-          where: "type='table' AND name NOT LIKE 'sqlite_%' AND name != 'android_metadata'");
+  /// City tables of time2.db translated to Kurdish Sorani through
+  /// cityme.json ("item 10: ناوە شارەکان بە کوردی سۆرانی").
+  Future<List<Map<String, Object?>>> cities() async {
+    final tables = await _times!.query('sqlite_master',
+        where: "type='table' AND name NOT LIKE 'sqlite_%' AND name != 'android_metadata'");
+    final ids = tables
+        .map((t) => '${t['name'] ?? ''}')
+        .where((n) => n.isNotEmpty)
+        .toList();
+    Map<String, String> names = {};
+    try {
+      final raw = await rootBundle.loadString('assets/data/cityme.json');
+      final list = jsonDecode(raw) as List;
+      names = {
+        for (final e in list)
+          '${e['id'] ?? ''}': '${e['Name'] ?? ''}',
+      };
+    } catch (_) {}
+    return [
+      for (final id in ids)
+        {'id': id, 'name': names[id] ?? id},
+    ];
+  }
+
+  /// Mushaf page number containing an ayah (ayah_info.db line layout).
+  Future<int?> ayahPage(int surahId, int ayah) async {
+    try {
+      final rows = await _info!.query('page_data_line',
+          where: 'surah_id = ? AND verse_id = ?',
+          whereArgs: [surahId, ayah],
+          columns: ['page_number'],
+          limit: 1);
+      if (rows.isEmpty) return null;
+      return (rows.first['page_number'] as num?)?.toInt();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Global ayah index (1..6236) — needed by the cdn.islamic.network
+  /// per-ayah audio endpoint used by the ayah player and creator.
+  Future<int> globalAyah(int surahId, int ayah) async {
+    final rows = await _surat!.query('surat',
+        columns: ['soraid', 'aya'], orderBy: 'soraid');
+    var cum = 0;
+    for (final r in rows) {
+      final sid = (r['soraid'] as num?)?.toInt() ?? 0;
+      final count = (r['aya'] as num?)?.toInt() ?? 0;
+      if (sid == surahId) return cum + ayah;
+      cum += count;
+    }
+    return cum + ayah;
+  }
 
   /// 99 names of Allah.
   Future<List<Map<String, Object?>>> names() async =>

@@ -148,6 +148,14 @@ class AppPrefs {
   String get dialogSeen => _p.getString('dialogg_seen') ?? '';
   set dialogSeen(String v) => _p.setString('dialogg_seen', v);
 
+  // --- home section order (item 8: جوڵاندنی بەشەکان سەرەوە/خوارەوە) ---
+  List<String> get homeOrder => _p.getStringList('homeOrder') ?? <String>[];
+  set homeOrder(List<String> v) => _p.setStringList('homeOrder', v);
+
+  // --- daily-ayah banner: index of the currently shown random ayah ---
+  int get ayahBannerSeed => _p.getInt('ayahBannerSeed') ?? -1;
+  set ayahBannerSeed(int v) => _p.setInt('ayahBannerSeed', v);
+
   // --- library books json (MainActivity pref "onlybookme": the fetched
   //     ktebakan.json, kept offline) ---
   String get libraryJson => _p.getString('onlybookme') ?? '';

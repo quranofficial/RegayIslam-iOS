@@ -149,8 +149,27 @@ class _VideosScreenState extends State<VideosScreen> {
             'ناردن سەرکەوتوو بوو. چاوەروان بە بەزووترین کات پێداچوونەوە بۆ ڤیدیۆکە ئەکرێ و قبووڵ ئەکرێت.')));
   }
 
+  final Set<String> _likedIds = {};
+
+  /// Item 17: a real like — writes the incremented counter back to
+  /// videoNew/<folder>/<key>/like; one like per device.
+  Future<void> _like(Map<String, dynamic> v) async {
+    final id = '${v['id'] ?? ''}';
+    final folder = '${v['folder'] ?? ''}';
+    if (id.isEmpty || _likedIds.contains(id)) return;
+    _likedIds.add(id);
+    final next = await Rtdb.I.likeVideo(folder, id, 'like');
+    if (next != null && mounted) {
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('لایک کرا ✅ ($next)'),
+          duration: const Duration(milliseconds: 900)));
+    }
+  }
+
   void _comments(Map<String, dynamic> v) {
-    final id = '${v['id'] ?? v['name'] ?? 'video'}';
+    // The original app stored comments under the video's "date" value.
+    final id = '${v['date'] ?? v['id'] ?? v['name'] ?? 'video'}';
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -300,6 +319,17 @@ class _VideosScreenState extends State<VideosScreen> {
                                 ]),
                               ),
                               trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                                IconButton(
+                                  tooltip: 'لایک',
+                                  onPressed: () => _like(v),
+                                  icon: Icon(
+                                      _likedIds.contains('${v['id'] ?? ''}')
+                                          ? Icons.favorite_rounded
+                                          : Icons.favorite_border_rounded,
+                                      size: 22,
+                                      color: _likedIds.contains('${v['id'] ?? ''}')
+                                          ? const Color(0xFFE91E63)
+                                          : AppColors.primaryDark)),
                                 IconButton(
                                   tooltip: 'سەرنجەکان',
                                   onPressed: () => _comments(v),

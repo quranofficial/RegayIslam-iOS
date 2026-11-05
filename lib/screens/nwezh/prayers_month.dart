@@ -1,4 +1,7 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:gal/gal.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
@@ -15,6 +18,7 @@ class _PrayersMonthScreenState extends State<PrayersMonthScreen> {
   int _month = DateTime.now().month;
   List<Map<String, Object?>> _rows = [];
   bool _loading = true;
+  final GlobalKey _tableKey = GlobalKey();
 
   @override
   void initState() {
@@ -32,7 +36,7 @@ class _PrayersMonthScreenState extends State<PrayersMonthScreen> {
   static const _cols = [
     ('D', 'بەروار'),
     ('bayani', 'بەیانی'),
-    ('xorhalatn', 'گزشتن'),
+    ('xorhalatn', 'گزنک'),
     ('niwaro', 'نیوەڕۆ'),
     ('asr', 'عەسر'),
     ('eywara', 'ئێوارە'),
@@ -86,7 +90,21 @@ class _PrayersMonthScreenState extends State<PrayersMonthScreen> {
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.all(12),
-                      child: DataTable(
+                      child: RepaintBoundary(
+                      key: _tableKey,
+                      child: Container(
+                      color: dark ? AppColors.nightBg : Colors.white,
+                      padding: const EdgeInsets.all(10),
+                      child: Column(children: [
+                      Text('کاتەکانی نوێژ — ${AppPrefs.I.cityName} — مانگی $_month',
+                          style: TextStyle(fontWeight: FontWeight.bold,
+                              fontSize: 14, color: txt)),
+                      const SizedBox(height: 6),
+                      Text('ڕێگای ئیسلام',
+                          style: TextStyle(fontSize: 10,
+                              color: txt.withOpacity(.45))),
+                      const SizedBox(height: 4),
+                      DataTable(
                         headingRowColor:
                             WidgetStatePropertyAll(dark ? AppColors.nightCard : const Color(0xFFE8F0FE)),
                         dataRowMinHeight: 34, dataRowMaxHeight: 38,
@@ -106,12 +124,59 @@ class _PrayersMonthScreenState extends State<PrayersMonthScreen> {
                             ]),
                         ],
                       ),
+                      ]),
+                      ),
                     ),
                   ),
                 ),
+                ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                    backgroundColor: dark ? AppColors.gold : AppColors.primaryDark,
+                    foregroundColor: dark ? Colors.black : Colors.white),
+                onPressed: _saveImage,
+                icon: const Icon(Icons.save_alt_rounded, size: 20),
+                label: const Text('پاشەکەوتکردنی وێنە بۆ گەلەری مۆبایل'),
+              ),
+            ),
+          ),
         ]),
       ),
     );
+  }
+
+  /// Item 11: one-tap capture of the monthly timetable into the phone
+  /// gallery (MediaStore via gal — no storage permission on Android 10+).
+  Future<void> _saveImage() async {
+    try {
+      final boundary = _tableKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
+      if (boundary == null) throw Exception('no boundary');
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final bytes =
+          (await image.toByteData(format: ui.ImageByteFormat.png))
+              ?.buffer
+              .asUint8List();
+      if (bytes == null) throw Exception('encode failed');
+      await Gal.putImageBytes(bytes, album: 'ڕێگای ئیسلام');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('وێنەکە پاشەکەوت کرا بۆ گەلەری ✅')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('پاشەکەوتکردن سەرکەوتوو نەبوو — '
+              'مۆڵەتی وێنە پشتڕاست بکەوە')));
+      final ok = await Gal.requestAccess();
+      if (ok && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('مۆڵەت درا — دووبارە هەوڵبدەرەوە')));
+      }
+    }
   }
 
   String _fmt(Object? v) {

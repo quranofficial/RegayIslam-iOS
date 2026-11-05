@@ -1,0 +1,765 @@
+<?xml version='1.0' encoding='UTF-8' ?><!--
+Created by Alight Motion (http://alightmotion.com)
+Exported: 2022-08-09 10:06 PM
+4.0.5 (0578)
+046a9b1 (8 Mar 2022 12:29:39 pm)
+-->
+<scene title="تێکستی _ 28" width="2160" height="3840" exportWidth="2160" exportHeight="3840" precompose="dynamicResolution" bgcolor="#ff000000" totalTime="15199" fps="30" modifiedTime="1660072004573" amver="578" ffver="105" am="com.alightcreative.motion/4.0.5" amplatform="android" retime="freeze" retimeAdaptFPS="false">
+  <shape id="724788" label="VID_20220307_230420_577.mp4" startTime="0" endTime="14846" fillType="media" fillVideo="content://media/external/video/media/11534" outTime="14814" s=".rect">
+    <transform>
+      <location value="1080.000000,1920.000000,0.000000" />
+      <scale value="1.007616,1.007616" />
+    </transform>
+    <effect id="com.alightcreative.effects.satvib" locallyApplied="true">
+      <property name="saturation" type="float" value="0.040000" />
+      <property name="vib" type="float" value="1.500000" />
+    </effect>
+    <effect id="com.alightcreative.effects.highlightshadow" locallyApplied="false">
+      <property name="highlights" type="float" value="1.600000" />
+      <property name="shadows" type="float" value="1.000000" />
+    </effect>
+    <effect id="com.alightcreative.gradientoverlay2" locallyApplied="true">
+      <property name="color1" type="color" value="#00ffffff" />
+      <property name="color2" type="color" value="#ff000000" />
+      <property name="angle" type="float" value="0.000000" />
+      <property name="scale" type="float" value="1.000000" />
+      <property name="alpha" type="float" value="1.000000" />
+      <property name="gradType" type="int" value="0" />
+      <property name="blendMode" type="int" value="1" />
+      <property name="offset" type="vec2" value="0.000000,-11.000000" />
+    </effect>
+    <effect id="com.alightcreative.effects.exposure" locallyApplied="true">
+      <property name="exposure" type="float" value="0.000000" />
+      <property name="gamma" type="float" value="0.765000" />
+      <property name="offset" type="float" value="0.000000" />
+    </effect>
+    <effect id="com.alightcreative.effects.satvib" locallyApplied="false">
+      <property name="saturation" type="float" value="0.145000" />
+      <property name="vib" type="float" value="1.000000" />
+    </effect>
+    <effect id="com.alightcreative.spotcolor" locallyApplied="true">
+      <property name="color" type="color" value="#ffcc0028" />
+      <property name="threshold" type="float" value="2.000000" />
+      <property name="feather" type="float" value="2.000000" />
+      <property name="saturation" type="float" value="0.000000" />
+    </effect>
+    <gain value="0.000000" />
+    <property name="size" type="vec2" value="1080.000000,1904.000000" />
+  </shape>
+  <audio id="724789" label="VID_20220307_230420_577.mp4" startTime="333" endTime="15179" src="content://media/external/video/media/11534" outTime="14814">
+    <gain value="1.500000" />
+  </audio>
+  <audio id="724806" label="VID_20220307_230420_577.mp4 Copy" startTime="333" endTime="15179" src="content://media/external/video/media/11534" outTime="14814">
+    <gain value="0.560000" />
+  </audio>
+  <text id="724790" startTime="300" endTime="15199" fillType="color" blending="overlay" size="28.000000" font="imported?name=Copperplate Gothic Bold Regular.ttf" wrapWidth="770" align="left">
+    <transform>
+      <location>
+        <kf t="0.001074" v="416.850098,178.474121,0.000000" />
+        <kf t="0.477616" v="416.850098,1581.934570,0.000000" />
+        <kf t="1.000000" v="2057.850098,1581.934570,0.000000" />
+      </location>
+      <scale value="1.019480,1.019480" />
+    </transform>
+    <content>ima.muslim</content>
+  </text>
+  <embedScene id="724811" label="Group 1" startTime="500" endTime="14665" fillType="intrinsic" outTime="14665">
+    <transform>
+      <location value="773.360718,1920.000000,0.000000" />
+      <pivot value="-97.734375,593.462158" />
+    </transform>
+    <fillColor value="#ff000000" />
+    <scene title="" width="2773" height="3840" exportWidth="2773" exportHeight="3840" precompose="dynamicResolution" bgcolor="#00000000" totalTime="14665" fps="30" modifiedTime="0" amver="578" ffver="105" am="com.alightcreative.motion/4.0.5" amplatform="android" retime="off" retimeAdaptFPS="false">
+      <text id="724791" startTime="0" endTime="1565" fillType="color" size="48.000000" font="imported?name=NRT-Bd (1).ttf" wrapWidth="1801" align="left">
+        <transform>
+          <location value="1483.934570,2416.080566,0.000000" />
+        </transform>
+        <effect id="com.alightcreative.glow" locallyApplied="true">
+          <property name="radius" type="float" value="33.000000" />
+          <property name="alpha" type="float" value="0.740000" />
+          <property name="hardness" type="float" value="0.700000" />
+          <property name="color" type="color" value="#ff000000" />
+          <property name="blendMode" type="int" value="1" />
+        </effect>
+        <effect id="com.alightcreative.effects.turbulentdisplace3" locallyApplied="true">
+          <property name="parr" type="vec2">
+            <kf t="0.011445" v="290.000000,0.000000" />
+            <kf t="1.000000" v="0.000000,0.000000" />
+          </property>
+          <property name="intensity" type="float">
+            <kf t="0.000000" v="0.359000" />
+            <kf t="0.888480" v="0.000000" />
+            <kf t="0.112132" v="0.000000" e="cubicBezier 0.0 0.0 0.58 1.0" />
+            <kf t="1.000000" v="0.244000" e="cubicBezier 0.42 0.0 1.0 1.0" />
+          </property>
+          <property name="evolution" type="float" value="0.000000" />
+          <property name="direction" type="int" value="2" />
+          <property name="scale" type="float" value="1.000000" />
+          <property name="stretch" type="vec2" value="1.000000,1.000000" />
+          <property name="seed" type="float" value="0.000000" />
+          <property name="singleAxis" type="bool" value="true" />
+          <property name="screenSpace" type="bool" value="false" />
+          <property name="octaves" type="float" value="6.000000" />
+          <property name="offs" type="float" value="0.000000" />
+        </effect>
+        <effect id="com.alightcreative.effects.fade" locallyApplied="true">
+          <property name="inTime" type="float" value="0.300000" />
+          <property name="outTime" type="float" value="0.300000" />
+        </effect>
+        <effect id="com.alightcreative.effects.wavewarp2" locallyApplied="true">
+          <property name="phase" type="float">
+            <kf t="0.000000" v="0.000000" />
+            <kf t="1.000000" v="2.000000" />
+            <kf t="0.495211" v="0.940000" />
+          </property>
+          <property name="a1d" type="float" value="0.000000" />
+          <property name="m1" type="float" value="6.400000" />
+          <property name="m2" type="float" value="0.400000" />
+          <property name="a2d" type="float" value="45.000000" />
+          <property name="damping" type="float" value="0.000000" />
+          <property name="dampingSpace" type="float" value="0.000000" />
+          <property name="dampingOrigin" type="float" value="0.500000" />
+          <property name="screenSpace" type="bool" value="false" />
+        </effect>
+        <content>نەکەی واز لە دوعا بێنی..!</content>
+      </text>
+      <text id="724792" startTime="1533" endTime="2465" fillType="color" size="48.000000" font="imported?name=NRT-Bd (1).ttf" wrapWidth="1438" align="left">
+        <transform>
+          <location value="1522.380615,2426.070068,0.000000" />
+          <scale value="1.015994,1.015994" />
+        </transform>
+        <effect id="com.alightcreative.glow" locallyApplied="true">
+          <property name="radius" type="float" value="33.000000" />
+          <property name="alpha" type="float" value="0.740000" />
+          <property name="hardness" type="float" value="0.700000" />
+          <property name="color" type="color" value="#ff000000" />
+          <property name="blendMode" type="int" value="1" />
+        </effect>
+        <effect id="com.alightcreative.effects.turbulentdisplace3" locallyApplied="true">
+          <property name="parr" type="vec2">
+            <kf t="0.011445" v="290.000000,0.000000" />
+            <kf t="1.000000" v="0.000000,0.000000" />
+          </property>
+          <property name="intensity" type="float">
+            <kf t="0.000000" v="0.359000" />
+            <kf t="0.888480" v="0.000000" />
+            <kf t="0.112132" v="0.000000" e="cubicBezier 0.0 0.0 0.58 1.0" />
+            <kf t="1.000000" v="0.244000" e="cubicBezier 0.42 0.0 1.0 1.0" />
+          </property>
+          <property name="evolution" type="float" value="0.000000" />
+          <property name="direction" type="int" value="2" />
+          <property name="scale" type="float" value="1.000000" />
+          <property name="stretch" type="vec2" value="1.000000,1.000000" />
+          <property name="seed" type="float" value="0.000000" />
+          <property name="singleAxis" type="bool" value="true" />
+          <property name="screenSpace" type="bool" value="false" />
+          <property name="octaves" type="float" value="6.000000" />
+          <property name="offs" type="float" value="0.000000" />
+        </effect>
+        <effect id="com.alightcreative.effects.wavewarp2" locallyApplied="true">
+          <property name="phase" type="float">
+            <kf t="0.000000" v="0.000000" />
+            <kf t="1.000000" v="2.000000" />
+            <kf t="0.495211" v="0.940000" />
+          </property>
+          <property name="a1d" type="float" value="0.000000" />
+          <property name="m1" type="float" value="6.400000" />
+          <property name="m2" type="float" value="0.400000" />
+          <property name="a2d" type="float" value="45.000000" />
+          <property name="damping" type="float" value="0.000000" />
+          <property name="dampingSpace" type="float" value="0.000000" />
+          <property name="dampingOrigin" type="float" value="0.500000" />
+          <property name="screenSpace" type="bool" value="false" />
+        </effect>
+        <content>والله قبوڵ نەبوو!!</content>
+      </text>
+      <text id="724793" startTime="2433" endTime="3533" fillType="color" size="40.000000" font="imported?name=NRT-Bd (1).ttf" wrapWidth="1607" align="left">
+        <transform>
+          <location value="1391.278564,2420.070068,0.000000" />
+          <scale value="1.288737,1.288737" />
+        </transform>
+        <effect id="com.alightcreative.glow" locallyApplied="true">
+          <property name="radius" type="float" value="33.000000" />
+          <property name="alpha" type="float" value="0.740000" />
+          <property name="hardness" type="float" value="0.700000" />
+          <property name="color" type="color" value="#ff000000" />
+          <property name="blendMode" type="int" value="1" />
+        </effect>
+        <effect id="com.alightcreative.effects.turbulentdisplace3" locallyApplied="true">
+          <property name="parr" type="vec2">
+            <kf t="0.011445" v="290.000000,0.000000" />
+            <kf t="1.000000" v="0.000000,0.000000" />
+          </property>
+          <property name="intensity" type="float">
+            <kf t="0.000000" v="0.359000" />
+            <kf t="0.888480" v="0.000000" />
+            <kf t="0.112132" v="0.000000" e="cubicBezier 0.0 0.0 0.58 1.0" />
+            <kf t="1.000000" v="0.244000" e="cubicBezier 0.42 0.0 1.0 1.0" />
+          </property>
+          <property name="evolution" type="float" value="0.000000" />
+          <property name="direction" type="int" value="2" />
+          <property name="scale" type="float" value="1.000000" />
+          <property name="stretch" type="vec2" value="1.000000,1.000000" />
+          <property name="seed" type="float" value="0.000000" />
+          <property name="singleAxis" type="bool" value="true" />
+          <property name="screenSpace" type="bool" value="false" />
+          <property name="octaves" type="float" value="6.000000" />
+          <property name="offs" type="float" value="0.000000" />
+        </effect>
+        <effect id="com.alightcreative.effects.wavewarp2" locallyApplied="true">
+          <property name="phase" type="float">
+            <kf t="0.000000" v="0.000000" />
+            <kf t="1.000000" v="2.000000" />
+            <kf t="0.495211" v="0.940000" />
+          </property>
+          <property name="a1d" type="float" value="0.000000" />
+          <property name="m1" type="float" value="6.400000" />
+          <property name="m2" type="float" value="0.400000" />
+          <property name="a2d" type="float" value="45.000000" />
+          <property name="damping" type="float" value="0.000000" />
+          <property name="dampingSpace" type="float" value="0.000000" />
+          <property name="dampingOrigin" type="float" value="0.500000" />
+          <property name="screenSpace" type="bool" value="false" />
+        </effect>
+        <content>تۆ چوزانی قبەڵ نەبوو؟!</content>
+      </text>
+      <text id="724795" startTime="3500" endTime="4633" fillType="color" size="48.000000" font="imported?name=NRT-Bd (1).ttf" wrapWidth="1794" align="left">
+        <transform>
+          <location value="1065.663452,2630.472656,0.000000" />
+          <scale value="1.005574,1.005574" />
+        </transform>
+        <fillColor value="#ffffe200" />
+        <effect id="com.alightcreative.glow" locallyApplied="true">
+          <property name="radius" type="float" value="33.000000" />
+          <property name="alpha" type="float" value="0.740000" />
+          <property name="hardness" type="float" value="0.700000" />
+          <property name="color" type="color" value="#ff000000" />
+          <property name="blendMode" type="int" value="1" />
+        </effect>
+        <effect id="com.alightcreative.effects.turbulentdisplace3" locallyApplied="true">
+          <property name="parr" type="vec2">
+            <kf t="0.011445" v="290.000000,0.000000" />
+            <kf t="1.000000" v="0.000000,0.000000" />
+          </property>
+          <property name="intensity" type="float">
+            <kf t="0.000000" v="0.359000" />
+            <kf t="0.888480" v="0.000000" />
+            <kf t="0.112132" v="0.000000" e="cubicBezier 0.0 0.0 0.58 1.0" />
+            <kf t="1.000000" v="0.244000" e="cubicBezier 0.42 0.0 1.0 1.0" />
+          </property>
+          <property name="evolution" type="float" value="0.000000" />
+          <property name="direction" type="int" value="2" />
+          <property name="scale" type="float" value="1.000000" />
+          <property name="stretch" type="vec2" value="1.000000,1.000000" />
+          <property name="seed" type="float" value="0.000000" />
+          <property name="singleAxis" type="bool" value="true" />
+          <property name="screenSpace" type="bool" value="false" />
+          <property name="octaves" type="float" value="6.000000" />
+          <property name="offs" type="float" value="0.000000" />
+        </effect>
+        <effect id="com.alightcreative.effects.wavewarp2" locallyApplied="true">
+          <property name="phase" type="float">
+            <kf t="0.000000" v="0.000000" />
+            <kf t="1.000000" v="2.000000" />
+            <kf t="0.495211" v="0.940000" />
+          </property>
+          <property name="a1d" type="float" value="0.000000" />
+          <property name="m1" type="float" value="6.400000" />
+          <property name="m2" type="float" value="0.400000" />
+          <property name="a2d" type="float" value="45.000000" />
+          <property name="damping" type="float" value="0.000000" />
+          <property name="dampingSpace" type="float" value="0.000000" />
+          <property name="dampingOrigin" type="float" value="0.500000" />
+          <property name="screenSpace" type="bool" value="false" />
+        </effect>
+        <content>نعوذ بالله</content>
+      </text>
+      <text id="724794" startTime="3500" endTime="4632" fillType="color" size="48.000000" font="imported?name=NRT-Bd (1).ttf" wrapWidth="1794" align="left">
+        <transform>
+          <location value="1632.976685,2425.568604,0.000000" />
+        </transform>
+        <effect id="com.alightcreative.glow" locallyApplied="true">
+          <property name="radius" type="float" value="33.000000" />
+          <property name="alpha" type="float" value="0.740000" />
+          <property name="hardness" type="float" value="0.700000" />
+          <property name="color" type="color" value="#ff000000" />
+          <property name="blendMode" type="int" value="1" />
+        </effect>
+        <effect id="com.alightcreative.effects.turbulentdisplace3" locallyApplied="true">
+          <property name="parr" type="vec2">
+            <kf t="0.011445" v="290.000000,0.000000" />
+            <kf t="1.000000" v="0.000000,0.000000" />
+          </property>
+          <property name="intensity" type="float">
+            <kf t="0.000000" v="0.359000" />
+            <kf t="0.888480" v="0.000000" />
+            <kf t="0.112132" v="0.000000" e="cubicBezier 0.0 0.0 0.58 1.0" />
+            <kf t="1.000000" v="0.244000" e="cubicBezier 0.42 0.0 1.0 1.0" />
+          </property>
+          <property name="evolution" type="float" value="0.000000" />
+          <property name="direction" type="int" value="2" />
+          <property name="scale" type="float" value="1.000000" />
+          <property name="stretch" type="vec2" value="1.000000,1.000000" />
+          <property name="seed" type="float" value="0.000000" />
+          <property name="singleAxis" type="bool" value="true" />
+          <property name="screenSpace" type="bool" value="false" />
+          <property name="octaves" type="float" value="6.000000" />
+          <property name="offs" type="float" value="0.000000" />
+        </effect>
+        <effect id="com.alightcreative.effects.wavewarp2" locallyApplied="true">
+          <property name="phase" type="float">
+            <kf t="0.000000" v="0.000000" />
+            <kf t="1.000000" v="2.000000" />
+            <kf t="0.495211" v="0.940000" />
+          </property>
+          <property name="a1d" type="float" value="0.000000" />
+          <property name="m1" type="float" value="6.400000" />
+          <property name="m2" type="float" value="0.400000" />
+          <property name="a2d" type="float" value="45.000000" />
+          <property name="damping" type="float" value="0.000000" />
+          <property name="dampingSpace" type="float" value="0.000000" />
+          <property name="dampingOrigin" type="float" value="0.500000" />
+          <property name="screenSpace" type="bool" value="false" />
+        </effect>
+        <content>بابە تۆ خوا بە درۆ ئەخەیتەوە!!</content>
+      </text>
+      <text id="724796" startTime="4600" endTime="5465" fillType="color" size="48.000000" font="imported?name=NRT-Bd (1).ttf" wrapWidth="2193" align="left">
+        <transform>
+          <location value="1557.116089,2413.717773,0.000000" />
+          <scale value="0.930233,0.930233" />
+        </transform>
+        <effect id="com.alightcreative.glow" locallyApplied="true">
+          <property name="radius" type="float" value="33.000000" />
+          <property name="alpha" type="float" value="0.740000" />
+          <property name="hardness" type="float" value="0.700000" />
+          <property name="color" type="color" value="#ff000000" />
+          <property name="blendMode" type="int" value="1" />
+        </effect>
+        <effect id="com.alightcreative.effects.turbulentdisplace3" locallyApplied="true">
+          <property name="parr" type="vec2">
+            <kf t="0.011445" v="290.000000,0.000000" />
+            <kf t="1.000000" v="0.000000,0.000000" />
+          </property>
+          <property name="intensity" type="float">
+            <kf t="0.000000" v="0.359000" />
+            <kf t="0.888480" v="0.000000" />
+            <kf t="0.112132" v="0.000000" e="cubicBezier 0.0 0.0 0.58 1.0" />
+            <kf t="1.000000" v="0.244000" e="cubicBezier 0.42 0.0 1.0 1.0" />
+          </property>
+          <property name="evolution" type="float" value="0.000000" />
+          <property name="direction" type="int" value="2" />
+          <property name="scale" type="float" value="1.000000" />
+          <property name="stretch" type="vec2" value="1.000000,1.000000" />
+          <property name="seed" type="float" value="0.000000" />
+          <property name="singleAxis" type="bool" value="true" />
+          <property name="screenSpace" type="bool" value="false" />
+          <property name="octaves" type="float" value="6.000000" />
+          <property name="offs" type="float" value="0.000000" />
+        </effect>
+        <effect id="com.alightcreative.effects.wavewarp2" locallyApplied="true">
+          <property name="phase" type="float">
+            <kf t="0.000000" v="0.000000" />
+            <kf t="1.000000" v="2.000000" />
+            <kf t="0.495211" v="0.940000" />
+          </property>
+          <property name="a1d" type="float" value="0.000000" />
+          <property name="m1" type="float" value="6.400000" />
+          <property name="m2" type="float" value="0.400000" />
+          <property name="a2d" type="float" value="45.000000" />
+          <property name="damping" type="float" value="0.000000" />
+          <property name="dampingSpace" type="float" value="0.000000" />
+          <property name="dampingOrigin" type="float" value="0.500000" />
+          <property name="screenSpace" type="bool" value="false" />
+        </effect>
+        <content>ئەفەرمووێت: سێ شتت بۆ ئەکات"</content>
+      </text>
+      <text id="724797" startTime="5433" endTime="6632" fillType="color" size="48.000000" font="imported?name=NRT-Bd (1).ttf" wrapWidth="2193" align="left">
+        <transform>
+          <location value="1131.494629,2396.682373,0.000000" />
+          <scale value="0.976744,0.976744" />
+        </transform>
+        <effect id="com.alightcreative.glow" locallyApplied="true">
+          <property name="radius" type="float" value="33.000000" />
+          <property name="alpha" type="float" value="0.740000" />
+          <property name="hardness" type="float" value="0.700000" />
+          <property name="color" type="color" value="#ff000000" />
+          <property name="blendMode" type="int" value="1" />
+        </effect>
+        <effect id="com.alightcreative.effects.turbulentdisplace3" locallyApplied="true">
+          <property name="parr" type="vec2">
+            <kf t="0.011445" v="290.000000,0.000000" />
+            <kf t="1.000000" v="0.000000,0.000000" />
+          </property>
+          <property name="intensity" type="float">
+            <kf t="0.000000" v="0.359000" />
+            <kf t="0.888480" v="0.000000" />
+            <kf t="0.112132" v="0.000000" e="cubicBezier 0.0 0.0 0.58 1.0" />
+            <kf t="1.000000" v="0.244000" e="cubicBezier 0.42 0.0 1.0 1.0" />
+          </property>
+          <property name="evolution" type="float" value="0.000000" />
+          <property name="direction" type="int" value="2" />
+          <property name="scale" type="float" value="1.000000" />
+          <property name="stretch" type="vec2" value="1.000000,1.000000" />
+          <property name="seed" type="float" value="0.000000" />
+          <property name="singleAxis" type="bool" value="true" />
+          <property name="screenSpace" type="bool" value="false" />
+          <property name="octaves" type="float" value="6.000000" />
+          <property name="offs" type="float" value="0.000000" />
+        </effect>
+        <effect id="com.alightcreative.effects.wavewarp2" locallyApplied="true">
+          <property name="phase" type="float">
+            <kf t="0.000000" v="0.000000" />
+            <kf t="1.000000" v="2.000000" />
+            <kf t="0.495211" v="0.940000" />
+          </property>
+          <property name="a1d" type="float" value="0.000000" />
+          <property name="m1" type="float" value="6.400000" />
+          <property name="m2" type="float" value="0.400000" />
+          <property name="a2d" type="float" value="45.000000" />
+          <property name="damping" type="float" value="0.000000" />
+          <property name="dampingSpace" type="float" value="0.000000" />
+          <property name="dampingOrigin" type="float" value="0.500000" />
+          <property name="screenSpace" type="bool" value="false" />
+        </effect>
+        <content>تۆ چوزانی کامیان؟</content>
+      </text>
+      <text id="724799" startTime="6600" endTime="8765" fillType="color" size="48.000000" font="imported?name=NRT-Bd (1).ttf" wrapWidth="2193" align="left">
+        <transform>
+          <location value="1100.500122,2396.262939,0.000000" />
+          <scale value="1.003648,1.003648" />
+        </transform>
+        <effect id="com.alightcreative.glow" locallyApplied="true">
+          <property name="radius" type="float" value="33.000000" />
+          <property name="alpha" type="float" value="0.740000" />
+          <property name="hardness" type="float" value="0.700000" />
+          <property name="color" type="color" value="#ff000000" />
+          <property name="blendMode" type="int" value="1" />
+        </effect>
+        <effect id="com.alightcreative.effects.turbulentdisplace3" locallyApplied="true">
+          <property name="parr" type="vec2">
+            <kf t="0.011445" v="290.000000,0.000000" />
+            <kf t="1.000000" v="0.000000,0.000000" />
+          </property>
+          <property name="intensity" type="float">
+            <kf t="0.000000" v="0.359000" />
+            <kf t="0.888480" v="0.000000" />
+            <kf t="0.112132" v="0.000000" e="cubicBezier 0.0 0.0 0.58 1.0" />
+            <kf t="1.000000" v="0.244000" e="cubicBezier 0.42 0.0 1.0 1.0" />
+          </property>
+          <property name="evolution" type="float" value="0.000000" />
+          <property name="direction" type="int" value="2" />
+          <property name="scale" type="float" value="1.000000" />
+          <property name="stretch" type="vec2" value="1.000000,1.000000" />
+          <property name="seed" type="float" value="0.000000" />
+          <property name="singleAxis" type="bool" value="true" />
+          <property name="screenSpace" type="bool" value="false" />
+          <property name="octaves" type="float" value="6.000000" />
+          <property name="offs" type="float" value="0.000000" />
+        </effect>
+        <effect id="com.alightcreative.effects.wavewarp2" locallyApplied="true">
+          <property name="phase" type="float">
+            <kf t="0.000000" v="5.010000" />
+            <kf t="0.487647" v="2.480000" />
+            <kf t="1.000000" v="0.000000" />
+          </property>
+          <property name="a1d" type="float" value="0.000000" />
+          <property name="m1" type="float" value="5.100000" />
+          <property name="m2" type="float" value="0.700000" />
+          <property name="a2d" type="float" value="135.000000" />
+          <property name="damping" type="float" value="-0.420000" />
+          <property name="dampingSpace" type="float" value="0.430000" />
+          <property name="dampingOrigin" type="float" value="0.200000" />
+          <property name="screenSpace" type="bool" value="false" />
+        </effect>
+        <content>خێری تۆی تییایە؟!</content>
+      </text>
+      <text id="724801" startTime="8733" endTime="10132" fillType="color" size="48.000000" font="imported?name=NRT-Bd (1).ttf" wrapWidth="2193" align="left">
+        <transform>
+          <location value="1100.500122,2396.262939,0.000000" />
+          <scale value="1.003648,1.003648" />
+        </transform>
+        <effect id="com.alightcreative.glow" locallyApplied="true">
+          <property name="radius" type="float" value="33.000000" />
+          <property name="alpha" type="float" value="0.740000" />
+          <property name="hardness" type="float" value="0.700000" />
+          <property name="color" type="color" value="#ff000000" />
+          <property name="blendMode" type="int" value="1" />
+        </effect>
+        <effect id="com.alightcreative.effects.turbulentdisplace3" locallyApplied="true">
+          <property name="parr" type="vec2">
+            <kf t="0.011445" v="290.000000,0.000000" />
+            <kf t="1.000000" v="0.000000,0.000000" />
+          </property>
+          <property name="intensity" type="float">
+            <kf t="0.000000" v="0.359000" />
+            <kf t="0.888480" v="0.000000" />
+            <kf t="0.112132" v="0.000000" e="cubicBezier 0.0 0.0 0.58 1.0" />
+            <kf t="1.000000" v="0.244000" e="cubicBezier 0.42 0.0 1.0 1.0" />
+          </property>
+          <property name="evolution" type="float" value="0.000000" />
+          <property name="direction" type="int" value="2" />
+          <property name="scale" type="float" value="1.000000" />
+          <property name="stretch" type="vec2" value="1.000000,1.000000" />
+          <property name="seed" type="float" value="0.000000" />
+          <property name="singleAxis" type="bool" value="true" />
+          <property name="screenSpace" type="bool" value="false" />
+          <property name="octaves" type="float" value="6.000000" />
+          <property name="offs" type="float" value="0.000000" />
+        </effect>
+        <effect id="com.alightcreative.effects.wavewarp2" locallyApplied="true">
+          <property name="phase" type="float">
+            <kf t="0.000000" v="0.000000" />
+            <kf t="0.495211" v="1.710000" />
+            <kf t="1.000000" v="2.220000" />
+          </property>
+          <property name="a1d" type="float" value="0.000000" />
+          <property name="m1" type="float" value="6.400000" />
+          <property name="m2" type="float" value="0.400000" />
+          <property name="a2d" type="float" value="45.000000" />
+          <property name="damping" type="float" value="0.000000" />
+          <property name="dampingSpace" type="float" value="0.000000" />
+          <property name="dampingOrigin" type="float" value="0.500000" />
+          <property name="screenSpace" type="bool" value="false" />
+        </effect>
+        <content>والله ئەوەم کردو</content>
+      </text>
+      <text id="724802" startTime="9300" endTime="10132" speed="0.879808" fillType="color" size="48.000000" font="imported?name=NRT-Bd (1).ttf" wrapWidth="2193" align="left">
+        <transform>
+          <location value="1339.760132,2624.977783,0.000000" />
+          <scale value="0.949384,0.949384" />
+        </transform>
+        <effect id="com.alightcreative.glow" locallyApplied="true">
+          <property name="radius" type="float" value="33.000000" />
+          <property name="alpha" type="float" value="0.740000" />
+          <property name="hardness" type="float" value="0.700000" />
+          <property name="color" type="color" value="#ff000000" />
+          <property name="blendMode" type="int" value="1" />
+        </effect>
+        <effect id="com.alightcreative.effects.turbulentdisplace3" locallyApplied="true">
+          <property name="parr" type="vec2">
+            <kf t="0.011445" v="290.000000,0.000000" />
+            <kf t="1.000000" v="0.000000,0.000000" />
+          </property>
+          <property name="intensity" type="float">
+            <kf t="0.000000" v="0.359000" />
+            <kf t="0.888480" v="0.000000" />
+            <kf t="0.112132" v="0.000000" e="cubicBezier 0.0 0.0 0.58 1.0" />
+            <kf t="1.000000" v="0.244000" e="cubicBezier 0.42 0.0 1.0 1.0" />
+          </property>
+          <property name="evolution" type="float" value="0.000000" />
+          <property name="direction" type="int" value="2" />
+          <property name="scale" type="float" value="1.000000" />
+          <property name="stretch" type="vec2" value="1.000000,1.000000" />
+          <property name="seed" type="float" value="0.000000" />
+          <property name="singleAxis" type="bool" value="true" />
+          <property name="screenSpace" type="bool" value="false" />
+          <property name="octaves" type="float" value="6.000000" />
+          <property name="offs" type="float" value="0.000000" />
+        </effect>
+        <effect id="com.alightcreative.effects.wavewarp2" locallyApplied="true">
+          <property name="phase" type="float">
+            <kf t="0.000000" v="0.000000" />
+            <kf t="1.000000" v="2.000000" />
+            <kf t="0.495211" v="1.180000" />
+          </property>
+          <property name="a1d" type="float" value="0.000000" />
+          <property name="m1" type="float" value="6.400000" />
+          <property name="m2" type="float" value="0.400000" />
+          <property name="a2d" type="float" value="45.000000" />
+          <property name="damping" type="float" value="0.000000" />
+          <property name="dampingSpace" type="float" value="0.000000" />
+          <property name="dampingOrigin" type="float" value="0.500000" />
+          <property name="screenSpace" type="bool" value="false" />
+        </effect>
+        <content>هەر هیچم دەست نەکەو..</content>
+      </text>
+      <text id="724804" label="خۆ ئەیەوێ فاکسی. بۆ بکات&#10;           کاکی خۆم Copy" startTime="10100" endTime="12265" fillType="color" size="40.000000" font="imported?name=NRT-Bd (1).ttf" wrapWidth="1649" align="left">
+        <transform>
+          <location value="1538.552979,2512.630127,0.000000" />
+          <scale value="1.132201,1.132201" />
+        </transform>
+        <effect id="com.alightcreative.glow" locallyApplied="true">
+          <property name="radius" type="float" value="33.000000" />
+          <property name="alpha" type="float" value="0.740000" />
+          <property name="hardness" type="float" value="0.700000" />
+          <property name="color" type="color" value="#ff000000" />
+          <property name="blendMode" type="int" value="1" />
+        </effect>
+        <effect id="com.alightcreative.effects.turbulentdisplace3" locallyApplied="true">
+          <property name="parr" type="vec2">
+            <kf t="0.011445" v="290.000000,0.000000" />
+            <kf t="1.000000" v="0.000000,0.000000" />
+          </property>
+          <property name="intensity" type="float">
+            <kf t="0.000000" v="0.359000" />
+            <kf t="0.888480" v="0.000000" />
+            <kf t="0.112132" v="0.000000" e="cubicBezier 0.0 0.0 0.58 1.0" />
+            <kf t="1.000000" v="0.244000" e="cubicBezier 0.42 0.0 1.0 1.0" />
+          </property>
+          <property name="evolution" type="float" value="0.000000" />
+          <property name="direction" type="int" value="2" />
+          <property name="scale" type="float" value="1.000000" />
+          <property name="stretch" type="vec2" value="1.000000,1.000000" />
+          <property name="seed" type="float" value="0.000000" />
+          <property name="singleAxis" type="bool" value="true" />
+          <property name="screenSpace" type="bool" value="false" />
+          <property name="octaves" type="float" value="6.000000" />
+          <property name="offs" type="float" value="0.000000" />
+        </effect>
+        <effect id="com.alightcreative.effects.wavewarp2" locallyApplied="true">
+          <property name="phase" type="float">
+            <kf t="0.000000" v="5.010000" />
+            <kf t="0.487647" v="2.480000" />
+            <kf t="1.000000" v="0.000000" />
+          </property>
+          <property name="a1d" type="float" value="0.000000" />
+          <property name="m1" type="float" value="5.100000" />
+          <property name="m2" type="float" value="0.700000" />
+          <property name="a2d" type="float" value="135.000000" />
+          <property name="damping" type="float" value="-0.420000" />
+          <property name="dampingSpace" type="float" value="0.430000" />
+          <property name="dampingOrigin" type="float" value="0.200000" />
+          <property name="screenSpace" type="bool" value="false" />
+        </effect>
+        <content>خۆ ئەیەوێ فاکسی بۆ بکات
+           کاکی خۆم</content>
+      </text>
+      <text id="724803" startTime="12266" endTime="14132" speed="1.160236" fillType="color" size="40.000000" font="imported?name=NRT-Bd (1).ttf" wrapWidth="1649" align="left">
+        <transform>
+          <location value="1644.310181,2390.762939,0.000000" />
+          <scale value="1.132201,1.132201" />
+        </transform>
+        <effect id="com.alightcreative.glow" locallyApplied="true">
+          <property name="radius" type="float" value="33.000000" />
+          <property name="alpha" type="float" value="0.740000" />
+          <property name="hardness" type="float" value="0.700000" />
+          <property name="color" type="color" value="#ff000000" />
+          <property name="blendMode" type="int" value="1" />
+        </effect>
+        <effect id="com.alightcreative.effects.turbulentdisplace3" locallyApplied="true">
+          <property name="parr" type="vec2">
+            <kf t="0.011445" v="290.000000,0.000000" />
+            <kf t="1.000000" v="0.000000,0.000000" />
+          </property>
+          <property name="intensity" type="float">
+            <kf t="0.000000" v="0.359000" />
+            <kf t="0.888480" v="0.000000" />
+            <kf t="0.112132" v="0.000000" e="cubicBezier 0.0 0.0 0.58 1.0" />
+            <kf t="1.000000" v="0.244000" e="cubicBezier 0.42 0.0 1.0 1.0" />
+          </property>
+          <property name="evolution" type="float" value="0.000000" />
+          <property name="direction" type="int" value="2" />
+          <property name="scale" type="float" value="1.000000" />
+          <property name="stretch" type="vec2" value="1.000000,1.000000" />
+          <property name="seed" type="float" value="0.000000" />
+          <property name="singleAxis" type="bool" value="true" />
+          <property name="screenSpace" type="bool" value="false" />
+          <property name="octaves" type="float" value="6.000000" />
+          <property name="offs" type="float" value="0.000000" />
+        </effect>
+        <effect id="com.alightcreative.effects.wavewarp2" locallyApplied="true">
+          <property name="phase" type="float">
+            <kf t="0.000000" v="5.010000" />
+            <kf t="0.487647" v="2.480000" />
+            <kf t="1.000000" v="0.000000" />
+          </property>
+          <property name="a1d" type="float" value="0.000000" />
+          <property name="m1" type="float" value="5.100000" />
+          <property name="m2" type="float" value="0.700000" />
+          <property name="a2d" type="float" value="135.000000" />
+          <property name="damping" type="float" value="-0.420000" />
+          <property name="dampingSpace" type="float" value="0.430000" />
+          <property name="dampingOrigin" type="float" value="0.200000" />
+          <property name="screenSpace" type="bool" value="false" />
+        </effect>
+        <content>لەگەڵ خوایا ئەو معامەلەیە ناکرێ</content>
+      </text>
+      <shape id="724812" label="مستطيل 1" startTime="0" endTime="14665" speed="0.753413" fillType="color" s=".rect">
+        <transform>
+          <location value="1386.500000,1919.999878,0.000000" />
+          <scale value="13.864999,24.648884" />
+        </transform>
+        <fillColor value="#ff44d370" />
+        <effect id="com.alightcreative.effects.lift" locallyApplied="true">
+          <property name="fill" type="float" value="0.000000" />
+        </effect>
+        <effect id="com.alightcreative.effects.highlightshadow" locallyApplied="true">
+          <property name="highlights" type="float" value="2.000000" />
+          <property name="shadows" type="float" value="0.830000" />
+        </effect>
+        <effect id="com.alightcreative.effects.exposure" locallyApplied="true">
+          <property name="exposure" type="float" value="0.310000" />
+          <property name="gamma" type="float" value="0.760000" />
+          <property name="offset" type="float" value="0.000000" />
+        </effect>
+        <effect id="com.alightcreative.effects.sharpen" locallyApplied="true">
+          <property name="strength" type="float" value="0.250000" />
+          <property name="radius" type="float" value="1.000000" />
+        </effect>
+        <effect id="com.alightcreative.effects.flicker2" locallyApplied="true">
+          <property name="freq" type="float" value="10.000000" />
+          <property name="mag" type="float" value="0.270000" />
+          <property name="seed" type="float" value="10.000000" />
+          <property name="basis" type="int" value="0" />
+        </effect>
+        <property name="size" type="vec2" value="100.000000,100.000000" />
+      </shape>
+      <shape id="724813" label="مستطيل 1" startTime="0" endTime="14665" speed="0.710908" fillType="color" blending="screen" s=".rect">
+        <transform>
+          <location value="1386.500000,1920.000000,0.000000" />
+          <scale value="13.864999,24.648886" />
+        </transform>
+        <fillColor value="#ff44d370" />
+        <effect id="com.alightcreative.effects.lift" locallyApplied="true">
+          <property name="fill" type="float" value="0.000000" />
+        </effect>
+        <effect id="com.alightcreative.effects.dblur" locallyApplied="true">
+          <property name="strength" type="float" value="0.310000" />
+          <property name="angle" type="float" value="0.000000" />
+        </effect>
+        <effect id="com.alightcreative.effects.colorhot" locallyApplied="true">
+          <property name="color" type="vec3" value="30.983013,1.000000,0.000000" />
+          <property name="tint" type="vec3" value="37.423771,1.000000,0.000000" />
+        </effect>
+        <effect id="com.alightcreative.effects.highlightshadow" locallyApplied="true">
+          <property name="highlights" type="float" value="0.100000" />
+          <property name="shadows" type="float" value="0.000000" />
+        </effect>
+        <property name="size" type="vec2" value="100.000000,100.000000" />
+      </shape>
+      <shape id="724814" label="مستطيل 1" startTime="0" endTime="14665" speed="0.710908" fillType="color" blending="lighten" s=".rect">
+        <transform>
+          <location value="1386.500000,1920.000000,0.000000" />
+          <scale value="13.865002,24.648888" />
+        </transform>
+        <fillColor value="#ff44d370" />
+        <effect id="com.alightcreative.effects.lift" locallyApplied="true">
+          <property name="fill" type="float" value="0.000000" />
+        </effect>
+        <effect id="com.alightcreative.gradientoverlay2" locallyApplied="true">
+          <property name="color1" type="color" value="#ff7b91af" />
+          <property name="color2" type="color" value="#ff000000" />
+          <property name="angle" type="float" value="0.000000" />
+          <property name="scale" type="float" value="2.540000" />
+          <property name="alpha" type="float" value="0.549000" />
+          <property name="gradType" type="int" value="1" />
+          <property name="blendMode" type="int" value="0" />
+        </effect>
+        <effect id="com.alightcreative.effects.gaussianblur" locallyApplied="true">
+          <property name="strength" type="float" value="0.150000" />
+        </effect>
+        <effect id="com.alightcreative.effects.highlightshadow" locallyApplied="true">
+          <property name="highlights" type="float" value="1.000000" />
+          <property name="shadows" type="float" value="0.000000" />
+        </effect>
+        <effect id="com.alightcreative.effects.flicker2" locallyApplied="true">
+          <property name="freq" type="float" value="10.000000" />
+          <property name="mag" type="float" value="0.030000" />
+          <property name="seed" type="float" value="10.000000" />
+          <property name="basis" type="int" value="0" />
+        </effect>
+        <property name="size" type="vec2" value="100.000000,100.000000" />
+      </shape>
+    </scene>
+  </embedScene>
+</scene>

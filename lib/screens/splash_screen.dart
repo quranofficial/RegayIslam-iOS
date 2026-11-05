@@ -5,6 +5,7 @@ import '../core/prefs.dart';
 import '../data/db.dart';
 import '../data/prayer_notifications.dart';
 import '../data/rtdb.dart';
+import '../data/home_widgets.dart';
 import 'main_screen.dart';
 
 /// Original: SplashActivity — initializes services, shows the admin
@@ -35,6 +36,7 @@ class _SplashScreenState extends State<SplashScreen> {
       await PrayerNotifications.I.init();
       await PrayerNotifications.I.requestPermission();
       await PrayerNotifications.I.scheduleAll();
+      await HomeWidgets.updatePrayer();
     } catch (_) {}
     if (!mounted) return;
     await Future.delayed(const Duration(milliseconds: 900));

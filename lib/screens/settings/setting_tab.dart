@@ -9,6 +9,7 @@ import '../feedback/feedback_screen.dart';
 import '../band/band_screen.dart';
 import '../misc/webview_screen.dart';
 import 'adhan_offset_screen.dart';
+import '../home/home_reorder_screen.dart';
 import 'adhan_voice_screen.dart';
 
 /// Original: SettingFragmentActivity — app settings incl. night mode,
@@ -68,22 +69,23 @@ class _SettingTabState extends State<SettingTab> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               child: Column(children: [
                 ListTile(
-                    leading: const Icon(Icons.tune_rounded, color: AppColors.primaryDark),
+                    leading: Icon(Icons.tune_rounded,
+                        color: dark ? AppColors.gold : AppColors.primaryDark),
                     title: Text('ڕێکخستنی قورئان (تەفسیر و فۆنت)',
                         style: TextStyle(fontSize: 14, color: txt)),
                     trailing: const Icon(Icons.chevron_left),
                     onTap: () => showQuranSettingsSheet(context, () {})),
                 ListTile(
-                    leading: const Icon(Icons.notifications_active_rounded,
-                        color: AppColors.primaryDark),
+                    leading: Icon(Icons.notifications_active_rounded,
+                        color: dark ? AppColors.gold : AppColors.primaryDark),
                     title: Text('ڕێکخستنی بانگی نوێژ',
                         style: TextStyle(fontSize: 14, color: txt)),
                     trailing: const Icon(Icons.chevron_left),
                     onTap: () => Navigator.push(context, MaterialPageRoute(
                         builder: (_) => const NwezhiSettingsScreen()))),
                 ListTile(
-                    leading: const Icon(Icons.record_voice_over_rounded,
-                        color: AppColors.primaryDark),
+                    leading: Icon(Icons.record_voice_over_rounded,
+                        color: dark ? AppColors.gold : AppColors.primaryDark),
                     title: Text('دەنگی بانگبێژ',
                         style: TextStyle(fontSize: 14, color: txt)),
                     subtitle: Text('دەنگی هەڵبژێردراو : ${p.adhanVoiceName}',
@@ -93,13 +95,21 @@ class _SettingTabState extends State<SettingTab> {
                         builder: (_) => const AdhanVoiceScreen()))
                         .then((_) => setState(() {}))),
                 ListTile(
-                    leading: const Icon(Icons.schedule_rounded,
-                        color: AppColors.primaryDark),
+                    leading: Icon(Icons.schedule_rounded,
+                        color: dark ? AppColors.gold : AppColors.primaryDark),
                     title: Text('دواخستن و پێشخستنی کاتی بانگدان',
                         style: TextStyle(fontSize: 14, color: txt)),
                     trailing: const Icon(Icons.chevron_left),
                     onTap: () => Navigator.push(context, MaterialPageRoute(
                         builder: (_) => const AdhanOffsetScreen()))),
+                ListTile(
+                    leading: Icon(Icons.swap_vert_rounded,
+                        color: dark ? AppColors.gold : AppColors.primaryDark),
+                    title: Text('ڕێکخستنی بەشەکانی پەڕەی سەرەتا',
+                        style: TextStyle(fontSize: 14, color: txt)),
+                    trailing: const Icon(Icons.chevron_left),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => const HomeReorderScreen()))),
               ])),
           _section('پەیوەندی', dark, txt),
           Card(color: dark ? AppColors.nightCard : Colors.white,
@@ -126,22 +136,22 @@ class _SettingTabState extends State<SettingTab> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               child: Column(children: [
                 ListTile(
-                    leading: const Icon(Icons.mail_outline_rounded,
-                        color: AppColors.primaryDark),
+                    leading: Icon(Icons.mail_outline_rounded,
+                        color: dark ? AppColors.gold : AppColors.primaryDark),
                     title: Text('پەیام و ڕەخنە', style: TextStyle(fontSize: 14, color: txt)),
                     trailing: const Icon(Icons.chevron_left),
                     onTap: () => Navigator.push(context, MaterialPageRoute(
                         builder: (_) => const FeedbackScreen()))),
                 ListTile(
-                    leading: const Icon(Icons.person_rounded,
-                        color: AppColors.primaryDark),
+                    leading: Icon(Icons.person_rounded,
+                        color: dark ? AppColors.gold : AppColors.primaryDark),
                     title: Text('پرۆفایل', style: TextStyle(fontSize: 14, color: txt)),
                     trailing: const Icon(Icons.chevron_left),
                     onTap: () => Navigator.push(context, MaterialPageRoute(
                         builder: (_) => const BandScreen()))),
                 ListTile(
-                    leading: const Icon(Icons.language_rounded,
-                        color: AppColors.primaryDark),
+                    leading: Icon(Icons.language_rounded,
+                        color: dark ? AppColors.gold : AppColors.primaryDark),
                     title: Text('ماڵپەڕ', style: TextStyle(fontSize: 14, color: txt)),
                     trailing: const Icon(Icons.chevron_left),
                     onTap: () => Navigator.push(context, MaterialPageRoute(
