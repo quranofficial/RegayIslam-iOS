@@ -31,6 +31,10 @@ dependencies:
   gal: ^2.3.2
   ffmpeg_kit_flutter_new: ^4.6.8
 
+dependency_overrides:
+  home_widget:
+    path: vendor/home_widget
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
