@@ -44,31 +44,38 @@ class Rtdb {
   /// Convert Firebase arrays, keyed collections and single records to rows.
   Future<List<Map<String, dynamic>>> list(String path) async {
     final v = await get(path);
+    if (v == null) return [];
+    final u = _unwrap(v);
     final out = <Map<String, dynamic>>[];
-    const fields = {'name', 'title', 'desc', 'text', 'link', 'url',
-      'video', 'videourl', 'stream', 'youtube', 'image', 'thumbnail'};
-    if (v is List) {
-      for (var i = 0; i < v.length; i++) {
-        final item = v[i];
+    if (u is List) {
+      for (var i = 0; i < u.length; i++) {
+        final item = u[i];
         if (item is Map) {
-          out.add(Map<String, dynamic>.from(item));
+          out.add({'id': i.toString(), ...Map<String, dynamic>.from(item)});
         } else if (item is String && item.trim().isNotEmpty) {
           out.add({'id': i.toString(), 'url': item.trim()});
         }
       }
-    } else if (v is Map) {
-      final oneRecord = v.keys.any((k) => fields.contains(k.toString().toLowerCase()));
-      if (oneRecord) {
-        out.add(Map<String, dynamic>.from(v));
+    } else if (u is Map) {
+      final entries = u.entries.toList();
+      // A single object with scalar fields (dialogg/dialog, ramadan) is one
+      // row, not a list of "day" -> 3 garbage rows.
+      final allScalar = entries.isNotEmpty &&
+          entries.every((e) => e.value is! Map && e.value is! List);
+      if (allScalar) {
+        out.add({'id': path.split('/').last, ...Map<String, dynamic>.from(u)});
       } else {
-        v.forEach((key, item) {
+        for (final e in entries) {
+          final item = e.value;
           if (item is Map) {
-            out.add({'id': key.toString(), ...Map<String, dynamic>.from(item)});
+            out.add({'id': e.key.toString(), ...Map<String, dynamic>.from(item)});
           } else if (item is String && item.trim().isNotEmpty) {
-            out.add({'id': key.toString(), 'url': item.trim()});
+            out.add({'id': e.key.toString(), 'url': item.trim()});
           }
-        });
+        }
       }
+    } else if (u is String && u.trim().isNotEmpty) {
+      out.add({'id': path.split('/').last, 'url': u.trim()});
     }
     return out;
   }
@@ -95,9 +102,11 @@ class Rtdb {
   }
 
   /// Sketchware saved some nodes as whole JSON arrays inside a string
-  /// ("videoall" -> {videoall: '[{image,name,tag},...]'}, "Live" likewise).
+  /// ("videoall" -> {videoall: '[{image,name,tag},...]'}, "Live" likewise)
+  /// or as single nested objects ("dialogg" -> {dialog: {...}},
+  /// "ramadan" -> {ramadan: {day, month, state}}). Unwrap all of that.
   dynamic _unwrap(dynamic v) {
-    if (v is String && v.trim().startsWith('[{')) {
+    if (v is String && v.trim().startsWith('[')) {
       try {
         return jsonDecode(v);
       } catch (_) {

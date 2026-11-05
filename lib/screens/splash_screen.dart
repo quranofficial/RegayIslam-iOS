@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../core/constants.dart';
 import '../core/prefs.dart';
 import '../data/db.dart';
 import '../data/prayer_notifications.dart';
+import '../data/rtdb.dart';
 import 'main_screen.dart';
 
-/// Original: SplashActivity — initializes services, then opens MainActivity.
+/// Original: SplashActivity — initializes services, shows the admin
+/// announcement dialog from Firebase "dialogg/dialog" (once per version),
+/// then opens MainActivity.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
   @override
@@ -37,6 +41,64 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const MainScreen()));
+    _maybeShowDialog();
+  }
+
+  /// dialogg/dialog = {open, only, title, text, url, close, ver, random}.
+  /// Shown once per unique ver/random so it doesn't nag on every start.
+  Future<void> _maybeShowDialog() async {
+    try {
+      final rows = await Rtdb.I.dialogg();
+      if (rows.isEmpty) return;
+      final d = rows.first;
+      if ('${d['open'] ?? ''}'.toLowerCase() == 'false') return;
+      final title = '${d['title'] ?? ''}'.trim();
+      final text = '${d['text'] ?? ''}'.trim();
+      if (title.isEmpty && text.isEmpty) return;
+      final stamp =
+          '${d['ver'] ?? ''}|${d['random'] ?? ''}|$title'.hashCode.toString();
+      if (AppPrefs.I.dialogSeen == stamp) return;
+      final url = '${d['url'] ?? ''}'.trim();
+      final closeLabel = '${d['close'] ?? ''}'.trim().isEmpty
+          ? 'داخستن'
+          : '${d['close']}'.trim();
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (c) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: Text(title.isEmpty ? 'ئاگادارکردنەوە' : title,
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryDark)),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Text(text,
+                    style: const TextStyle(fontSize: 13.5, height: 1.8)),
+              ),
+            ),
+            actions: [
+              if (url.startsWith('http'))
+                TextButton(
+                    onPressed: () => launchUrl(Uri.parse(url),
+                        mode: LaunchMode.externalApplication),
+                    child: const Text('کردنەوەی لینک',
+                        style: TextStyle(color: AppColors.primaryDark))),
+              ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryDark,
+                      foregroundColor: Colors.white),
+                  onPressed: () => Navigator.pop(c),
+                  child: Text(closeLabel)),
+            ],
+          ),
+        ),
+      );
+      AppPrefs.I.dialogSeen = stamp;
+    } catch (_) {}
   }
 
   @override

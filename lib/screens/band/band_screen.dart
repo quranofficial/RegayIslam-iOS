@@ -37,6 +37,12 @@ class BandScreen extends StatelessWidget {
               const SizedBox(height: 12),
               Center(child: Text(AppPrefs.I.cityName == '' ? 'بەکارهێنەر' : 'ئەندامی ڕێگای ئیسلام',
                   style: TextStyle(fontWeight: FontWeight.bold, color: txt))),
+              if (items.isEmpty) ...[
+                const SizedBox(height: 20),
+                Center(child: Text('هیچ زانیارییەک بۆ پرۆفایل بەردەست نییە',
+                    style: TextStyle(fontSize: 12.5,
+                        color: txt.withOpacity(.5)))),
+              ],
               const SizedBox(height: 20),
               for (final b in items)
                 Container(

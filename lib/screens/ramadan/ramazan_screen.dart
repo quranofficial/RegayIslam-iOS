@@ -65,6 +65,15 @@ class RamazanScreen extends StatelessWidget {
                 builder: (context, fs) {
                   if (!fs.hasData || fs.data!.isEmpty) return const SizedBox();
                   final last = fs.data!.last;
+                  final state = '${last['state'] ?? ''}'.toLowerCase();
+                  if (state == 'false') return const SizedBox();
+                  final day = '${last['day'] ?? ''}'.trim();
+                  final month = '${last['month'] ?? ''}'.trim();
+                  final when = day.isNotEmpty
+                      ? 'ئێمە ئێستا لە ڕۆژی $day'
+                          '${month.isNotEmpty ? 'ی مانگی $month' : ''} دابوون'
+                      : '';
+                  final extra = '${last['text'] ?? ''}'.trim();
                   return Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -72,13 +81,23 @@ class RamazanScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(14)),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('${last['title'] ?? 'ڕەمەزانتان پیرۆز'}',
+                          Text('${last['title'] ?? 'ڕەمەزانتان پیرۆز بێت'}',
                               style: const TextStyle(color: Colors.white,
                                   fontWeight: FontWeight.bold, fontSize: 15)),
-                          const SizedBox(height: 4),
-                          Text('${last['text'] ?? ''}',
-                              style: TextStyle(color: Colors.white.withOpacity(.85),
-                                  fontSize: 12.5, height: 1.6)),
+                          if (when.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(when,
+                                style: TextStyle(
+                                    color: Colors.white.withOpacity(.85),
+                                    fontSize: 12.5, height: 1.6)),
+                          ],
+                          if (extra.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(extra,
+                                style: TextStyle(
+                                    color: Colors.white.withOpacity(.85),
+                                    fontSize: 12.5, height: 1.6)),
+                          ],
                         ]),
                   );
                 },

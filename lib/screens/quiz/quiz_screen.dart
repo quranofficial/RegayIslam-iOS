@@ -34,7 +34,7 @@ class _QuizScreenState extends State<QuizScreen> {
     final q = await Rtdb.I.quiz();
     if (!mounted) return;
     if (q.isEmpty) {
-      setState(() { _loading = false; _error = 'کێشەی هێنانەوەی پرسیارەکان — ئینتەرنێت بپشکنە'; });
+      setState(() { _loading = false; _error = 'پرسیارەکان بەردەست نین — دواتر دووبارە هەوڵبدەرەوە'; });
       return;
     }
     q.shuffle();

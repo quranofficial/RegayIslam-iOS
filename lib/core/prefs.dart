@@ -144,6 +144,10 @@ class AppPrefs {
   String get commentName => _p.getString('nameprofile') ?? '';
   set commentName(String v) => _p.setString('nameprofile', v);
 
+  // --- startup announcement dialog: stamp of the last shown dialogg/ver ---
+  String get dialogSeen => _p.getString('dialogg_seen') ?? '';
+  set dialogSeen(String v) => _p.setString('dialogg_seen', v);
+
   // --- library books json (MainActivity pref "onlybookme": the fetched
   //     ktebakan.json, kept offline) ---
   String get libraryJson => _p.getString('onlybookme') ?? '';
