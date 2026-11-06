@@ -1,0 +1,45 @@
+name: Build RegayIslam Web
+
+on:
+  push:
+    branches:
+      - feature/unified-web-platform
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: regayislam-web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Build website
+        run: flutter build web --release --base-href /RegayIslam-iOS/
+
+      - name: Upload website artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: regayislam-website
+          path: build/web/
+          if-no-files-found: error
+          retention-days: 14
