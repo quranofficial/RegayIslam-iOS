@@ -28,13 +28,17 @@ class _SplashScreenState extends State<SplashScreen> {
     try {
       await Db.I.init();
     } catch (_) {}
+    // Native alarm setup is isolated: a platform that does not support
+    // local notifications (for example, a browser) must not block the rest
+    // of startup or the daily Quran ayah selection.
     try {
       await PrayerNotifications.I.init();
-      await PrayerNotifications.warmUp(); // find downloaded adhan voices
+      await PrayerNotifications.warmUp();
       await PrayerNotifications.I.requestPermission();
       await PrayerNotifications.I.scheduleAll();
+    } catch (_) {}
+    try {
       await HomeWidgets.updatePrayer();
-      // Item 5: the Quran widget always carries one fresh ayah of the day.
       await HomeWidgets.pushDailyAyah();
     } catch (_) {}
     _checkAdminNotification();
