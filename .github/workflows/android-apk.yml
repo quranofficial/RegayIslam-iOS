@@ -1,10 +1,13 @@
 name: Build RegayIslam Android APK
 
 on:
+  push:
+    branches:
+      - feature/unified-web-platform
   workflow_dispatch:
 
 concurrency:
-  group: regayislam-${{ github.workflow }}
+  group: regayislam-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
