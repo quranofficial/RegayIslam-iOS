@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
@@ -148,9 +147,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           if (await file.exists()) await f.delete();
         } catch (_) {}
       });
-      final bytes = await file.readAsBytes();
-      await Gal.putVideoBytes(Uint8List.fromList(bytes),
-          album: 'ڕێگای ئیسلام');
+      // gal >= 2.0 removed putVideoBytes (large videos must not be read
+      // into memory) — save directly from the temp file instead.
+      await Gal.putVideo(file.path, album: 'ڕێگای ئیسلام');
       try {
         if (await file.exists()) await file.delete();
       } catch (_) {}
