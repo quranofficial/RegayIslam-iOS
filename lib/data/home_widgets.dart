@@ -65,11 +65,22 @@ class HomeWidgets {
       final now = DateTime.now();
       final dayKey = '${now.year}-${now.month}-${now.day}';
       if (AppPrefs.I.widgetAyahDay == dayKey) return;
-      final sura = Random(now.day).nextInt(114) + 1;
+      // Keep the widget and the home banner on the exact same daily
+      // selection. The surah is derived from the calendar day; the ayah
+      // index is persisted so both surfaces remain identical after restart.
+      final dailyRandom = Random(now.day * 31 + now.month);
+      final sura = dailyRandom.nextInt(114) + 1;
       final pool = await Db.I.ayat(sura, AppPrefs.I.tafsir);
       if (pool.isEmpty) return;
-      final idx = Random(now.day).nextInt(pool.length);
+      final saved = AppPrefs.I.ayahDay == dayKey
+          ? AppPrefs.I.ayahBannerSeed
+          : -1;
+      final idx = saved >= 0 && saved < pool.length
+          ? saved
+          : Random(now.day * 31 + now.month).nextInt(pool.length);
       final row = pool[idx];
+      AppPrefs.I.ayahDay = dayKey;
+      AppPrefs.I.ayahBannerSeed = idx;
       await updateAyah(
         text: '${row['text'] ?? ''}',
         reference:
