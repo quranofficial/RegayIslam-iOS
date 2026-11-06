@@ -121,14 +121,14 @@ class _QiblaScreenState extends State<QiblaScreen> {
             : const Color(0xFFEAF2F8),
         appBar: AppBar(
           backgroundColor: dark ? AppColors.nightCard : AppColors.primaryDark,
-          title: const Text('قیبلەنما',
+          title: const Text('قیبلە',
               style: TextStyle(color: Colors.white, fontSize: 17)),
           actions: [
             IconButton(
                 tooltip: 'هاوبەشی',
                 onPressed: () => sharePage(
                     'قیبلەنمای ڕێگای ئیسلام — ئاڕاستەی قیبلە بە دروستی بدۆزەوە',
-                    title: 'قیبلەنما'),
+                    title: 'قیبلە'),
                 icon: const Icon(Icons.share_rounded, color: Colors.white)),
           ],
         ),
