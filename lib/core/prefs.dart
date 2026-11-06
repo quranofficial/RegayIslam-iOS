@@ -272,6 +272,34 @@ class AppPrefs {
   int get mushafLastPage => _p.getInt('mushafLastPage') ?? 0;
   set mushafLastPage(int v) => _p.setInt('mushafLastPage', v);
 
+  // --- item 3: last read position in the Quran reader (continue reading) ---
+  int get lastReadSurah => _p.getInt('lastReadSurah') ?? 0;
+  set lastReadSurah(int v) => _p.setInt('lastReadSurah', v);
+  int get lastReadAyah => _p.getInt('lastReadAyah') ?? 0;
+  set lastReadAyah(int v) => _p.setInt('lastReadAyah', v);
+  String get lastReadWhen => _p.getString('lastReadWhen') ?? '';
+  set lastReadWhen(String v) => _p.setString('lastReadWhen', v);
+  void saveReadingPosition(int surahId, int ayah) {
+    if (surahId <= 0 || ayah <= 0) return;
+    _p.setInt('lastReadSurah', surahId);
+    _p.setInt('lastReadAyah', ayah);
+    final n = DateTime.now();
+    _p.setString('lastReadWhen',
+        '${n.year}/${n.month}/${n.day}');
+  }
+
+  // --- item 21: browse mode of the Quran tab (0 = سوورەت, 1 = لاپەڕە) ---
+  int get quranBrowseMode => _p.getInt('quranBrowseMode') ?? 0;
+  set quranBrowseMode(int v) => _p.setInt('quranBrowseMode', v);
+
+  // --- item 10: remembered video playback speed (0.25 .. 2.0) ---
+  double get videoSpeed => _p.getDouble('videoSpeed') ?? 1.0;
+  set videoSpeed(double v) => _p.setDouble('videoSpeed', v);
+
+  // --- item 4: continue to the next surah automatically (دەنگی قورئان) ---
+  bool get autoNextSurah => _p.getBool('autoNextSurah') ?? true;
+  set autoNextSurah(bool v) => _p.setBool('autoNextSurah', v);
+
   ThemeData get theme => ThemeData(
         brightness: day ? Brightness.light : Brightness.dark,
         colorScheme: ColorScheme.fromSeed(

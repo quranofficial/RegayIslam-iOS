@@ -257,7 +257,7 @@ class _QiblaScreenState extends State<QiblaScreen> {
                   if (_lat != null && _lng != null) ...[
                     const SizedBox(height: 6),
                     Text(
-                        'دووری قەبە: ${_distanceKm(_lat!, _lng!).toStringAsFixed(0)} کم — ناوخۆکەت: ${_lat!.toStringAsFixed(2)}, ${_lng!.toStringAsFixed(2)}',
+                        'دووری قیبلە: ${_distanceKm(_lat!, _lng!).toStringAsFixed(0)} کم — ناوخۆکەت: ${_lat!.toStringAsFixed(2)}, ${_lng!.toStringAsFixed(2)}',
                         textAlign: TextAlign.center,
                         style: TextStyle(fontSize: 11.5,
                             color: txt.withOpacity(.6))),

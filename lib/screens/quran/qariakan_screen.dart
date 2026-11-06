@@ -21,6 +21,7 @@ class QariakanScreen extends StatefulWidget {
 
 class _QariakanScreenState extends State<QariakanScreen> {
   List<Map<String, dynamic>> _reciters = [];
+  List<Map<String, Object?>> _surahs = [];
   Map<String, Object?>? _surah;
   int? _selected = int.tryParse(AppPrefs.I.qariId);
   final AudioPlayer _player = AudioPlayer();
@@ -29,6 +30,7 @@ class _QariakanScreenState extends State<QariakanScreen> {
   String? _error;
   String? _downloadingId;
   bool _cancelAll = false;
+  bool _advancing = false; // guard against double advance
 
   @override
   void initState() {
@@ -38,8 +40,34 @@ class _QariakanScreenState extends State<QariakanScreen> {
     _player.onPlayerStateChanged.listen((s) {
       if (mounted) setState(() => _playing = s == PlayerState.playing);
     });
-    _player.onPlayerComplete.listen((_) {
-      if (mounted) setState(() => _playing = false);
+    // Item 4: when a surah finishes, the NEXT surah starts automatically
+    // with the same reciter (١١٤ سوورەت بەدوای یەک) — no more silence after
+    // every surah.
+    _player.onPlayerComplete.listen((_) async {
+      if (!mounted || _advancing) return;
+      if (!AppPrefs.I.autoNextSurah) {
+        setState(() => _playing = false);
+        return;
+      }
+      _advancing = true;
+      try {
+        final cur = (_surah?['soraid'] as num?)?.toInt() ?? 1;
+        final next = cur >= 114 ? 1 : cur + 1;
+        final s = _surahs.where((e) =>
+            (e['soraid'] as num?)?.toInt() == next).toList();
+        if (s.isEmpty || _selected == null) return;
+        final rec = _reciters.where((r) =>
+            (r['id'] is int ? r['id'] : int.tryParse('${r['id']}')) ==
+                _selected).toList();
+        if (rec.isEmpty) return;
+        if (mounted) {
+          setState(() => _surah = s.first);
+          await _play(rec.first);
+        }
+      } catch (_) {
+      } finally {
+        _advancing = false;
+      }
     });
   }
 
@@ -47,8 +75,10 @@ class _QariakanScreenState extends State<QariakanScreen> {
     try {
       final raw = await rootAssetString('assets/data/dangakan.json');
       final list = jsonDecode(raw) as List;
+      final surahs = await Db.I.surahs();
       setState(() {
         _reciters = list.map((e) => Map<String, dynamic>.from(e)).toList();
+        _surahs = surahs;
         _loading = false;
       });
     } catch (e) {
@@ -285,6 +315,20 @@ class _QariakanScreenState extends State<QariakanScreen> {
                   fontWeight: FontWeight.bold)),
           actions: [
             IconButton(
+              tooltip: AppPrefs.I.autoNextSurah
+                  ? 'بەردەوامی دوای هەر سوورەتێک: کارا — بۆ کژکردن دەستی لێبدا'
+                  : 'بەردەوامی دوای هەر سوورەتێک: کژە — بۆ کردنەوەی دەستی لێبدا',
+              icon: Icon(
+                AppPrefs.I.autoNextSurah
+                    ? Icons.playlist_play_rounded
+                    : Icons.playlist_remove_rounded,
+                color: AppPrefs.I.autoNextSurah
+                    ? AppColors.gold
+                    : Colors.white54),
+              onPressed: () => setState(() =>
+                  AppPrefs.I.autoNextSurah = !AppPrefs.I.autoNextSurah),
+            ),
+            IconButton(
                 tooltip: 'هاوبەشی',
                 icon: const Icon(Icons.share_rounded, color: Colors.white),
                 onPressed: () => sharePage('دەنگی قورئان بە دەنگی قارئەکان',
@@ -361,7 +405,8 @@ class _QariakanScreenState extends State<QariakanScreen> {
                     return AudioPlayerBar(
                       player: _player,
                       dark: dark,
-                      title: 'دەنگی سوورەت — $name',
+                      title: 'دەنگی سوورەت — $name'
+                          '${_surah == null ? '' : ' • ${_surah!['name'] ?? ''}'}',
                       onPlayPause: () {
                         if (rec.isNotEmpty) _play(rec.first);
                       },

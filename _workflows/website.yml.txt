@@ -1,0 +1,46 @@
+# نموونەی workflow بۆ خۆکارکردنی وێبسایت (ئارەزوومەندانە).
+# تۆکنی ئێستا ڕێگەی workflow scope نییە، بۆیە ئەم فایلە لە .github/workflows دانەنراوە.
+# بەکارهێنان: لە GitHub، ئەم فایلە کۆپی بکە بۆ .github/workflows/website.yml
+# یان لە Settings → Pages → Source = "Deploy from a branch" → main /docs هەڵبژێرە
+# (ئەو کاتە وێبسایت بەبێ هیچ Action ـێک ٢٤/٧ بەردەست دەبێت).
+name: RegayIslam Website (GitHub Pages)
+
+# Item 19: the website lives with the app and stays online 24/7 for FREE —
+# GitHub Pages hosting + this action re-publishing docs/ on every push.
+# One-time setup in the repo: Settings → Pages → Source = "GitHub Actions".
+on:
+  push:
+    branches: [main]
+    paths: [docs/**]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: regayislam-web
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload the static site (docs/)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

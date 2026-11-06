@@ -10,9 +10,10 @@ import 'quran_search_screen.dart';
 import 'quran_studio_screen.dart';
 
 /// Original: QurannFragmentActivity — surah list with live search filter.
-/// Item 3: the Quran can also be browsed by جوزئی (پارە) — 30 parts, each
-/// opening the surah it starts in. Item 20: titles never double the
-/// "سوڕەتی" prefix (suraLabel strips every DB spelling).
+/// Item 21: the second browse mode is لاپەڕە (pages) — 604 page cards that
+/// open the real MushafScreen at that page (the old پارە/جوزئی mode kept
+/// bouncing back to a list). Item 3: a "continue reading" card always sits
+/// on top and returns to the EXACT last-read ayah.
 class QuranTab extends StatefulWidget {
   const QuranTab({super.key});
   @override
@@ -24,18 +25,36 @@ class _QuranTabState extends State<QuranTab> {
   List<Map<String, Object?>> _all = [];
   List<Map<String, Object?>> _filtered = [];
   bool _loading = true;
-  bool _byJuz = false; // false = سوورەت, true = پارە (جوزئی)
+  late int _mode; // 0 = سوورەت, 1 = لاپەڕە
+  Map<String, Object?>? _lastRead;
 
   @override
   void initState() {
     super.initState();
+    _mode = AppPrefs.I.quranBrowseMode;
     _load();
   }
 
   Future<void> _load() async {
     final rows = await Db.I.surahs();
+    // Item 3: the last-read surah for the continue-reading card.
+    Map<String, Object?>? last;
+    final sid = AppPrefs.I.lastReadSurah;
+    if (sid > 0) {
+      for (final r in rows) {
+        if ((r['soraid'] as num?)?.toInt() == sid) {
+          last = r;
+          break;
+        }
+      }
+    }
     if (!mounted) return;
-    setState(() { _all = rows; _filtered = rows; _loading = false; });
+    setState(() {
+      _all = rows;
+      _filtered = rows;
+      _lastRead = last;
+      _loading = false;
+    });
   }
 
   void _filter(String q) {
@@ -51,28 +70,9 @@ class _QuranTabState extends State<QuranTab> {
     });
   }
 
-  /// جوزئی numbers contained in a raw DB value like "جوزئی  3-4".
-  List<int> _juzOf(Map<String, Object?> s) {
-    final raw = '${s['juz'] ?? ''}'.replaceAll(RegExp(r'[^0-9\-]'), ' ');
-    final out = <int>{};
-    for (final p in raw.split(RegExp(r'[\s\-]+'))) {
-      final n = int.tryParse(p);
-      if (n != null && n >= 1 && n <= 30) out.add(n);
-    }
-    return out.toList()..sort();
-  }
-
-  /// The surah in which juz [n] starts (smallest global start ayah).
-  Map<String, Object?>? _surahOfJuz(int n) {
-    Map<String, Object?>? best;
-    var bestStart = 1 << 30;
-    for (final s in _all) {
-      if (!_juzOf(s).contains(n)) continue;
-      final st = (s['sarata'] as num?)?.toInt() ??
-          ((s['soraid'] as num?)?.toInt() ?? 0) * 10000;
-      if (st < bestStart) { bestStart = st; best = s; }
-    }
-    return best;
+  void _setMode(int m) {
+    setState(() => _mode = m);
+    AppPrefs.I.quranBrowseMode = m;
   }
 
   @override
@@ -91,8 +91,11 @@ class _QuranTabState extends State<QuranTab> {
             IconButton(
                 tooltip: 'مەشەف',
                 icon: const Icon(Icons.menu_book_rounded, color: Colors.white),
-                onPressed: () => Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => const MushafScreen()))),
+                onPressed: () async {
+                  await Navigator.push(context, MaterialPageRoute(
+                      builder: (_) => const MushafScreen()));
+                  _load();
+                }),
             IconButton(
                 tooltip: 'ئیدیتی قورئان',
                 icon: const Icon(Icons.edit_note_rounded, color: Colors.white),
@@ -132,21 +135,21 @@ class _QuranTabState extends State<QuranTab> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    // Item 3: سوورەت بە پارەش بخوێنرێتەوە.
-                    SegmentedButton<bool>(
+                    // Item 21: لاپەڕە (pages) replaces the old پارە (جوزئی)
+                    // label — picking a page opens the mushaf itself.
+                    SegmentedButton<int>(
                       segments: const [
                         ButtonSegment(
-                            value: false,
+                            value: 0,
                             icon: Icon(Icons.menu_book_rounded, size: 18),
                             label: Text('سوورەت')),
                         ButtonSegment(
-                            value: true,
+                            value: 1,
                             icon: Icon(Icons.auto_stories_rounded, size: 18),
-                            label: Text('پارە (جوزئی)')),
+                            label: Text('لاپەڕە')),
                       ],
-                      selected: {_byJuz},
-                      onSelectionChanged: (s) =>
-                          setState(() => _byJuz = s.first),
+                      selected: {_mode},
+                      onSelectionChanged: (s) => _setMode(s.first),
                       style: ButtonStyle(
                         visualDensity: VisualDensity.compact,
                         side: WidgetStatePropertyAll(BorderSide(
@@ -155,9 +158,10 @@ class _QuranTabState extends State<QuranTab> {
                     ),
                   ]),
                 ),
+                _continueCard(dark, txt),
                 Expanded(
-                  child: _byJuz
-                      ? _juzList(dark, txt)
+                  child: _mode == 1
+                      ? _pageGrid(dark, txt)
                       : ListView.builder(
                           padding: EdgeInsets.fromLTRB(12, 0, 12, bottomInset(context)),
                           itemCount: _filtered.length,
@@ -225,60 +229,97 @@ class _QuranTabState extends State<QuranTab> {
     );
   }
 
-  void _openSurah(Map<String, Object?> s) {
+  /// Item 3: the continue-reading card — shown only when there is a saved
+  /// reading position; one tap reopens the reader at the EXACT ayah.
+  Widget _continueCard(bool dark, Color txt) {
+    final s = _lastRead;
+    final ayah = AppPrefs.I.lastReadAyah;
+    if (s == null || ayah <= 0) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+      child: Card(
+        color: dark ? AppColors.gold.withOpacity(.12) : const Color(0xFFE8F0FE),
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(
+                color: dark
+                    ? AppColors.gold.withOpacity(.4)
+                    : AppColors.primaryDark.withOpacity(.25))),
+        child: ListTile(
+          onTap: () => _openSurahAt(s, ayah),
+          leading: Icon(Icons.history_edu_rounded,
+              color: dark ? AppColors.gold : AppColors.primaryDark, size: 30),
+          title: Text('بەردەوامبوونی خوێندنەوە',
+              style: TextStyle(fontWeight: FontWeight.bold,
+                  fontSize: 13.5, color: txt)),
+          subtitle: Text(
+              '${suraLabel('${s['name']}')} • ئایەتی ${toArabicDigits(ayah)}'
+              '${AppPrefs.I.lastReadWhen.isEmpty ? '' : '  —  ${AppPrefs.I.lastReadWhen}'}',
+              style: TextStyle(fontSize: 12,
+                  color: dark ? AppColors.gold : AppColors.primaryDark)),
+          trailing: Icon(Icons.play_circle_rounded,
+              size: 32, color: dark ? AppColors.gold : AppColors.primaryDark),
+        ),
+      ),
+    );
+  }
+
+  void _openSurah(Map<String, Object?> s) => _openSurahAt(s, null);
+
+  void _openSurahAt(Map<String, Object?> s, int? ayah) {
     Navigator.push(context, MaterialPageRoute(
         builder: (_) => OpenQuranScreen(
             surahId: int.tryParse('${s['soraid']}') ?? 1,
             surahName: '${s['name']}',
             ayaCount: int.tryParse('${s['aya']}') ?? 0,
             place: '${s['place']}',
-            juz: '${s['juz']}')));
+            juz: '${s['juz']}',
+            initialAyah: ayah,
+            highlightAyah: ayah))).then((_) => _load());
   }
 
-  /// Item 3: 30 juz cards — each opens the surah the juz starts in.
-  Widget _juzList(bool dark, Color txt) => GridView.builder(
-        padding: EdgeInsets.fromLTRB(12, 0, 12, bottomInset(context)),
+  /// Item 21: 604 لاپەڕە — tapping a page card opens the real mushaf on
+  /// that page (no more bouncing back to a surah list).
+  Widget _pageGrid(bool dark, Color txt) => GridView.builder(
+        padding: EdgeInsets.fromLTRB(12, 4, 12, bottomInset(context)),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3, mainAxisSpacing: 8, crossAxisSpacing: 8,
-            childAspectRatio: 1.05),
-        itemCount: 30,
+            crossAxisCount: 4, mainAxisSpacing: 8, crossAxisSpacing: 8,
+            childAspectRatio: 1.0),
+        itemCount: 604,
         itemBuilder: (context, i) {
-          final juz = i + 1;
-          final s = _surahOfJuz(juz);
-          final surahName = s == null ? '' : '${s['name']}';
+          final page = i + 1;
+          final isLast = page == AppPrefs.I.mushafLastPage;
           return InkWell(
-            onTap: s == null ? null : () => _openSurah(s),
-            borderRadius: BorderRadius.circular(14),
+            onTap: () async {
+              await Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => MushafScreen(startPage: page)));
+              _load();
+            },
+            borderRadius: BorderRadius.circular(12),
             child: Container(
-              padding: const EdgeInsets.all(8),
+              alignment: Alignment.center,
               decoration: BoxDecoration(
-                  color: dark ? AppColors.nightCard : Colors.white,
-                  borderRadius: BorderRadius.circular(14),
+                  color: isLast
+                      ? AppColors.gold.withOpacity(.16)
+                      : (dark ? AppColors.nightCard : Colors.white),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                      color: dark ? Colors.white10 : Colors.black12)),
+                      color: isLast
+                          ? AppColors.gold
+                          : (dark ? Colors.white10 : Colors.black12),
+                      width: isLast ? 1.6 : 1)),
               child: Column(mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Container(width: 40, height: 40,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: dark
-                              ? AppColors.gold.withOpacity(.14)
-                              : AppColors.primaryDark.withOpacity(.08)),
-                      child: Text(toArabicDigits(juz),
-                          style: TextStyle(fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                              color: dark ? AppColors.gold : AppColors.primaryDark))),
-                    const SizedBox(height: 6),
-                    Text('جوزئی $juz',
+                    Text(toArabicDigits(page),
                         style: TextStyle(fontWeight: FontWeight.bold,
-                            fontSize: 12, color: txt)),
-                    if (surahName.isNotEmpty)
-                      Text(suraLabel(surahName),
-                          textAlign: TextAlign.center, maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 10,
-                              color: txt.withOpacity(.55))),
+                            fontSize: 15,
+                            color: isLast
+                                ? AppColors.gold
+                                : (dark ? Colors.white : Colors.black87))),
+                    Text('لاپەڕە',
+                        style: TextStyle(fontSize: 9.5,
+                            color: txt.withOpacity(.45))),
                   ]),
             ),
           );

@@ -834,6 +834,66 @@ class _TagVideosSheetState extends State<_TagVideosSheet> {
     }
   }
 
+  /// Item 20: EDIT an existing video (name and/or URL) in place — the
+  /// admin no longer has to delete + re-add a video to fix a typo.
+  Future<void> _edit(Map<String, dynamic> v) async {
+    final id = '${v['id'] ?? ''}';
+    final nameC = TextEditingController(text: '${v['name'] ?? ''}');
+    final urlC = TextEditingController(text: '${v['url'] ?? v['video'] ?? ''}');
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (d) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('دەستکاری ڤیدیۆ'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(
+                controller: nameC,
+                decoration: const InputDecoration(
+                    labelText: 'ناوی ڤیدیۆ', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(
+                controller: urlC,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                    labelText: 'لینکی ڤیدیۆ (mp4)',
+                    border: OutlineInputBorder())),
+          ]),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(d, false),
+                child: const Text('لابردن')),
+            ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryDark,
+                    foregroundColor: Colors.white),
+                onPressed: () => Navigator.pop(d, true),
+                child: const Text('پاشەکەوت')),
+          ],
+        ),
+      ),
+    );
+    if (ok != true) return;
+    final name = nameC.text.trim();
+    final url = urlC.text.trim();
+    if (name.isEmpty && url.isEmpty) return;
+    final patch = <String, dynamic>{
+      if (name.isNotEmpty) 'name': name,
+      if (url.isNotEmpty) 'url': url,
+    };
+    final done = await Rtdb.I.patch('videoNew/${widget.tag}/$id', patch);
+    widget.onLog(done
+        ? 'videoNew/${widget.tag}/$id نوێکرایەوە (دەستکاری)'
+        : 'نوێکردنەوەی videoNew/${widget.tag}/$id سەرکەوتوو نەبوو');
+    if (!mounted) return;
+    if (done) {
+      _toast('نوێکرایەوە ✅');
+      _reload();
+    } else {
+      _toast('سەرکەوتوو نەبوو — ${Rtdb.I.lastError ?? 'پەیوەندی نەکرا'}');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final txt = _dark ? Colors.white : Colors.black87;
@@ -892,11 +952,21 @@ class _TagVideosSheetState extends State<_TagVideosSheet> {
                                 style: TextStyle(
                                     fontSize: 10,
                                     color: txt.withOpacity(.5))),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete_outline_rounded,
-                                  color: AppColors.red),
-                              onPressed: () => _delete(v),
-                            ),
+                            trailing: Row(mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Item 20: edit-in-place (PATCH)
+                                  IconButton(
+                                    tooltip: 'دەستکاری',
+                                    icon: const Icon(Icons.edit_rounded,
+                                        color: AppColors.primaryDark),
+                                    onPressed: () => _edit(v),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline_rounded,
+                                        color: AppColors.red),
+                                    onPressed: () => _delete(v),
+                                  ),
+                                ]),
                           );
                         },
                       ),
@@ -923,6 +993,107 @@ class _AdminBooksPageState extends _AdminPageState<_AdminBooksPage> {
   final _about = TextEditingController();
   final _url = TextEditingController();
   final _image = TextEditingController();
+  List<Map<String, dynamic>> _books = const [];
+  bool _loadingBooks = false;
+
+  /// Item 20: load the existing books so they can be edited or deleted.
+  Future<void> _loadBooks() async {
+    setState(() => _loadingBooks = true);
+    final rows = await Rtdb.I.list('ktebakan');
+    if (!mounted) return;
+    setState(() { _books = rows; _loadingBooks = false; });
+  }
+
+  Future<void> _editBook(Map<String, dynamic> b) async {
+    final id = '${b['id'] ?? ''}';
+    final nameC = TextEditingController(text: '${b['name'] ?? ''}');
+    final urlC = TextEditingController(text: '${b['url'] ?? ''}');
+    final aboutC = TextEditingController(text: '${b['about'] ?? ''}');
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (d) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('دەستکاری کتێب'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(
+                controller: nameC,
+                decoration: const InputDecoration(
+                    labelText: 'ناوی کتێب', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(
+                controller: urlC,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                    labelText: 'لینکی PDF', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(
+                controller: aboutC,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                    labelText: 'کورتە', border: OutlineInputBorder())),
+          ]),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(d, false),
+                child: const Text('لابردن')),
+            ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryDark,
+                    foregroundColor: Colors.white),
+                onPressed: () => Navigator.pop(d, true),
+                child: const Text('پاشەکەوت')),
+          ],
+        ),
+      ),
+    );
+    if (ok != true) return;
+    final name = nameC.text.trim();
+    final url = urlC.text.trim();
+    if (name.isEmpty && url.isEmpty) return;
+    final done = await Rtdb.I.patch('ktebakan/$id', {
+      if (name.isNotEmpty) 'name': name,
+      if (url.isNotEmpty) 'url': url,
+      'about': aboutC.text.trim(),
+    });
+    widget.log(done
+        ? 'ktebakan/$id نوێکرایەوە (دەستکاری)'
+        : 'نوێکردنەوەی کتێب سەرکەوتوو نەبوو');
+    if (!mounted) return;
+    toast(done ? 'کتێب نوێکرایەوە ✅' : 'سەرکەوتوو نەبوو — ${Rtdb.I.lastError ?? ''}');
+    if (done) _loadBooks();
+  }
+
+  Future<void> _deleteBook(Map<String, dynamic> b) async {
+    final id = '${b['id'] ?? ''}';
+    final name = '${b['name'] ?? id}';
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (d) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('سڕینەوەی کتێب'),
+          content: Text('دڵنیایت لە سڕینەوەی "$name"؟'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(d, false),
+                child: const Text('نەخێر')),
+            ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.red, foregroundColor: Colors.white),
+                onPressed: () => Navigator.pop(d, true),
+                child: const Text('سڕینەوە')),
+          ],
+        ),
+      ),
+    );
+    if (ok != true) return;
+    final done = await Rtdb.I.delete('ktebakan/$id');
+    widget.log(done ? 'ktebakan/$id سڕدرایەوە' : 'سڕینەوەی کتێب سەرکەوتوو نەبوو');
+    if (!mounted) return;
+    toast(done ? 'سڕدرایەوە ✅' : 'سەرکەوتوو نەبوو — ${Rtdb.I.lastError ?? ''}');
+    if (done) _loadBooks();
+  }
 
   @override
   void dispose() {
@@ -968,8 +1139,9 @@ class _AdminBooksPageState extends _AdminPageState<_AdminBooksPage> {
   @override
   Widget build(BuildContext context) {
     return pageScaffold(
-      'زیادکردنی کتێب',
+      'کتێبەکان',
       list([
+        section('زیادکردنی نوێ'),
         field(_name, 'ناوی کتێب'),
         field(_admin, 'نوسەر'),
         field(_about, 'کورتە', maxLines: 3),
@@ -980,6 +1152,39 @@ class _AdminBooksPageState extends _AdminPageState<_AdminBooksPage> {
             icon: Icons.local_library_rounded),
         note(
             'کتێبەکان دەچنە ناو نۆدی "ktebakan"ی Firebase و بە خۆکاری لە کتێبخانەی ئەپ دەردەکەون.'),
+        // Item 20: manage the existing books — edit + delete.
+        section('کتێبەکانی ئێستا (دەستکاری / سڕینەوە)'),
+        button('هێنانی لیستی کتێبەکان', _loadBooks,
+            icon: Icons.refresh_rounded),
+        if (_loadingBooks)
+          const Center(child: Padding(
+              padding: EdgeInsets.all(10),
+              child: CircularProgressIndicator()))
+        else if (_books.isNotEmpty)
+          for (final b in _books)
+            Card(
+              margin: const EdgeInsets.only(bottom: 6),
+              child: ListTile(
+                dense: true,
+                leading: const Icon(Icons.local_library_rounded,
+                    color: AppColors.primaryDark),
+                title: Text('${b['name'] ?? ''}', maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13)),
+                trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                  IconButton(
+                      tooltip: 'دەستکاری',
+                      icon: const Icon(Icons.edit_rounded,
+                          color: AppColors.primaryDark),
+                      onPressed: () => _editBook(b)),
+                  IconButton(
+                      tooltip: 'سڕینەوە',
+                      icon: const Icon(Icons.delete_outline_rounded,
+                          color: AppColors.red),
+                      onPressed: () => _deleteBook(b)),
+                ]),
+              ),
+            ),
       ]),
     );
   }

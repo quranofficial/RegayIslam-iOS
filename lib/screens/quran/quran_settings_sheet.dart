@@ -33,11 +33,26 @@ void showQuranSettingsSheet(BuildContext context, VoidCallback onChange) {
         }
 
         Widget fontChip(List<String> fonts, String current, String group) {
+          // Item 17: the sample text of every Quran font is بسم الله
+          // (rendered in that font) — no more abstract "نمونە".
           return ChoiceChip(
-              label: Text(group == 'quran' ? 'نمونە' : 'فۆنت',
-                  style: TextStyle(fontSize: 12,
-                      fontFamily: fonts.first,
-                      color: current == fonts.first ? Colors.white : txt)),
+              label: Column(mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Directionality(
+                      textDirection: TextDirection.rtl,
+                      child: Text('بسم الله',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontFamily: fonts.first,
+                              color: current == fonts.first
+                                  ? Colors.white : txt)),
+                    ),
+                    Text(group == 'quran' ? 'فۆنتی قورئان' : 'فۆنتی ئەپ',
+                        style: TextStyle(fontSize: 9.5,
+                            color: current == fonts.first
+                                ? Colors.white70 : txt.withOpacity(.6))),
+                  ]),
               selected: current == fonts.first,
               selectedColor: AppColors.primaryDark,
               onSelected: (_) => setSheet(() {

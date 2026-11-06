@@ -148,10 +148,12 @@ class Db {
           '${e['id'] ?? ''}': '${e['Name'] ?? ''}',
       };
     } catch (_) {}
-    return [
-      for (final id in ids)
-        {'id': id, 'name': names[id] ?? id},
-    ];
+    // Item 15: the city list is ALWAYS shown with its Kurdish name from
+    // cityme.json and sorted by that name (no raw English ids anywhere).
+    final out = [
+      for (final id in ids) {'id': id, 'name': names[id] ?? id},
+    ]..sort((a, b) => '${a['name']}'.compareTo('${b['name']}'));
+    return out;
   }
 
   /// Mushaf page number containing an ayah (ayah_info.db line layout).
@@ -193,6 +195,22 @@ class Db {
         });
       }
       return out;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Item 22: the line boxes of one mushaf page (ayah_info.db). Every row
+  /// is one line segment of one verse with its bounding box in the 1246 ×
+  /// 2031 mushaf coordinate space — used to hit-test taps ("دەست لە ئایەت
+  /// بدە، هەڵی ببژێرە و لێی بدە") and to draw the recitation highlight.
+  Future<List<Map<String, Object?>>> pageAyahLines(int page) async {
+    try {
+      return await _info!.query('page_data_line',
+          where: 'page_number = ?',
+          whereArgs: [page],
+          columns: ['surah_id', 'verse_id', 'min_x', 'max_x', 'min_y', 'max_y'],
+          orderBy: 'line_number, min_x');
     } catch (_) {
       return [];
     }

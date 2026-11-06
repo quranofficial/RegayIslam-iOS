@@ -1,29 +1,32 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
+import '../../core/ui.dart' show AudioSetup, bottomInset, kAppUrl;
 import '../../data/db.dart';
+import '../../data/downloader.dart';
 import '../../data/favorites.dart';
-import '../../core/ui.dart' show bottomInset, kAppUrl;
-import 'open_quran.dart' show toArabicDigits;
+import 'open_quran.dart' show OpenQuranScreen, toArabicDigits;
 
 /// Original: NameActivity — the 99 names of Allah.
 ///
-/// Item 6: "دەنگ لە ناوەکانی خودای گەورە زیاد بکە و لەگەڵ دەنگەکە ناوەکانیش
-/// دیار بکە، داتابەیسەکەشی ئامادە بکە لە پرۆژەکە" —
-///  • the ready data file assets/data/nawakani_xwda.json is bundled in the
-///    project (dumped from name.db, editable, same rows) and this screen
-///    reads it first (name.db stays as the offline fallback);
-///  • every name speaks its Arabic form with the device Arabic TTS (works
-///    offline) and the playing name is highlighted;
-///  • "لێدانی هەموو" walks through all the names one after another;
-///  • new card design: number badge + big Arabic calligraphy + Kurdish
-///    meaning, expandable to all four translations + the surah reference.
+/// Item 13: every name now carries REAL sound and REAL location:
+///  • the row keeps its TTS voice, and a second button plays the AYAH
+///    where the name occurs (per-ayah audio, same cdn as the reader);
+///  • the location row (سوورەت + ئایەت) is clickable — it opens the Quran
+///    AT that ayah with the name's word highlighted inside the verse;
+///  • tafsir in Sorani AND Badini (from the bundled name.db) stays visible;
+///  • opening with openId (from favorites) expands + scrolls to that name.
 class NameScreen extends StatefulWidget {
-  const NameScreen({super.key});
+  const NameScreen({super.key, this.openId});
+
+  /// Item 12/13: when opened from favorites, expand + scroll to this name.
+  final int? openId;
+
   @override
   State<NameScreen> createState() => _NameScreenState();
 }
@@ -58,11 +61,15 @@ class _NameScreenState extends State<NameScreen> {
   bool _loading = true;
   final FlutterTts _tts = FlutterTts();
   bool _ttsReady = false;
+  final AudioPlayer _ayahPlayer = AudioPlayer();
+  int? _ayahPlayingId;
+  final Map<int, GlobalKey> _cardKeys = {};
 
   @override
   void initState() {
     super.initState();
     _initTts();
+    AudioSetup.prepare(_ayahPlayer);
     _load();
   }
 
@@ -121,6 +128,20 @@ class _NameScreenState extends State<NameScreen> {
     }
     if (!mounted) return;
     setState(() { _rows = rows; _filtered = rows; _loading = false; });
+    // Item 12/13: opened from a favorite — expand and scroll to the name.
+    final target = widget.openId;
+    if (target != null) {
+      setState(() => _openId = target);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final ctx = _cardKeys[target]?.currentContext;
+        if (ctx != null && mounted) {
+          Scrollable.ensureVisible(ctx,
+              duration: const Duration(milliseconds: 450),
+              curve: Curves.easeOut,
+              alignment: 0.1);
+        }
+      });
+    }
   }
 
   static List<Map<String, dynamic>> jsonDecodeList(String raw) {
@@ -159,7 +180,7 @@ class _NameScreenState extends State<NameScreen> {
     }
   }
 
-  /// Item 6: recite ALL names one by one with highlight.
+  /// Item 13: recite ALL names one by one with highlight.
   Future<void> _togglePlayAll() async {
     if (_playAll) {
       _playAll = false;
@@ -193,10 +214,74 @@ class _NameScreenState extends State<NameScreen> {
     });
   }
 
+  /// "2:7" → (2, 7); ""/bad → null.
+  (int, int)? _refOf(String ref) {
+    final p = ref.split(':');
+    if (p.length != 2) return null;
+    final s = int.tryParse(p[0].trim());
+    final a = int.tryParse(p[1].trim());
+    if (s == null || a == null || s < 1 || s > 114 || a < 1) return null;
+    return (s, a);
+  }
+
+  /// Item 13: open the Quran AT the ayah where this name occurs, with the
+  /// name's word highlighted inside the verse (the word comes from the
+  /// highlight_section column of name.db).
+  Future<void> _openAyahOf(_NameRow r) async {
+    final ref = _refOf(r.ref);
+    if (ref == null) return;
+    final (sid, ayah) = ref;
+    final surahs = await Db.I.surahs();
+    final s = surahs
+        .where((e) => (e['soraid'] as num?)?.toInt() == sid)
+        .toList();
+    if (!mounted || s.isEmpty) return;
+    final word = r.tashkeel.trim();
+    Navigator.push(context, MaterialPageRoute(
+        builder: (_) => OpenQuranScreen(
+            surahId: sid,
+            surahName: '${s.first['name'] ?? ''}',
+            ayaCount: (s.first['aya'] as num?)?.toInt() ?? 7,
+            place: '${s.first['place'] ?? ''}',
+            juz: '${s.first['juz'] ?? ''}',
+            initialAyah: ayah,
+            highlightAyah: ayah,
+            highlightWord:
+                (word.isNotEmpty && word.split(' ').length <= 3) ? word : null)));
+  }
+
+  /// Item 13: play the real recitation of the ayah where the name occurs
+  /// (per-ayah audio — global index 1..6236, same CDN as the reader).
+  Future<void> _playAyahOf(_NameRow r) async {
+    final ref = _refOf(r.ref);
+    if (ref == null) return;
+    final (sid, ayah) = ref;
+    try {
+      await _ayahPlayer.stop();
+      setState(() => _ayahPlayingId = r.id);
+      final g = await Db.I.globalAyah(sid, ayah);
+      final url = Downloader.httpsify(
+          'https://cdn.islamic.network/quran/audio/128/ar.alafasy/$g.mp3');
+      await _ayahPlayer.play(UrlSource(url));
+    } catch (_) {
+      if (mounted) {
+        setState(() => _ayahPlayingId = null);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('دەنگی ئایەتەکە بەردەست نییە — ئینتەرنێت بپشکنە'),
+            duration: Duration(milliseconds: 900)));
+      }
+      return;
+    }
+    _ayahPlayer.onPlayerComplete.first.then((_) {
+      if (mounted) setState(() => _ayahPlayingId = null);
+    });
+  }
+
   @override
   void dispose() {
     _playAll = false;
     try { _tts.stop(); } catch (_) {}
+    _ayahPlayer.dispose();
     super.dispose();
   }
 
@@ -259,7 +344,8 @@ class _NameScreenState extends State<NameScreen> {
                       final r = _filtered[i];
                       final open = _openId == r.id;
                       final speaking = _speakingId == r.id;
-                      return _nameCard(r, open, speaking, dark, txt);
+                      final key = _cardKeys.putIfAbsent(r.id, () => GlobalKey());
+                      return _nameCard(r, open, speaking, dark, txt, key);
                     },
                   ),
           ),
@@ -268,9 +354,12 @@ class _NameScreenState extends State<NameScreen> {
     );
   }
 
-  Widget _nameCard(_NameRow r, bool open, bool speaking, bool dark, Color txt) {
+  Widget _nameCard(_NameRow r, bool open, bool speaking, bool dark, Color txt,
+      GlobalKey key) {
     final accent = dark ? AppColors.gold : AppColors.primaryDark;
+    final ref = _refOf(r.ref);
     return Card(
+      key: key,
       color: speaking
           ? accent.withOpacity(dark ? .18 : .10)
           : (dark ? AppColors.nightCard : Colors.white),
@@ -350,7 +439,50 @@ class _NameScreenState extends State<NameScreen> {
               Divider(height: 1, color: txt.withOpacity(.15)),
               const SizedBox(height: 10),
               if (r.ref.isNotEmpty)
-                _m('شوێنی ناوەکە', 'سوورەت ${r.ref}', txt, dark),
+                // Item 13: the location is CLICKABLE — one tap opens the
+                // Quran at that surah/ayah with the name highlighted.
+                InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: ref != null ? () => _openAyahOf(r) : null,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 8),
+                    margin: const EdgeInsets.only(bottom: 6),
+                    decoration: BoxDecoration(
+                        color: accent.withOpacity(.08),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: accent.withOpacity(.25))),
+                    child: Row(children: [
+                      Icon(Icons.menu_book_rounded, size: 17, color: accent),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                            'شوێنی ناوەکە — سوڕەتی ${toArabicDigits(ref?.$1 ?? 0)}'
+                            ' • ئایەتی ${toArabicDigits(ref?.$2 ?? 0)}'
+                            '${r.tashkeel.trim().isEmpty ? '' : '  (${r.tashkeel.trim()})'}',
+                            style: TextStyle(fontSize: 12.5,
+                                fontWeight: FontWeight.w600, color: accent)),
+                      ),
+                      // play the real ayah recitation
+                      InkWell(
+                        onTap: ref != null ? () => _playAyahOf(r) : null,
+                        borderRadius: BorderRadius.circular(16),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Icon(
+                              _ayahPlayingId == r.id
+                                  ? Icons.pause_circle_rounded
+                                  : Icons.play_circle_rounded,
+                              size: 24, color: accent),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.chevron_left_rounded,
+                          size: 20, color: accent),
+                    ]),
+                  ),
+                ),
               if (r.badini.isNotEmpty) _m('بادینی', r.badini, txt, dark),
               if (r.english.isNotEmpty) _m('English', r.english, txt, dark),
               if (r.farsi.isNotEmpty) _m('فارسی', r.farsi, txt, dark),

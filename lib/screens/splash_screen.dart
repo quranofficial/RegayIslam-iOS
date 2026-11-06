@@ -18,7 +18,10 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  String _status = '';
+  /// Item 18: the splash shows ONLY the logo + progress + one fixed line
+  /// ("ڕێکخستن...") — no changing status texts, no pickers, nothing else
+  /// for the user to read or touch while the app prepares itself.
+  static const String _status = 'ڕێکخستن...';
 
   @override
   void initState() {
@@ -27,11 +30,9 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _boot() async {
-    setState(() => _status = 'ئامادەکردنی داتابەیس...');
     try {
       await Db.I.init();
     } catch (_) {}
-    setState(() => _status = 'ڕێکخستنی ئاگادارکردنەوەکان...');
     try {
       await PrayerNotifications.I.init();
       await PrayerNotifications.warmUp(); // find downloaded adhan voices

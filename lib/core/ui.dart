@@ -4,10 +4,16 @@ import 'package:share_plus/share_plus.dart';
 import 'package:flutter/services.dart';
 import 'constants.dart';
 
-/// Public website (GitHub Pages) used by every Share action so the shared
-/// content always carries a working link to the app.
-const String kAppUrl = 'https://quranofficial.github.io/RegayIslam-iOS/';
+/// Public website used by every Share action so the shared content always
+/// carries a working link (item 6: the app-store links can't be used —
+/// the owner's own domain + the GitHub repo are shared instead).
+const String kAppUrl = 'https://linkakam.com/Regayislam';
 const String kRepoUrl = 'https://github.com/quranofficial/RegayIslam-iOS';
+/// Item 6: the GitHub raw bases that replace the un-usable store links —
+/// reciter audio, books (PDFs) and the databases are served from GitHub.
+const String kQariRepoUrl = 'https://github.com/quranofficial/RegayIslam-iOS';
+const String kBooksUrl = 'https://github.com/quranofficial/RegayIslam-iOS';
+const String kDatabaseUrl = 'https://github.com/quranofficial/RegayIslam-iOS';
 
 /// The original DB already writes some sura names as "سوڕەتی الفاتحة", so
 /// composing "سوڕەتی $name" produced "سوڕەتی سوڕەتی الفاتحة". Strip the

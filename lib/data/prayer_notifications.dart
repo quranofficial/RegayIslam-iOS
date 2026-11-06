@@ -45,9 +45,12 @@ class PrayerNotifications {
     return _canUseExactAlarms;
   }
 
-  /// Item 3 + item 12: the notification rings with the SELECTED adhan voice
-  /// when it was downloaded for offline use, otherwise with the bundled
-  /// res/raw/adhan.mp3 — so the adhan always sounds, even with no internet.
+  /// Item 3 + item 12 + item 14: the notification rings with the SELECTED
+  /// adhan voice when it was downloaded for offline use, otherwise with the
+  /// bundled res/raw/adhan.mp3 — so the adhan always sounds, even with no
+  /// internet. The sound is routed through the ALARM audio attributes and
+  /// a full-screen intent so it plays LOUD on every phone brand (many
+  /// devices route plain notification sounds quietly or mute them in DND).
   AndroidNotificationSound? _notificationSound() {
     if (!AppPrefs.I.adhanSoundEnabled) return null;
     try {
@@ -97,7 +100,16 @@ class PrayerNotifications {
         enableLights: true,
         ledColor: const Color(0xFFF44336),
         enableVibration: p.adhanVibrationEnabled,
-        visibility: NotificationVisibility.public);
+        visibility: NotificationVisibility.public,
+        // Item 14: مازووی دەنگ بۆ هەموو جۆرێکی مۆبایل —
+        //  • alarm audio attributes: the adhan plays at the ALARM volume
+        //    stream (never muted by media focus, loud on Xiaomi/Samsung/...)
+        //  • full-screen intent: the adhan turns the screen on like an alarm
+        //    clock instead of a silent head-up snackbar.
+        audioAttributesUsage: AudioAttributesUsage.alarm,
+        fullScreenIntent: true,
+        category: AndroidNotificationCategory.alarm,
+        channelAction: AndroidNotificationChannelAction.createIfNotExists);
   }
 
   Future<void> showNow(String title, String body) async {

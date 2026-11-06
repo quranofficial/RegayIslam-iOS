@@ -87,6 +87,16 @@ class FavoritesStore {
     return !exists;
   }
 
+  /// Insert without toggling (used by the mushaf ayah sheet — item 22:
+  /// the action is "add to favorites", never silently remove).
+  static Future<void> add(FavoriteEntry entry) async {
+    final prefs = await SharedPreferences.getInstance();
+    final items = await all();
+    if (items.any((e) => e.id == entry.id)) return;
+    items.insert(0, entry);
+    await prefs.setStringList(_key, items.map((e) => jsonEncode(e.toJson())).toList());
+  }
+
   static Future<void> remove(String id) async {
     final prefs = await SharedPreferences.getInstance();
     final items = await all()..removeWhere((e) => e.id == id);
@@ -542,6 +552,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     }
     if (parts.length >= 3 && parts[0] == 'quran') {
       final surahId = int.tryParse(parts[1]) ?? 1;
+      final ayah = int.tryParse(parts[2]) ?? 0;
       final s = (await Db.I.surahs())
           .where((r) => (r['soraid'] as num?)?.toInt() == surahId)
           .toList();
@@ -552,7 +563,29 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               surahName: s.isNotEmpty ? '${s.first['name'] ?? ''}' : '',
               ayaCount: s.isNotEmpty ? ((s.first['aya'] as num?)?.toInt() ?? 7) : 7,
               place: s.isNotEmpty ? '${s.first['place'] ?? ''}' : '',
-              juz: s.isNotEmpty ? '${s.first['juz'] ?? ''}' : '')));
+              juz: s.isNotEmpty ? '${s.first['juz'] ?? ''}' : '',
+              // Item 12: land on the EXACT ayah and ring it — not the top
+              // of the surah.
+              initialAyah: ayah > 0 ? ayah : null,
+              highlightAyah: ayah > 0 ? ayah : null)));
+      return;
+    }
+    if (parts.length >= 3 && parts[0] == 'ruqya') {
+      final surahId = int.tryParse(parts[1]) ?? 1;
+      final ayah = int.tryParse(parts[2]) ?? 0;
+      final s = (await Db.I.surahs())
+          .where((r) => (r['soraid'] as num?)?.toInt() == surahId)
+          .toList();
+      if (!context.mounted) return;
+      Navigator.push(context, MaterialPageRoute(
+          builder: (_) => OpenQuranScreen(
+              surahId: surahId,
+              surahName: s.isNotEmpty ? '${s.first['name'] ?? ''}' : '',
+              ayaCount: s.isNotEmpty ? ((s.first['aya'] as num?)?.toInt() ?? 7) : 7,
+              place: s.isNotEmpty ? '${s.first['place'] ?? ''}' : '',
+              juz: s.isNotEmpty ? '${s.first['juz'] ?? ''}' : '',
+              initialAyah: ayah > 0 ? ayah : null,
+              highlightAyah: ayah > 0 ? ayah : null)));
       return;
     }
     if (parts.length >= 2 && parts[0] == 'surah') {
@@ -581,8 +614,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       return;
     }
     if (parts.length >= 2 && parts[0] == 'allahname') {
+      final id = int.tryParse(parts[1]) ?? 0;
+      // Item 12: the name screen opens with THAT name already expanded and
+      // scrolled into view — not just the plain list.
       Navigator.push(context, MaterialPageRoute(
-          builder: (_) => const NameScreen()));
+          builder: (_) => NameScreen(openId: id > 0 ? id : null)));
       return;
     }
     if (parts.length >= 2 && parts[0] == 'reciter') {
@@ -596,6 +632,27 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       return;
     }
     if (parts.length >= 2 && parts[0] == 'daily_ayah') {
+      // Item 12: the daily-ayah favorite reopens the Quran at the exact
+      // ayah that was saved (parts: daily_ayah::<surahId>::<ayah>).
+      final surahId = parts.length >= 3 ? int.tryParse(parts[1]) ?? 0 : 0;
+      final ayah = parts.length >= 3 ? int.tryParse(parts[2]) ?? 0 : 0;
+      if (surahId > 0) {
+        final s = (await Db.I.surahs())
+            .where((r) => (r['soraid'] as num?)?.toInt() == surahId)
+            .toList();
+        if (!context.mounted) return;
+        Navigator.push(context, MaterialPageRoute(
+            builder: (_) => OpenQuranScreen(
+                surahId: surahId,
+                surahName: s.isNotEmpty ? '${s.first['name'] ?? ''}' : '',
+                ayaCount: s.isNotEmpty
+                    ? ((s.first['aya'] as num?)?.toInt() ?? 7) : 7,
+                place: s.isNotEmpty ? '${s.first['place'] ?? ''}' : '',
+                juz: s.isNotEmpty ? '${s.first['juz'] ?? ''}' : '',
+                initialAyah: ayah > 0 ? ayah : null,
+                highlightAyah: ayah > 0 ? ayah : null)));
+        return;
+      }
       Navigator.push(context, MaterialPageRoute(
           builder: (_) => const AyatScreen()));
       return;

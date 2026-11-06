@@ -156,6 +156,12 @@ class Rtdb {
 
   /// videoNew/<folder>/<pushKey>/{name,url,...} — folders are tag ids from
   /// "videoall". Flatten to one row per video (136+ videos live there).
+  ///
+  /// Item 9 CRITICAL FIX: the row id MUST be the real Firebase push key of
+  /// videoNew/<folder>/<key> — the old code used video['key'] when present,
+  /// which often differs from the actual path, so every like/comment PATCH
+  /// created a ghost node instead of updating the visible video. Likes and
+  /// comments now always hit the exact row the user is looking at.
   Future<List<Map<String, dynamic>>> videosFlat() async {
     final v = await get('videoNew');
     final out = <Map<String, dynamic>>[];
@@ -165,7 +171,7 @@ class Rtdb {
           items.forEach((key, video) {
             if (video is Map) {
               out.add({
-                'id': '${video['key'] ?? key}',
+                'id': '$key',
                 'folder': '$folder',
                 ...Map<String, dynamic>.from(video),
               });
@@ -177,7 +183,7 @@ class Rtdb {
     return out;
   }
 
-  /// Per-tag videos: videoNew/<tag> is one folder.
+  /// Per-tag videos: videoNew/<tag> is one folder (same push-key rule).
   Future<List<Map<String, dynamic>>> videosOfTag(String tag) async {
     final v = await get('videoNew/$tag');
     final out = <Map<String, dynamic>>[];
@@ -185,7 +191,7 @@ class Rtdb {
       v.forEach((key, video) {
         if (video is Map) {
           out.add({
-            'id': '${video['key'] ?? key}',
+            'id': '$key',
             'folder': tag,
             ...Map<String, dynamic>.from(video),
           });

@@ -1160,21 +1160,25 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
         ),
       ]);
 
-  /// Quran font chips (each label rendered in its own font)
+  /// Quran font chips — item 17: every chip shows بسم الله rendered in
+  /// that font instead of the raw font name.
   Widget _fontRow(Color txt, Color accent) => Wrap(
         spacing: 8,
         runSpacing: 8,
         children: [
           for (var i = 0; i < kFontsQuran.length; i++)
             ChoiceChip(
-              label: Text(kFontsQuran[i],
-                  style: TextStyle(
-                      fontFamily: kFontsQuran[i],
-                      fontSize: 12,
-                      color: _fontIndex == i ? accent : txt,
-                      fontWeight: _fontIndex == i
-                          ? FontWeight.bold
-                          : FontWeight.normal)),
+              label: Directionality(
+                textDirection: TextDirection.rtl,
+                child: Text('بسم الله',
+                    style: TextStyle(
+                        fontFamily: kFontsQuran[i],
+                        fontSize: 17,
+                        color: _fontIndex == i ? accent : txt,
+                        fontWeight: _fontIndex == i
+                            ? FontWeight.bold
+                            : FontWeight.normal)),
+              ),
               selected: _fontIndex == i,
               selectedColor: accent.withOpacity(.18),
               showCheckmark: false,

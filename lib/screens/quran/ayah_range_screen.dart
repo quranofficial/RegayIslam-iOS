@@ -10,7 +10,6 @@ import '../../data/db.dart';
 import '../../data/downloader.dart';
 import 'mushaf_screen.dart';
 import 'open_quran.dart' show toArabicDigits;
-import 'quran_settings_sheet.dart';
 
 /// Item 3 — the requested special feature: "تایبەتمەندی ئایەتەکان".
 /// Pick a reciter, a surah and an ayah range (e.g. start at ayah 5); the
@@ -37,6 +36,10 @@ class _AyahRangeScreenState extends State<AyahRangeScreen> {
   int? _currentAyah;
   String? _error;
   bool _mushaf = false;
+  /// Item 8: the reciter/surah/range pickers no longer sit in the middle
+  /// of the screen — the reader shows ONLY the Quran. The pickers hide
+  /// behind the ⚙ appbar action for when they are really needed.
+  bool _showPickers = false;
   final AudioPlayer _player = AudioPlayer();
   final ScrollController _scroll = ScrollController();
   Map<String, int> _timings = {};
@@ -214,11 +217,10 @@ class _AyahRangeScreenState extends State<AyahRangeScreen> {
                     color: Colors.white),
                 onPressed: () => setState(() => _mushaf = !_mushaf)),
             IconButton(
-                tooltip: 'ڕێکخستنی قورئان',
-                icon: const Icon(Icons.tune_rounded, color: Colors.white),
-                onPressed: () => showQuranSettingsSheet(context, () {
-                      setState(() {});
-                    })),
+                tooltip: 'هەڵبژاردنی قاری و ئایەت',
+                icon: Icon(Icons.tune_rounded,
+                    color: _showPickers ? AppColors.gold : Colors.white),
+                onPressed: () => setState(() => _showPickers = !_showPickers)),
           ],
         ),
         body: _loading
@@ -226,7 +228,28 @@ class _AyahRangeScreenState extends State<AyahRangeScreen> {
             : _error != null
                 ? Center(child: Text(_error!, style: TextStyle(color: txt)))
                 : Column(children: [
-                    _pickerRow(dark, txt, card),
+                    // Item 8: only the Quran remains on the page — the
+                    // pickers are folded away behind the ⚙ button.
+                    if (_showPickers) _pickerRow(dark, txt, card),
+                    if (!_showPickers && _surah != null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+                        child: Row(children: [
+                          Icon(Icons.menu_book_rounded, size: 17,
+                              color: dark ? AppColors.gold : AppColors.primaryDark),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                                '${suraLabel('${_surah!['name'] ?? ''}')} — '
+                                'ئایەتی ${toArabicDigits(_from)} بۆ ${toArabicDigits(_to)}'
+                                ' • ${_reciter?['name_ar'] ?? AppPrefs.I.qariName}',
+                                maxLines: 1, overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: dark ? AppColors.gold : AppColors.primaryDark)),
+                          ),
+                        ]),
+                      ),
                     Expanded(
                         child: _mushaf
                             ? _mushafView(dark, txt)

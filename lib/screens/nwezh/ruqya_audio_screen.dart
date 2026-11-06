@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
-import '../../core/ui.dart' show AudioSetup;
+import '../../core/ui.dart' show AudioSetup, bottomInset;
 import '../../data/favorites.dart';
 import 'ruqya_screen.dart';
 
@@ -252,10 +252,14 @@ class _RuqyaAudioScreenState extends State<RuqyaAudioScreen> {
     );
   }
 
-  Widget _playerBar(bool dark, Color txt) => Align(
-        alignment: Alignment.bottomCenter,
+  /// Item 11: the floating bar used to sit flush with the screen bottom —
+  /// behind the system navigation bar, so the seekbar and the play button
+  /// were barely visible/pressable. It now rides above the nav bar
+  /// (SafeArea + viewPadding) and gained ±10 seconds buttons.
+  Widget _playerBar(bool dark, Color txt) => Positioned(
+        left: 12, right: 12,
+        bottom: bottomInset(context, extra: 8),
         child: Container(
-          margin: const EdgeInsets.all(12),
           padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
           decoration: BoxDecoration(
               color: dark ? AppColors.nightCard : Colors.white,
@@ -270,11 +274,29 @@ class _RuqyaAudioScreenState extends State<RuqyaAudioScreen> {
                     color: txt)),
             Row(children: [
               IconButton(
+                  tooltip: '١٠ چرکە بەرەو دواوە',
+                  onPressed: () async {
+                    final t = _pos - const Duration(seconds: 10);
+                    await _player.seek(t < Duration.zero
+                        ? Duration.zero : t);
+                  },
+                  icon: const Icon(Icons.replay_10_rounded,
+                      size: 24, color: AppColors.primaryDark)),
+              IconButton(
                   onPressed: () => _play(_selected!),
                   icon: Icon(_playing
                       ? Icons.pause_circle_rounded
                       : Icons.play_circle_rounded,
                       size: 34, color: AppColors.primaryDark)),
+              IconButton(
+                  tooltip: '١٠ چرکە بەرەو پێشەوە',
+                  onPressed: () async {
+                    final t = _pos + const Duration(seconds: 10);
+                    final max = _dur > Duration.zero ? _dur : t;
+                    await _player.seek(t > max ? max : t);
+                  },
+                  icon: const Icon(Icons.forward_10_rounded,
+                      size: 24, color: AppColors.primaryDark)),
               Expanded(
                 child: Slider(
                     value: _dur > Duration.zero &&

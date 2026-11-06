@@ -19,7 +19,7 @@ import '../media/videos_screen.dart';
 import '../quran/ayat_screen.dart';
 import '../quran/ayatul_kursi_screen.dart';
 import '../quran/name_screen.dart';
-import '../quran/open_quran.dart' show toArabicDigits;
+import '../quran/open_quran.dart' show OpenQuranScreen, toArabicDigits;
 import '../quran/qariakan_screen.dart';
 import '../quran/quran_search_screen.dart';
 import '../ramadan/ramazan_screen.dart';
@@ -52,20 +52,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, dynamic>? _ramadanDay;
   List<Map<String, dynamic>> _live = [];
   Map<String, Object?>? _bannerAyah;
-  List<Map<String, Object?>>? _bannerPool;
-  final PageController _bannerPager = PageController();
-  int _bannerIndex = 0;
+  int _bannerSuraId = 0;
 
   @override
   void initState() {
     super.initState();
     _load();
-  }
-
-  @override
-  void dispose() {
-    _bannerPager.dispose();
-    super.dispose();
   }
 
   Future<void> _load() async {
@@ -90,52 +82,58 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadBannerAyah();
   }
 
-  /// Smart daily ayah (item 1): the banner picks ONE ayah per calendar day
-  /// and keeps it the whole day — opening the app again or re-tapping the
-  /// card never shuffles it. The pick stays in sync with the home widget.
+  /// Item 2: the daily-ayah card shows exactly ONE ayah — the surah name
+  /// and the ayah number ride together as one unit, and a new day brings a
+  /// new ayah. Tapping the card opens the Quran AT that ayah (not at the
+  /// top of the surah, and not a separate ayahs list).
   Future<void> _loadBannerAyah() async {
     try {
       final now = DateTime.now();
       final dayKey = '${now.year}-${now.month}-${now.day}';
       final seed = AppPrefs.I.ayahBannerSeed;
       final sameDay = AppPrefs.I.ayahDay == dayKey && seed >= 0;
-      if (!sameDay) {
-        final sura = Random(now.day * 31 + now.month).nextInt(114) + 1;
+      int sura;
+      int idx;
+      if (sameDay) {
+        sura = Random(now.day * 31 + now.month).nextInt(114) + 1;
         final pool = await Db.I.ayat(sura, AppPrefs.I.tafsir);
         if (pool.isEmpty || !mounted) return;
-        final idx = Random(now.day * 31 + now.month).nextInt(pool.length);
-        setState(() { _bannerPool = pool; _bannerAyah = pool[idx]; });
-        _jumpBanner(idx);
+        idx = seed < pool.length ? seed : 0;
+        setState(() { _bannerAyah = pool[idx]; _bannerSuraId = sura; });
+      } else {
+        sura = Random(now.day * 31 + now.month).nextInt(114) + 1;
+        final pool = await Db.I.ayat(sura, AppPrefs.I.tafsir);
+        if (pool.isEmpty || !mounted) return;
+        idx = Random(now.day * 31 + now.month).nextInt(pool.length);
+        setState(() { _bannerAyah = pool[idx]; _bannerSuraId = sura; });
         AppPrefs.I.ayahDay = dayKey;
         AppPrefs.I.ayahBannerSeed = idx;
-        HomeWidgets.updateAyah(
-          text: '${pool[idx]['text'] ?? ''}',
-          reference:
-              '${pool[idx]['sura_name_ar'] ?? ''} — ئایەتی ${pool[idx]['ayah'] ?? ''}');
-        return;
       }
-      // Same day: show exactly the ayah saved for today (no re-shuffle).
-      final saved = _bannerAyah;
-      if (saved != null) return;
-      final sura = Random(now.day * 31 + now.month).nextInt(114) + 1;
-      final pool = _bannerPool ?? await Db.I.ayat(sura, AppPrefs.I.tafsir);
-      if (pool.isEmpty || !mounted) return;
-      final idx = seed < pool.length ? seed : 0;
-      setState(() { _bannerPool = pool; _bannerAyah = pool[idx]; });
-      _jumpBanner(idx);
       HomeWidgets.updateAyah(
-        text: '${pool[idx]['text'] ?? ''}',
+        text: '${_bannerAyah!['text'] ?? ''}',
         reference:
-            '${pool[idx]['sura_name_ar'] ?? ''} — ئایەتی ${pool[idx]['ayah'] ?? ''}');
+            '${_bannerAyah!['sura_name_ar'] ?? ''} — ئایەتی ${_bannerAyah!['ayah'] ?? ''}');
     } catch (_) {}
   }
 
-  /// The gallery starts on today's picked ayah.
-  void _jumpBanner(int idx) {
-    if (idx <= 0) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _bannerPager.hasClients) _bannerPager.jumpToPage(idx);
-    });
+  /// Item 2: clicking the daily ayah opens the Quran at that EXACT ayah.
+  void _openBannerAyah() async {
+    final r = _bannerAyah;
+    if (r == null || _bannerSuraId <= 0) return;
+    final surahs = await Db.I.surahs();
+    final s = surahs
+        .where((e) => (e['soraid'] as num?)?.toInt() == _bannerSuraId)
+        .toList();
+    if (!mounted || s.isEmpty) return;
+    Navigator.push(context, MaterialPageRoute(
+        builder: (_) => OpenQuranScreen(
+            surahId: _bannerSuraId,
+            surahName: '${s.first['name'] ?? ''}',
+            ayaCount: (s.first['aya'] as num?)?.toInt() ?? 7,
+            place: '${s.first['place'] ?? ''}',
+            juz: '${s.first['juz'] ?? ''}',
+            initialAyah: (r['ayah'] as num?)?.toInt(),
+            highlightAyah: (r['ayah'] as num?)?.toInt())));
   }
 
   void _openReorder() {
@@ -212,34 +210,21 @@ class _HomeScreenState extends State<HomeScreen> {
       ]);
 
   Widget _ayatBanner(Color card, Color txt, bool dark) {
-    final pool = _bannerPool;
-    if (_bannerAyah == null || pool == null || pool.isEmpty) {
+    final r = _bannerAyah;
+    if (r == null) {
       return _bannerCard(
-        r: _bannerAyah,
+        r: null,
         text: 'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ',
         tafsir: '',
         dark: dark,
       );
     }
-    // Item 1: the daily-ayah banner is a GALLERY — one swipe moves to the
-    // next verse, no button press needed. It still starts on today's ayah.
-    return SizedBox(
-      height: 262,
-      child: PageView.builder(
-        controller: _bannerPager,
-        reverse: true,
-        itemCount: pool.length,
-        onPageChanged: (i) => setState(() => _bannerIndex = i),
-        itemBuilder: (context, i) {
-          final r = pool[i];
-          return _bannerCard(
-            r: r,
-            text: '${r['text'] ?? ''}',
-            tafsir: '${r[AppPrefs.I.tafsir] ?? ''}',
-            dark: dark,
-          );
-        },
-      ),
+    // Item 2: ONE ayah per day — no gallery, no swiping between verses.
+    return _bannerCard(
+      r: r,
+      text: '${r['text'] ?? ''}',
+      tafsir: '${r[AppPrefs.I.tafsir] ?? ''}',
+      dark: dark,
     );
   }
 
@@ -249,8 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 2),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const AyatScreen())),
+        onTap: _openBannerAyah,
         child: Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -286,30 +270,27 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: const Icon(Icons.add_circle_outline_rounded,
                         color: Colors.white70, size: 19)),
                 const SizedBox(width: 4),
-                Icon(Icons.swipe_left_rounded, color: Colors.white54, size: 16),
-                const SizedBox(width: 6),
-                if (_bannerPool != null && _bannerPool!.isNotEmpty)
-                  Text(
-                      '${toArabicDigits(_bannerIndex + 1)} / ${toArabicDigits(_bannerPool!.length)}',
-                      style: const TextStyle(
-                          color: Colors.white60, fontSize: 10.5)),
+                // Item 2: click opens the Quran at this exact ayah.
+                const Icon(Icons.touch_app_rounded,
+                    color: Colors.white54, size: 16),
               ]),
               const SizedBox(height: 8),
               if (r != null)
                 Row(children: [
+                  // Item 2: surah name + ayah number ride together as one unit.
                   Flexible(child: Text(
                       suraLabel('${r['sura_name_ar'] ?? ''}') +
-                          ' • ئایەتی ${(r['ayah'] ?? 0)}',
+                          ' • ئایەتی ${toArabicDigits((r['ayah'] as num?)?.toInt() ?? 0)}',
                       maxLines: 1, overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                           color: dark ? AppColors.gold : Colors.white70,
-                          fontSize: 11, fontWeight: FontWeight.bold))),
+                          fontSize: 12.5, fontWeight: FontWeight.bold))),
                   const Spacer(),
                   FavoriteButton(
                     id: 'daily_ayah::${r['suraId'] ?? ''}::${r['ayah'] ?? ''}',
-                    title: '${suraLabel('${r['sura_name_ar'] ?? ''}')} • ئایەتی ${r['ayah'] ?? ''}',
+                    title: '${suraLabel('${r['sura_name_ar'] ?? ''}')} • ئایەتی ${toArabicDigits((r['ayah'] as num?)?.toInt() ?? 0)}',
                     content: '${r['text'] ?? ''}\n\n${r[AppPrefs.I.tafsir] ?? ''}',
-                    route: 'daily_ayah::${r['suraId'] ?? ''}',
+                    route: 'daily_ayah::${r['suraId'] ?? ''}::${r['ayah'] ?? ''}',
                     color: Colors.white70),
                   IconButton(visualDensity: VisualDensity.compact,
                     tooltip: 'هاوبەشی',
@@ -322,27 +303,26 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: Colors.white70, size: 19)),
                 ]),
               if (r != null) const SizedBox(height: 4),
-              Expanded(
-                child: Directionality(
-                  textDirection: TextDirection.rtl,
-                  child: Text(text,
-                      maxLines: 6, overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontFamily: 'Quran',
-                          fontSize: AppPrefs.I.ayahFontSize.toDouble(),
-                          height: 1.8)),
-                ),
+              Directionality(
+                textDirection: TextDirection.rtl,
+                child: Text(text,
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontFamily: 'Quran',
+                        fontSize: AppPrefs.I.ayahFontSize.toDouble(),
+                        height: 1.8)),
               ),
-              if (tafsir.trim().isNotEmpty)
+              if (tafsir.trim().isNotEmpty) ...[
+                const SizedBox(height: 6),
                 Directionality(
                   textDirection: TextDirection.rtl,
                   child: Text(tafsir,
-                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      maxLines: 2, overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                           color: Colors.white.withOpacity(.75),
                           fontSize: 12, height: 1.7)),
                 ),
+              ],
             ])),
       ),
     );
@@ -551,7 +531,7 @@ class _HomeScreenState extends State<HomeScreen> {
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuestionScreen()))),
       _G('ڤیدیۆی ئاینی', Icons.ondemand_video_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VideosScreen()))),
-      _G('تاوەنە گەورەکان', Icons.warning_amber_rounded,
+      _G('تاوانەگەورەکان', Icons.warning_amber_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TawanakanmScreen()))),
       _G('کتێبخانە', Icons.local_library_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KtebScreen()))),

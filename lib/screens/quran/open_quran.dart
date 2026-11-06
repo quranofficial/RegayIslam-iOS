@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -27,6 +28,9 @@ class OpenQuranScreen extends StatefulWidget {
     required this.ayaCount,
     required this.place,
     required this.juz,
+    this.initialAyah,
+    this.highlightAyah,
+    this.highlightWord,
   });
 
   final int surahId;
@@ -34,6 +38,16 @@ class OpenQuranScreen extends StatefulWidget {
   final int ayaCount;
   final String place;
   final String juz;
+
+  /// Item 3: when opened from a favorite / the daily ayah / a name of
+  /// Allah, the reader opens AT that ayah (not at the top of the surah),
+  /// scrolls to it and rings it for a few seconds.
+  final int? initialAyah;
+  final int? highlightAyah;
+
+  /// Item 13: a word to highlight inside the ayah text (e.g. one of the
+  /// 99 names of Allah appearing in the verse).
+  final String? highlightWord;
 
   @override
   State<OpenQuranScreen> createState() => _OpenQuranScreenState();
@@ -53,6 +67,16 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
   Map<String, int> _timings = {};
   final ScrollController _scroll = ScrollController();
 
+  /// Item 3: the ayah that came from outside (favorite / daily ayah /
+  /// name of Allah) keeps a golden ring for a few seconds.
+  int? _ringedAyah;
+  Timer? _ringTimer;
+
+  /// Item 3: reading position is remembered while scrolling, so "بەردەوامبوون"
+  /// (continue reading) can always return to the same place.
+  int _lastVisibleAyah = 1;
+  DateTime _lastSave = DateTime.fromMillisecondsSinceEpoch(0);
+
   /// Item 10: one GlobalKey per ayah row so "recite from this ayah"
   /// scrolls to the EXACT widget (the old fixed 170px estimate landed on
   /// the wrong verse on long surahs).
@@ -64,6 +88,7 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
     AudioSetup.prepare(_player); // item 2: steady full volume everywhere
     _tafsir = AppPrefs.I.tafsir;
     _load();
+    _scroll.addListener(_onScroll);
     _player.onPlayerStateChanged.listen((s) {
       if (mounted) setState(() => _state = s);
     });
@@ -88,6 +113,47 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
     if (!mounted) return;
     setState(() { _ayat = rows; _loading = false; });
     _timings = await Db.I.timings(AppPrefs.I.qariId);
+    // Item 3: jump straight to the requested ayah (favorite / daily ayah /
+    // a name of Allah) and ring it so the user sees exactly where it is.
+    final target = widget.initialAyah ?? widget.highlightAyah;
+    if (target != null && target > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _scrollToAyah(target);
+        setState(() => _ringedAyah = target);
+        _ringTimer?.cancel();
+        _ringTimer = Timer(const Duration(seconds: 6), () {
+          if (mounted) setState(() => _ringedAyah = null);
+        });
+      });
+    }
+  }
+
+  /// Item 3: while the reader scrolls, remember which ayah is on top and
+  /// persist it (throttled) as the last-read position.
+  void _onScroll() {
+    if (!mounted || _ayat.isEmpty || !_scroll.hasClients) return;
+    int? topAyah;
+    double bestTop = double.infinity;
+    for (final a in _ayat) {
+      final n = (a['ayah'] as num?)?.toInt() ?? 0;
+      final ctx = _ayahKeys[n]?.currentContext;
+      if (ctx == null) continue;
+      final box = ctx.findRenderObject();
+      if (box is! RenderBox) continue;
+      final top = box.localToGlobal(Offset.zero).dy;
+      if (top >= -80 && top < bestTop) {
+        bestTop = top;
+        topAyah = n;
+      }
+    }
+    if (topAyah == null) return;
+    _lastVisibleAyah = topAyah;
+    final now = DateTime.now();
+    if (now.difference(_lastSave).inMilliseconds > 1500) {
+      _lastSave = now;
+      AppPrefs.I.saveReadingPosition(widget.surahId, topAyah);
+    }
   }
 
   String _mp3Url(String link) {
@@ -273,6 +339,9 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
 
   @override
   void dispose() {
+    _ringTimer?.cancel();
+    // Item 3: the reading position is saved on leaving the reader too.
+    AppPrefs.I.saveReadingPosition(widget.surahId, _lastVisibleAyah);
     _player.dispose();
     _scroll.dispose();
     super.dispose();
@@ -307,6 +376,50 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text('کۆپی کرا')));
+  }
+
+  /// Item 13: the ayah text with one word highlighted (e.g. one of the 99
+  /// names of Allah when the reader is opened from the name screen).
+  Widget _ayahText(String text, Color color) {
+    final word = (widget.highlightWord ?? '').trim();
+    if (word.isEmpty || !text.contains(word)) {
+      return Text(text,
+          style: TextStyle(
+              fontFamily: AppPrefs.I.fontQuran,
+              fontFamilyFallback: const ['Quran', 'Quran1', 'Quran3'],
+              fontSize: AppPrefs.I.quranFontSize.toDouble(),
+              height: 2, color: color));
+    }
+    final dark = !AppPrefs.I.day;
+    final accent = dark ? AppColors.gold : AppColors.primaryDark;
+    final spans = <TextSpan>[];
+    var rest = text;
+    while (rest.isNotEmpty) {
+      final i = rest.indexOf(word);
+      if (i < 0) {
+        spans.add(TextSpan(text: rest));
+        break;
+      }
+      if (i > 0) spans.add(TextSpan(text: rest.substring(0, i)));
+      spans.add(TextSpan(
+          text: word,
+          style: TextStyle(
+              background: Paint()..color = accent.withOpacity(.28),
+              color: accent,
+              fontWeight: FontWeight.bold)));
+      rest = rest.substring(i + word.length);
+    }
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: RichText(
+          text: TextSpan(
+              style: TextStyle(
+                  fontFamily: AppPrefs.I.fontQuran,
+                  fontFamilyFallback: const ['Quran', 'Quran1', 'Quran3'],
+                  fontSize: AppPrefs.I.quranFontSize.toDouble(),
+                  height: 2, color: color),
+              children: spans)),
+    );
   }
 
   @override
@@ -371,10 +484,12 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                       final ayahText = '${a['text'] ?? ''}';
                       final tafsir = '${a[_tafsir] ?? ''}';
                       final highlighted = _playingAyah == ayahNum;
+                      final ringed = _ringedAyah == ayahNum;
                       return GestureDetector(
                         key: _ayahKeys.putIfAbsent(ayahNum, () => GlobalKey()),
                         onTap: () => _copyAyah(ayahText, tafsir),
-                        child: Container(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: highlighted
@@ -382,9 +497,17 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                                 : (customBg ?? card),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                                color: highlighted
-                                    ? AppColors.primaryDark
-                                    : dark ? Colors.white10 : Colors.black12),
+                                color: ringed
+                                    ? AppColors.gold
+                                    : highlighted
+                                        ? AppColors.primaryDark
+                                        : dark ? Colors.white10 : Colors.black12,
+                                width: ringed ? 2.2 : 1),
+                            boxShadow: ringed
+                                ? [BoxShadow(
+                                    color: AppColors.gold.withOpacity(.35),
+                                    blurRadius: 14)]
+                                : null,
                           ),
                           child: Column(crossAxisAlignment:
                               CrossAxisAlignment.stretch, children: [
@@ -434,16 +557,7 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                                   fontWeight: FontWeight.w600)),
                             ]),
                             const SizedBox(height: 8),
-                            Directionality(
-                              textDirection: TextDirection.rtl,
-                              child: Text(ayahText,
-                                  style: TextStyle(
-                                      fontFamily: AppPrefs.I.fontQuran,
-                                      fontFamilyFallback: const ['Quran', 'Quran1', 'Quran3'],
-                                      fontSize: AppPrefs.I.quranFontSize
-                                          .toDouble(),
-                                      height: 2, color: ayahColor)),
-                            ),
+                            _ayahText(ayahText, ayahColor),
                             if (AppPrefs.I.showQuranTafsir && tafsir.trim().isNotEmpty) ...[
                               const SizedBox(height: 8),
                               Container(

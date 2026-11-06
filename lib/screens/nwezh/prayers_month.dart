@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:gal/gal.dart';
 import '../../core/constants.dart';
+import '../../core/kurdish_date.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
 import '../quran/open_quran.dart' show toArabicDigits;
@@ -118,7 +119,10 @@ class _PrayersMonthScreenState extends State<PrayersMonthScreen> {
                         rows: [
                           for (final r in _rows)
                             DataRow(cells: [
-                              for (final c in _cols)
+                              // Item 16: the day carries all three formats —
+                              // weekday, Hijri date and the normal date.
+                              DataCell(_dateCell(r['D'], txt)),
+                              for (final c in _cols.skip(1))
                                 DataCell(Text(_fmt(r[c.$1]),
                                     style: TextStyle(fontSize: 12, color: txt))),
                             ]),
@@ -187,5 +191,26 @@ class _PrayersMonthScreenState extends State<PrayersMonthScreen> {
       return '${toArabicDigits(int.parse(p[1]))}/${toArabicDigits(int.parse(p[0]))}';
     }
     return s;
+  }
+
+  /// Item 16: three-line date cell — weekday (شەممە…) + Hijri date +
+  /// normal (Gregorian) date, all in Sorani.
+  Widget _dateCell(Object? v, Color txt) {
+    final s = '${v ?? ''}';
+    final m = RegExp(r'^(\d{2})-(\d{2})$').firstMatch(s);
+    if (m == null) {
+      return Text(_fmt(v), style: TextStyle(fontSize: 12, color: txt));
+    }
+    final now = DateTime.now();
+    final d = DateTime(now.year, int.parse(m.group(1)!), int.parse(m.group(2)!));
+    return Column(crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center, children: [
+      Text(weekdayKu(d), style: TextStyle(fontSize: 11.5,
+          fontWeight: FontWeight.bold, color: txt)),
+      Text(hijriKu(d), style: TextStyle(fontSize: 10,
+          color: txt.withOpacity(.8))),
+      Text(gregorianKu(d), style: TextStyle(fontSize: 10,
+          color: txt.withOpacity(.6))),
+    ]);
   }
 }

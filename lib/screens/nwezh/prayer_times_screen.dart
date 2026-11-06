@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
+import '../../core/kurdish_date.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
 import '../nwezh/prayers_month.dart';
@@ -75,8 +76,9 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                   Text('شار: ${AppPrefs.I.cityName}',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: txt)),
                   const SizedBox(height: 4),
-                  Text('${DateTime.now().year}/${DateTime.now().month}/${DateTime.now().day}',
-                    style: TextStyle(color: txt.withOpacity(.55))),
+                  // Item 16: weekday + Hijri + normal date, all three.
+                  Text(fullDateKu(DateTime.now()),
+                    style: TextStyle(color: txt.withOpacity(.55), fontSize: 12.5)),
                   if (_cities.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
