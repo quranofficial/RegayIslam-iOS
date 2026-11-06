@@ -1402,7 +1402,7 @@ class _AdminCommentsPageState extends _AdminPageState<_AdminCommentsPage> {
   Future<void> _deleteComment(Map<String, dynamic> c) async {
     if (_videoId.isEmpty) return;
     final ok = await confirm(
-        'سڕینەوەی سەرنج', 'دڵنیایت لە سڕینەوەی سەرنجی "${c['name'] ?? ''}"؟');
+        'سڕینەوەی سەرنج', 'دڵنیایت لە سڕینەوەی سەرنجی "${c['userrr'] ?? c['name'] ?? ''}"؟');
     if (!ok) return;
     setState(() => busy = true);
     final done = await Rtdb.I.delete('CommentVideo/$_videoId/${c['id']}');
@@ -1451,7 +1451,7 @@ class _AdminCommentsPageState extends _AdminPageState<_AdminCommentsPage> {
               children: [
                 Row(children: [
                   Expanded(
-                    child: Text('${c['name'] ?? ''}',
+                    child: Text('${c['userrr'] ?? c['name'] ?? ''}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -1463,7 +1463,7 @@ class _AdminCommentsPageState extends _AdminPageState<_AdminCommentsPage> {
                       style: TextStyle(fontSize: 10, color: txt.withOpacity(.5))),
                 ]),
                 const SizedBox(height: 4),
-                SelectableText('${c['text'] ?? ''}',
+                SelectableText('${c['commenttt'] ?? c['text'] ?? ''}',
                     style: TextStyle(
                         fontSize: 12.5,
                         color: txt.withOpacity(.85),
