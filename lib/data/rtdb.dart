@@ -171,9 +171,11 @@ class Rtdb {
           items.forEach((key, video) {
             if (video is Map) {
               out.add({
+                ...Map<String, dynamic>.from(video),
+                // The Firebase push key is the canonical row ID. Keep it
+                // authoritative even if legacy JSON contains an "id" field.
                 'id': '$key',
                 'folder': '$folder',
-                ...Map<String, dynamic>.from(video),
               });
             }
           });
@@ -191,9 +193,10 @@ class Rtdb {
       v.forEach((key, video) {
         if (video is Map) {
           out.add({
+            ...Map<String, dynamic>.from(video),
+            // Keep the real Firebase push key for like/comment writes.
             'id': '$key',
             'folder': tag,
-            ...Map<String, dynamic>.from(video),
           });
         }
       });
