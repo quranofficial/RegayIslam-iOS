@@ -65,7 +65,25 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
   @override
   void initState() {
     super.initState();
+    // item 13: restore the last saved studio design (font, size, colors,
+    // animation) so reopening the section shows the same look.
+    final p = AppPrefs.I;
+    _fontIndex = p.studioFontIndex.clamp(0, kFontsQuran.length - 1);
+    _textSize = p.studioTextSize;
+    _textColor = p.studioTextColor;
+    _bgColor = p.studioBgColor;
+    _animation = p.studioAnimation.clamp(0, _animations.length - 1);
     _load();
+  }
+
+  /// Persist the design options whenever one of them changes.
+  void _saveDesign() {
+    final p = AppPrefs.I;
+    p.studioFontIndex = _fontIndex;
+    p.studioTextSize = _textSize;
+    p.studioTextColor = _textColor;
+    p.studioBgColor = _bgColor;
+    p.studioAnimation = _animation;
   }
 
   Future<void> _load() async {
@@ -298,7 +316,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
           _bgVideoPath!.trim().isNotEmpty &&
           File(_bgVideoPath!).existsSync();
 
-      // 1) frames — transparent when a bg video will be overlaid
+      // (1) frames — transparent when a bg video will be overlaid
       final bgImage = _bgImagePath != null && !hasBgVideo
           ? await _decodeImage(_bgImagePath!)
           : null;
@@ -389,7 +407,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
             transparentBg: hasBgVideo, bgImage: bgImage);
       }
 
-      // 2) per-frame segments (with animation) then concat
+      // (2) per-frame segments (with animation) then concat
       setState(() => _progress = 'دروستکردنی ڤیدیۆ...');
       final segments = <String>[];
       for (var i = 0; i < range.length; i++) {
@@ -428,7 +446,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
 
       String out;
       if (hasBgVideo) {
-        // 3) overlay the transparent text frames over the looping bg video
+        // (3) overlay the transparent text frames over the looping bg video
         out = '${work.path}/quran_video.mp4';
         final rc3 = await FFmpegKit.execute(
             '-stream_loop -1 -i "${_bgVideoPath!}" -i "$framesOut" '
@@ -465,7 +483,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
         out = framesOut;
       }
 
-      // 4) mux audio if any
+      // (4) mux audio if any
       final validAudio = audioFiles.where((f) => f.path.isNotEmpty).toList();
       if (validAudio.isNotEmpty) {
         String audioOut;
@@ -535,7 +553,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
   Widget build(BuildContext context) {
     final dark = !AppPrefs.I.day;
     final txt = dark ? Colors.white : Colors.black;
-    final card = dark ? AppColors.nightCard : Colors.white;
+    final accent = dark ? AppColors.gold : AppColors.primaryDark;
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -548,178 +566,401 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
         ),
         body: _surahs.isEmpty
             ? const Center(child: CircularProgressIndicator())
-            : ListView(padding: const EdgeInsets.all(14), children: [
-                _preview(card, txt, dark),
-                const SizedBox(height: 14),
-                _section('سوورەت و مەودای ئایەت', Icons.filter_alt_rounded, txt),
-                _pickerRow(dark, txt, card),
-                const SizedBox(height: 8),
-                _rangeRow(dark, txt, card),
+            : ListView(
+                padding: EdgeInsets.fromLTRB(
+                    14, 14, 14, bottomInset(context, extra: 16)),
+                children: [
+                // live preview of the current design
+                _preview(txt),
                 const SizedBox(height: 12),
-                _section('دەق و فۆنت', Icons.text_fields_rounded, txt),
-                _styleRow(dark, txt, card),
-                _sizeRow(dark, txt, card),
-                _fontRow(dark, txt, card),
-                const SizedBox(height: 12),
-                _section('پاشبنەما', Icons.wallpaper_rounded, txt),
-                _bgRow(dark, txt, card),
-                const SizedBox(height: 12),
-                _section('قاری و دەنگ', Icons.mic_rounded, txt),
-                _reciterRow(dark, txt, card),
-                SwitchListTile(
-                  activeColor: dark ? AppColors.gold : AppColors.primaryDark,
-                  contentPadding: EdgeInsets.zero,
-                  title: Text('دەنگ بۆ ڤیدیۆ',
-                      style: TextStyle(fontSize: 13.5, color: txt)),
-                  value: _withAudio,
-                  onChanged: (v) => setState(() => _withAudio = v),
+
+                // ١ — سوورەت و مەودای ئایەت
+                _section(
+                  icon: Icons.filter_alt_rounded,
+                  title: '١ • سوورەت و مەودای ئایەت',
+                  dark: dark,
+                  txt: txt,
+                  accent: accent,
+                  children: [
+                    _pickerRow(dark, txt),
+                    const SizedBox(height: 12),
+                    _rangeRow(dark, txt),
+                    const SizedBox(height: 12),
+                    _rangeChips(txt, accent),
+                  ],
                 ),
-                if (_withAudio)
-                  SegmentedButton<bool>(
-                    segments: const [
-                      ButtonSegment(value: false, label: Text('ئایەت بە ئایەت', style: TextStyle(fontSize: 11.5))),
-                      ButtonSegment(value: true, label: Text('قاری هەڵبژێردراو', style: TextStyle(fontSize: 11.5))),
-                    ],
-                    selected: {_useReciterAudio},
-                    onSelectionChanged: (s) =>
-                        setState(() => _useReciterAudio = s.first),
-                  ),
                 const SizedBox(height: 12),
-                _section('ئەنیمەیشنی ڤیدیۆ', Icons.animation_rounded, txt),
-                Wrap(spacing: 8, children: [
-                  for (var i = 0; i < _animations.length; i++)
-                    ChoiceChip(
-                      label: Text(_animations[i], style: const TextStyle(fontSize: 11.5)),
-                      selected: _animation == i,
-                      selectedColor: dark ? AppColors.gold.withOpacity(.25) : AppColors.primaryDark.withOpacity(.12),
-                      labelStyle: TextStyle(
-                          color: _animation == i
-                              ? (dark ? AppColors.gold : AppColors.primaryDark)
-                              : txt),
-                      onSelected: (_) => setState(() => _animation = i),
-                    ),
-                ]),
+
+                // ٢ — دەق و فۆنت
+                _section(
+                  icon: Icons.text_fields_rounded,
+                  title: '٢ • دەق و فۆنت',
+                  dark: dark,
+                  txt: txt,
+                  accent: accent,
+                  children: [
+                    _styleRow(dark, txt),
+                    const SizedBox(height: 12),
+                    _sizeRow(txt, accent),
+                    const SizedBox(height: 12),
+                    _fontRow(txt, accent),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // ٣ — پاشبنەما
+                _section(
+                  icon: Icons.wallpaper_rounded,
+                  title: '٣ • پاشبنەما',
+                  dark: dark,
+                  txt: txt,
+                  accent: accent,
+                  children: [_bgRow(dark, txt, accent)],
+                ),
+                const SizedBox(height: 12),
+
+                // ٤ — قاری و دەنگ
+                _section(
+                  icon: Icons.mic_rounded,
+                  title: '٤ • قاری و دەنگ',
+                  dark: dark,
+                  txt: txt,
+                  accent: accent,
+                  children: [
+                    _reciterRow(dark, txt),
+                    const SizedBox(height: 8),
+                    Row(children: [
+                      Icon(Icons.volume_up_rounded,
+                          size: 18, color: txt.withOpacity(.65)),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text('دەنگ بۆ ڤیدیۆ',
+                          style: TextStyle(fontSize: 13, color: txt))),
+                      Switch(
+                        value: _withAudio,
+                        activeColor: accent,
+                        onChanged: (v) => setState(() => _withAudio = v),
+                      ),
+                    ]),
+                    if (_withAudio) ...[
+                      const SizedBox(height: 8),
+                      SegmentedButton<bool>(
+                        segments: const [
+                          ButtonSegment(
+                              value: false,
+                              label: Text('ئایەت بە ئایەت',
+                                  style: TextStyle(fontSize: 11.5))),
+                          ButtonSegment(
+                              value: true,
+                              label: Text('قاری هەڵبژێردراو',
+                                  style: TextStyle(fontSize: 11.5))),
+                        ],
+                        selected: {_useReciterAudio},
+                        onSelectionChanged: (s) =>
+                            setState(() => _useReciterAudio = s.first),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // ٥ — ئەنیمەیشنی ڤیدیۆ
+                _section(
+                  icon: Icons.animation_rounded,
+                  title: '٥ • ئەنیمەیشنی ڤیدیۆ',
+                  dark: dark,
+                  txt: txt,
+                  accent: accent,
+                  children: [
+                    Text('ئەنیمەیشن تەنها بۆ ڤیدیۆ جێبەجێ دەکرێت',
+                        style: TextStyle(fontSize: 12,
+                            color: txt.withOpacity(.65))),
+                    const SizedBox(height: 8),
+                    Wrap(spacing: 8, runSpacing: 8, children: [
+                      for (var i = 0; i < _animations.length; i++)
+                        ChoiceChip(
+                          label: Text(_animations[i],
+                              style: TextStyle(fontSize: 12,
+                                  color: _animation == i ? accent : txt)),
+                          selected: _animation == i,
+                          selectedColor: accent.withOpacity(.18),
+                          showCheckmark: false,
+                          onSelected: (_) => setState(() {
+                            _animation = i;
+                            _saveDesign();
+                          }),
+                        ),
+                    ]),
+                  ],
+                ),
+
+                // progress + action buttons
                 if (_working) ...[
-                  const SizedBox(height: 10),
-                  Row(children: [
-                    const SizedBox(width: 22, height: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2)),
-                    const SizedBox(width: 10),
-                    Expanded(child: Text(_progress,
-                        style: TextStyle(fontSize: 12.5, color: txt))),
-                  ]),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                        color: dark
+                            ? Colors.white.withOpacity(.05)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: dark ? Colors.white12 : Colors.black12)),
+                    child: Row(children: [
+                      const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2)),
+                      const SizedBox(width: 12),
+                      Expanded(child: Text(_progress,
+                          style: TextStyle(fontSize: 12.5, color: txt))),
+                    ]),
+                  ),
                 ],
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 Row(children: [
-                  Expanded(child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                        backgroundColor:
-                            dark ? AppColors.gold : AppColors.primaryDark,
-                        foregroundColor:
-                            dark ? Colors.black : Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12)),
-                    onPressed: _working ? null : _makeImage,
-                    icon: const Icon(Icons.image_rounded),
-                    label: const Text('دروستکردنی وێنە'),
-                  )),
+                  Expanded(
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                          backgroundColor: accent,
+                          foregroundColor:
+                              dark ? Colors.black : Colors.white,
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14))),
+                      onPressed: _working ? null : _makeImage,
+                      icon: const Icon(Icons.image_rounded),
+                      label: const Text('دروستکردنی وێنە',
+                          style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                  ),
                   const SizedBox(width: 10),
-                  Expanded(child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFB71C1C),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12)),
-                    onPressed: _working ? null : _makeVideo,
-                    icon: const Icon(Icons.videocam_rounded),
-                    label: const Text('دروستکردنی ڤیدیۆ'),
-                  )),
+                  Expanded(
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFB71C1C),
+                          foregroundColor: Colors.white,
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14))),
+                      onPressed: _working ? null : _makeVideo,
+                      icon: const Icon(Icons.videocam_rounded),
+                      label: const Text('دروستکردنی ڤیدیۆ',
+                          style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                  ),
                 ]),
                 const SizedBox(height: 10),
                 Text('وێنە و ڤیدیۆکان دەچنە ناو گەلەری مۆبایل (ئەلبوومی ڕێگای ئیسلام). '
                     'دروستکردنی ڤیدیۆ پێویستی بە ئینتەرنێت هەیە بۆ دەنگی ئایەتەکان.',
-                    style: TextStyle(fontSize: 11.5, color: txt.withOpacity(.5))),
+                    style: TextStyle(fontSize: 11.5,
+                        color: txt.withOpacity(.5))),
               ]),
       ),
     );
   }
 
-  Widget _section(String title, IconData icon, Color txt) => Padding(
-        padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
-        child: Row(children: [
-          Icon(icon, size: 17, color: txt.withOpacity(.7)),
-          const SizedBox(width: 6),
-          Text(title, style: TextStyle(fontWeight: FontWeight.bold,
-              fontSize: 13.5, color: txt)),
-        ]),
+  /// one rounded controls-group card: header (icon + bold title) + children
+  Widget _section({
+    required IconData icon,
+    required String title,
+    required bool dark,
+    required Color txt,
+    required Color accent,
+    required List<Widget> children,
+  }) =>
+      Container(
+        decoration: BoxDecoration(
+          color: dark ? AppColors.nightCard : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: dark ? Colors.white10 : Colors.black12),
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                    color: accent.withOpacity(.12),
+                    borderRadius: BorderRadius.circular(10)),
+                child: Icon(icon, size: 18, color: accent),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(title,
+                    style: TextStyle(fontWeight: FontWeight.bold,
+                        fontSize: 14, color: txt)),
+              ),
+            ]),
+            const SizedBox(height: 12),
+            ...children,
+          ],
+        ),
       );
 
-  Widget _preview(Color card, Color txt, bool dark) {
+  /// large live preview: bismillah + first ayah of the range + reference +
+  /// brand; a picked background image/video is reflected here
+  Widget _preview(Color txt) {
     final text = _ayat.isEmpty
         ? '...'
         : _range.isEmpty
             ? '...'
             : '${_range.first['text'] ?? ''}';
-    final bgDeco = _bgVideoPath != null
-        ? BoxDecoration(
+    final hasImage = _bgImagePath != null && _bgVideoPath == null;
+    final hasVideo = _bgVideoPath != null;
+
+    final content = Column(children: [
+      Text('بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
+          style: TextStyle(
+              color: Color(_textColor).withOpacity(.9), fontSize: 15)),
+      const Spacer(),
+      Text(text,
+          maxLines: 4,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+              fontFamily:
+                  kFontsQuran[_fontIndex.clamp(0, kFontsQuran.length - 1)],
+              color: Color(_textColor),
+              fontSize: _textSize.clamp(14, 30),
+              height: 1.9)),
+      const Spacer(),
+      Text(_from <= _to ? _reference(_from) : '',
+          style: TextStyle(
+              color: Color(_textColor).withOpacity(.85), fontSize: 12)),
+      const SizedBox(height: 2),
+      Text('ڕێگای ئیسلام',
+          style: TextStyle(
+              color: Color(_textColor).withOpacity(.7), fontSize: 10)),
+    ]);
+
+    final Widget box;
+    if (hasVideo) {
+      // dark placeholder with the picked video file name
+      box = Container(
+        height: 240,
+        decoration: BoxDecoration(
             color: const Color(0xFF1A1A1A),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFFFD54F).withOpacity(.5), width: 2))
-        : BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-                begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                colors: [Color(_bgColor), Color(_bgColor).withOpacity(.82)]),
-            border: Border.all(color: const Color(0xFFFFD54F).withOpacity(.6), width: 2));
-    final preview = Container(
-      height: 230,
-      decoration: bgDeco,
-      padding: const EdgeInsets.all(12),
-      child: Column(children: [
-        Text('بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
-            style: TextStyle(color: Color(_textColor).withOpacity(.9), fontSize: 15)),
-        const Spacer(),
-        Directionality(
-          textDirection: TextDirection.rtl,
-          child: Text(text,
-              maxLines: 4, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: kFontsQuran[_fontIndex],
-                  color: Color(_textColor),
-                  fontSize: _textSize.clamp(14, 30), height: 1.9)),
+            borderRadius: BorderRadius.circular(20),
+            border:
+                Border.all(color: AppColors.gold.withOpacity(.6), width: 2)),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.videocam_rounded,
+                size: 36, color: AppColors.gold),
+            const SizedBox(height: 8),
+            Text('ڤیدیۆی پاشبنەما هەڵبژێردرا ✅',
+                style: TextStyle(
+                    color: Colors.white.withOpacity(.85), fontSize: 12.5)),
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Text(_bgVideoPath!.split('/').last,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: Colors.white.withOpacity(.45), fontSize: 11)),
+            ),
+          ],
         ),
-        const Spacer(),
-        Text(_from <= _to ? '${suraLabel(_name)} • ئایەتی ${toArabicDigits(_from)}' : '',
-            style: TextStyle(color: Color(_textColor).withOpacity(.85), fontSize: 12)),
-        Text('ڕێگای ئیسلام',
-            style: TextStyle(color: Color(_textColor).withOpacity(.7), fontSize: 10)),
-      ]),
-    );
-    return _bgImagePath != null && _bgVideoPath == null
-        ? ClipRRect(
-            borderRadius: BorderRadius.circular(16),
+      );
+    } else if (hasImage) {
+      // picked image over the color, dark scrim so text stays readable
+      box = SizedBox(
+        height: 240,
+        child: Container(
+          foregroundDecoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border:
+                  Border.all(color: AppColors.gold.withOpacity(.6), width: 2)),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
             child: Stack(children: [
+              Positioned.fill(child: Container(color: Color(_bgColor))),
               Positioned.fill(
                   child: Image.file(File(_bgImagePath!),
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => const SizedBox())),
               Positioned.fill(
                   child: Container(color: Colors.black.withOpacity(.35))),
-              preview,
-            ]))
-        : preview;
+              Padding(padding: const EdgeInsets.all(12), child: content),
+            ]),
+          ),
+        ),
+      );
+    } else {
+      // gradient of the picked background color
+      box = Container(
+        height: 240,
+        decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(_bgColor),
+                  Color(_bgColor).withOpacity(.82)
+                ]),
+            border:
+                Border.all(color: AppColors.gold.withOpacity(.6), width: 2)),
+        padding: const EdgeInsets.all(12),
+        child: content,
+      );
+    }
+
+    return Column(children: [
+      box,
+      if (hasImage || hasVideo)
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: TextButton(
+            style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: const Size(0, 36)),
+            onPressed: () => setState(() {
+              _bgImagePath = null;
+              _bgVideoPath = null;
+            }),
+            child: Text('سڕینەوەی پاشبنەما',
+                style:
+                    TextStyle(fontSize: 12, color: txt.withOpacity(.65))),
+          ),
+        ),
+    ]);
   }
 
-  Widget _pickerRow(bool dark, Color txt, Color card) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(color: card,
+  /// surah dropdown
+  Widget _pickerRow(bool dark, Color txt) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+            color: dark
+                ? Colors.white.withOpacity(.05)
+                : const Color(0xFFF4F5F7),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: dark ? Colors.white10 : Colors.black12)),
+            border:
+                Border.all(color: dark ? Colors.white12 : Colors.black12)),
         child: DropdownButtonHideUnderline(
           child: DropdownButton<Map<String, Object?>>(
             value: _surah,
             isExpanded: true,
+            icon: Icon(Icons.keyboard_arrow_down_rounded,
+                color: txt.withOpacity(.6)),
+            dropdownColor: dark ? AppColors.nightCard : Colors.white,
             items: [
               for (final s in _surahs)
-                DropdownMenuItem(value: s,
-                    child: Text('${s['soraid']}. ${s['name']}',
+                DropdownMenuItem(
+                    value: s,
+                    child: Text(
+                        '${toArabicDigits((s['soraid'] as num?)?.toInt() ?? 0)}. ${s['name']}',
                         style: TextStyle(fontSize: 12.5, color: txt))),
             ],
             onChanged: (v) async {
@@ -730,161 +971,322 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
         ),
       );
 
-  Widget _rangeRow(bool dark, Color txt, Color card) {
+  /// quick range actions: start / end / whole surah + ayah count
+  Widget _rangeChips(Color txt, Color accent) {
     final count = _ayat.isEmpty ? 1 : _ayat.length;
-    return Row(children: [
-      Text('لە ئایەتی', style: TextStyle(fontSize: 12.5, color: txt)),
-      const SizedBox(width: 6),
-      _stepper(dark, txt, card, _from, min: 1, max: count,
-          onChanged: (v) => setState(() {
-            _from = v;
-            if (_to < _from) _to = _from;
-          })),
-      const SizedBox(width: 14),
-      Text('بۆ ئایەتی', style: TextStyle(fontSize: 12.5, color: txt)),
-      const SizedBox(width: 6),
-      _stepper(dark, txt, card, _to, min: _from, max: count,
-          onChanged: (v) => setState(() => _to = v)),
+    return Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          ChoiceChip(
+            avatar:
+                Icon(Icons.first_page_rounded, size: 14, color: accent),
+            label:
+                Text('سەرەتا', style: TextStyle(fontSize: 11.5, color: txt)),
+            selected: false,
+            onSelected: (_) => setState(() {
+              _from = 1;
+              if (_to < _from) _to = _from;
+            }),
+          ),
+          ChoiceChip(
+            avatar: Icon(Icons.last_page_rounded, size: 14, color: accent),
+            label:
+                Text('کۆتایی', style: TextStyle(fontSize: 11.5, color: txt)),
+            selected: false,
+            onSelected: (_) => setState(() => _to = count),
+          ),
+          ChoiceChip(
+            avatar: Icon(Icons.select_all_rounded, size: 14, color: accent),
+            label:
+                Text('هەموو', style: TextStyle(fontSize: 11.5, color: txt)),
+            selected: false,
+            onSelected: (_) => setState(() {
+              _from = 1;
+              _to = count;
+            }),
+          ),
+          Text('ژمارەی ئایەتەکان: ${toArabicDigits(count)}',
+              style:
+                  TextStyle(fontSize: 12, color: txt.withOpacity(.65))),
+        ]);
+  }
+
+  /// from → to steppers (min/max clamps kept)
+  Widget _rangeRow(bool dark, Color txt) {
+    final count = _ayat.isEmpty ? 1 : _ayat.length;
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Expanded(
+        child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+          Text('لە ئایەتی',
+              style:
+                  TextStyle(fontSize: 12.5, color: txt.withOpacity(.8))),
+          const SizedBox(height: 6),
+          _stepper(dark, txt, _from,
+              min: 1,
+              max: count,
+              onChanged: (v) => setState(() {
+                    _from = v;
+                    if (_to < _from) _to = _from;
+                  })),
+        ]),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+          Text('بۆ ئایەتی',
+              style:
+                  TextStyle(fontSize: 12.5, color: txt.withOpacity(.8))),
+          const SizedBox(height: 6),
+          _stepper(dark, txt, _to,
+              min: _from,
+              max: count,
+              onChanged: (v) => setState(() => _to = v)),
+        ]),
+      ),
     ]);
   }
 
-  Widget _stepper(bool dark, Color txt, Color card, int value,
-      {required int min, required int max, required ValueChanged<int> onChanged}) =>
+  /// − value + stepper
+  Widget _stepper(bool dark, Color txt, int value,
+      {required int min,
+      required int max,
+      required ValueChanged<int> onChanged}) =>
       Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 2),
         decoration: BoxDecoration(
-            color: card,
+            color: dark
+                ? Colors.white.withOpacity(.05)
+                : const Color(0xFFF4F5F7),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: dark ? Colors.white10 : Colors.black12)),
+            border:
+                Border.all(color: dark ? Colors.white12 : Colors.black12)),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          IconButton(visualDensity: VisualDensity.compact,
+          IconButton(
+              visualDensity: VisualDensity.compact,
               onPressed: value <= min ? null : () => onChanged(value - 1),
-              icon: Icon(Icons.remove_rounded, size: 18,
+              icon: Icon(Icons.remove_rounded,
+                  size: 18,
                   color: dark ? AppColors.gold : AppColors.primaryDark)),
           Text(toArabicDigits(value),
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
-                  color: txt)),
-          IconButton(visualDensity: VisualDensity.compact,
+              style: TextStyle(fontSize: 14,
+                  fontWeight: FontWeight.bold, color: txt)),
+          IconButton(
+              visualDensity: VisualDensity.compact,
               onPressed: value >= max ? null : () => onChanged(value + 1),
-              icon: Icon(Icons.add_rounded, size: 18,
+              icon: Icon(Icons.add_rounded,
+                  size: 18,
                   color: dark ? AppColors.gold : AppColors.primaryDark)),
         ]),
       );
 
-  Widget _styleRow(bool dark, Color txt, Color card) => Padding(
-        padding: const EdgeInsets.only(top: 6),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-          Text('ڕەنگی دەقی ئایەت', style: TextStyle(fontSize: 12, color: txt.withOpacity(.7))),
-          const SizedBox(height: 6),
-          Wrap(spacing: 8, children: [
-            for (final c in _textColors)
-              InkWell(
-                onTap: () => setState(() => _textColor = c),
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  width: 34, height: 34,
-                  decoration: BoxDecoration(
-                      color: Color(c),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                          color: _textColor == c
-                              ? AppColors.gold
-                              : (dark ? Colors.white24 : Colors.black26),
-                          width: _textColor == c ? 3 : 1)),
-                ),
-              ),
-          ]),
-        ]),
-      );
-
-  Widget _sizeRow(bool dark, Color txt, Color card) => Row(children: [
-        const Icon(Icons.text_decrease_rounded, size: 18),
-        Expanded(child: Slider(
-          min: 22, max: 72, divisions: 25,
-          value: _textSize.clamp(22, 72),
-          label: '${_textSize.round()}',
-          activeColor: dark ? AppColors.gold : AppColors.primaryDark,
-          onChanged: (v) => setState(() => _textSize = v),
-        )),
-        const Icon(Icons.text_increase_rounded, size: 18),
-      ]);
-
-  Widget _fontRow(bool dark, Color txt, Color card) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Wrap(spacing: 8, runSpacing: 8, children: [
-          for (final font in kFontsQuran)
-            ChoiceChip(
-              label: Text(font, style: TextStyle(fontFamily: font, fontSize: 12)),
-              selected: kFontsQuran[_fontIndex] == font,
-              selectedColor: dark ? AppColors.gold.withOpacity(.25) : AppColors.primaryDark.withOpacity(.12),
-              onSelected: (_) => setState(() =>
-                  _fontIndex = kFontsQuran.indexOf(font).clamp(0, kFontsQuran.length - 1)),
-            ),
-        ]),
-      );
-
-  Widget _bgRow(bool dark, Color txt, Color card) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('ڕەنگی پاشبنەما', style: TextStyle(fontSize: 12, color: txt.withOpacity(.7))),
-        const SizedBox(height: 6),
-        Wrap(spacing: 8, children: [
-          for (final c in _bgColors)
-            InkWell(
-              onTap: () => setState(() { _bgColor = c; _bgImagePath = null; _bgVideoPath = null; }),
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                width: 34, height: 34,
-                decoration: BoxDecoration(
-                    color: Color(c),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                        color: _bgColor == c && _bgImagePath == null && _bgVideoPath == null
-                            ? AppColors.gold
-                            : (dark ? Colors.white24 : Colors.black26),
-                        width: _bgColor == c && _bgImagePath == null && _bgVideoPath == null ? 3 : 1)),
-              ),
-            ),
-        ]),
-        const SizedBox(height: 8),
-        Row(children: [
-          Expanded(child: OutlinedButton.icon(
-            onPressed: _pickBgImage,
-            icon: const Icon(Icons.image_rounded, size: 18),
-            label: Text(_bgImagePath == null ? 'وێنەی پاشبنەما' : 'وێنە هەڵبژێردرا ✅',
-                style: const TextStyle(fontSize: 11.5)),
-          )),
-          const SizedBox(width: 8),
-          Expanded(child: OutlinedButton.icon(
-            onPressed: _pickBgVideo,
-            icon: const Icon(Icons.videocam_rounded, size: 18),
-            label: Text(_bgVideoPath == null ? 'ڤیدیۆی پاشبنەما' : 'ڤیدیۆ هەڵبژێردرا ✅',
-                style: const TextStyle(fontSize: 11.5)),
-          )),
-        ]),
-      ]);
-
-  Widget _reciterRow(bool dark, Color txt, Color card) => Padding(
-        padding: const EdgeInsets.only(top: 6, bottom: 4),
+  /// round color swatch with a gold ring when selected
+  Widget _colorDot(Color color,
+          {required bool dark,
+          required bool selected,
+          required VoidCallback onTap}) =>
+      InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: BoxDecoration(color: card,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: dark ? Colors.white10 : Colors.black12)),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<Map<String, dynamic>>(
-              value: _reciter,
-              isExpanded: true,
-              hint: Text('قاری بۆ دەنگی ڤیدیۆ (ئایەت بە ئایەت: مشاری العفاسي)',
-                  style: TextStyle(fontSize: 12, color: txt.withOpacity(.7))),
-              items: [
-                for (final r in _reciters)
-                  DropdownMenuItem(value: r,
-                      child: Text('${r['name_ar'] ?? ''}'.trim(),
-                          style: TextStyle(fontSize: 12.5, color: txt))),
-              ],
-              onChanged: (v) => setState(() => _reciter = v),
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              border: Border.all(
+                  color: selected
+                      ? AppColors.gold
+                      : (dark ? Colors.white24 : Colors.black26),
+                  width: selected ? 3 : 1)),
+        ),
+      );
+
+  /// ayah text color dots
+  Widget _styleRow(bool dark, Color txt) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('ڕەنگی دەقی ئایەت',
+              style:
+                  TextStyle(fontSize: 12, color: txt.withOpacity(.65))),
+          const SizedBox(height: 8),
+          Wrap(spacing: 10, runSpacing: 10, children: [
+            for (final c in _textColors)
+              _colorDot(Color(c),
+                  dark: dark,
+                  selected: _textColor == c,
+                  onTap: () => setState(() {
+                        _textColor = c;
+                        _saveDesign();
+                      })),
+          ]),
+        ],
+      );
+
+  /// ayah text size slider (22..72), value shown in Arabic digits
+  Widget _sizeRow(Color txt, Color accent) => Row(children: [
+        Icon(Icons.text_decrease_rounded,
+            size: 18, color: txt.withOpacity(.6)),
+        Expanded(
+          child: Slider(
+            min: 22,
+            max: 72,
+            divisions: 25,
+            value: _textSize.clamp(22, 72),
+            label: toArabicDigits(_textSize.round()),
+            activeColor: accent,
+            onChanged: (v) {
+              setState(() => _textSize = v);
+              _saveDesign();
+            },
+          ),
+        ),
+        Icon(Icons.text_increase_rounded,
+            size: 18, color: txt.withOpacity(.6)),
+        const SizedBox(width: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+              color: accent.withOpacity(.12),
+              borderRadius: BorderRadius.circular(10)),
+          child: Text(toArabicDigits(_textSize.round()),
+              style: TextStyle(fontSize: 12.5,
+                  fontWeight: FontWeight.bold, color: accent)),
+        ),
+      ]);
+
+  /// Quran font chips (each label rendered in its own font)
+  Widget _fontRow(Color txt, Color accent) => Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (var i = 0; i < kFontsQuran.length; i++)
+            ChoiceChip(
+              label: Text(kFontsQuran[i],
+                  style: TextStyle(
+                      fontFamily: kFontsQuran[i],
+                      fontSize: 12,
+                      color: _fontIndex == i ? accent : txt,
+                      fontWeight: _fontIndex == i
+                          ? FontWeight.bold
+                          : FontWeight.normal)),
+              selected: _fontIndex == i,
+              selectedColor: accent.withOpacity(.18),
+              showCheckmark: false,
+              onSelected: (_) => setState(() {
+                _fontIndex = i;
+                _saveDesign();
+              }),
             ),
+        ],
+      );
+
+  /// background color dots + image/video pick buttons
+  Widget _bgRow(bool dark, Color txt, Color accent) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('ڕەنگی پاشبنەما',
+              style:
+                  TextStyle(fontSize: 12, color: txt.withOpacity(.65))),
+          const SizedBox(height: 8),
+          Wrap(spacing: 10, runSpacing: 10, children: [
+            for (final c in _bgColors)
+              _colorDot(Color(c),
+                  dark: dark,
+                  selected: _bgColor == c &&
+                      _bgImagePath == null &&
+                      _bgVideoPath == null,
+                  onTap: () => setState(() {
+                        _bgColor = c;
+                        _bgImagePath = null;
+                        _bgVideoPath = null;
+                        _saveDesign();
+                      })),
+          ]),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                    side: BorderSide(
+                        color: dark ? Colors.white24 : Colors.black26),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 10)),
+                onPressed: _pickBgImage,
+                icon: Icon(Icons.image_rounded,
+                    size: 18,
+                    color: _bgImagePath != null
+                        ? AppColors.gold
+                        : txt.withOpacity(.7)),
+                label: Text(
+                    _bgImagePath == null
+                        ? 'وێنەی پاشبنەما'
+                        : 'وێنە هەڵبژێردرا ✅',
+                    style: TextStyle(fontSize: 11.5, color: txt)),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                    side: BorderSide(
+                        color: dark ? Colors.white24 : Colors.black26),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 10)),
+                onPressed: _pickBgVideo,
+                icon: Icon(Icons.videocam_rounded,
+                    size: 18,
+                    color: _bgVideoPath != null
+                        ? AppColors.gold
+                        : txt.withOpacity(.7)),
+                label: Text(
+                    _bgVideoPath == null
+                        ? 'ڤیدیۆی پاشبنەما'
+                        : 'ڤیدیۆ هەڵبژێردرا ✅',
+                    style: TextStyle(fontSize: 11.5, color: txt)),
+              ),
+            ),
+          ]),
+        ],
+      );
+
+  /// reciter dropdown for the video audio
+  Widget _reciterRow(bool dark, Color txt) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+            color: dark
+                ? Colors.white.withOpacity(.05)
+                : const Color(0xFFF4F5F7),
+            borderRadius: BorderRadius.circular(12),
+            border:
+                Border.all(color: dark ? Colors.white12 : Colors.black12)),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<Map<String, dynamic>>(
+            value: _reciter,
+            isExpanded: true,
+            icon: Icon(Icons.keyboard_arrow_down_rounded,
+                color: txt.withOpacity(.6)),
+            dropdownColor: dark ? AppColors.nightCard : Colors.white,
+            hint: Text('قاری بۆ دەنگی ڤیدیۆ',
+                style: TextStyle(fontSize: 12.5,
+                    color: txt.withOpacity(.65))),
+            items: [
+              for (final r in _reciters)
+                DropdownMenuItem(
+                    value: r,
+                    child: Text('${r['name_ar'] ?? ''}'.trim(),
+                        style: TextStyle(fontSize: 12.5, color: txt))),
+            ],
+            onChanged: (v) => setState(() => _reciter = v),
           ),
         ),
       );

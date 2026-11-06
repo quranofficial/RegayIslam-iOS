@@ -3,6 +3,7 @@ import '../core/constants.dart';
 import '../core/prefs.dart';
 import '../data/home_widgets.dart';
 import '../data/prayer_notifications.dart';
+import '../main.dart' show kThemeEpoch;
 import 'home/home_screen.dart';
 import 'quran/quran_tab.dart';
 import 'tasbih/tasbih_list.dart';
@@ -10,6 +11,10 @@ import 'settings/setting_tab.dart';
 
 /// Original: MainActivity — ViewPager + BottomNavigationView.
 /// Tab order from the original code: Home, Quran, Tasbih, Settings.
+///
+/// Item 12: dark mode switches IN PLACE — MainScreen listens to
+/// kThemeEpoch and remounts the four tabs with fresh colors (no restart
+/// through the Splash anymore).
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
   @override
@@ -62,34 +67,41 @@ class _MainScreenState extends State<MainScreen>
 
   @override
   Widget build(BuildContext context) {
-    final dark = !AppPrefs.I.day;
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Scaffold(
-        body: PageView(
-          controller: _pager,
-          onPageChanged: (i) => setState(() => _position = i),
-          children: const [
-            HomeScreen(),
-            QuranTab(),
-            TasbihListScreen(),
-            SettingTab(),
-          ],
-        ),
-        bottomNavigationBar: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          currentIndex: _position,
-          onTap: _select,
-          backgroundColor: dark ? AppColors.nightCard : Colors.white,
-          selectedItemColor: dark ? AppColors.gold : AppColors.primaryDark,
-          unselectedItemColor: dark ? Colors.white54 : Colors.black54,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-          items: [
-            for (final t in _tabs)
-              BottomNavigationBarItem(
-                  icon: Icon(t.$2, size: 24), label: t.$1),
-          ],
-        ),
+      child: ValueListenableBuilder<int>(
+        valueListenable: kThemeEpoch,
+        builder: (context, epoch, __) {
+          final d2 = !AppPrefs.I.day;
+          return Scaffold(
+            body: PageView(
+              controller: _pager,
+              onPageChanged: (i) => setState(() => _position = i),
+              // Fresh instances (keyed by the theme epoch) so the tabs
+              // repaint immediately when day/night switches.
+              children: [
+                HomeScreen(key: ValueKey('home-$epoch')),
+                QuranTab(key: ValueKey('quran-$epoch')),
+                TasbihListScreen(key: ValueKey('tasbih-$epoch')),
+                SettingTab(key: ValueKey('settings-$epoch')),
+              ],
+            ),
+            bottomNavigationBar: BottomNavigationBar(
+              type: BottomNavigationBarType.fixed,
+              currentIndex: _position,
+              onTap: _select,
+              backgroundColor: d2 ? AppColors.nightCard : Colors.white,
+              selectedItemColor: d2 ? AppColors.gold : AppColors.primaryDark,
+              unselectedItemColor: d2 ? Colors.white54 : Colors.black54,
+              selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+              items: [
+                for (final t in _tabs)
+                  BottomNavigationBarItem(
+                      icon: Icon(t.$2, size: 24), label: t.$1),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

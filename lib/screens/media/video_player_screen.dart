@@ -3,14 +3,33 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
+import '../../data/rtdb.dart';
+import 'videos_screen.dart' show CommentsSheet;
 
 /// Original: PlayvideoActivity / ViewActivity — in-app video playback
 /// (mp4 from the Videokan repo, HLS m3u8 for the live channels) instead of
 /// handing the link to an external app.
+///
+/// Optional folder/videoKey/initialLike/initialComment: when opened from
+/// VideosScreen (direct mp4 with a known push key) a compact like + comment
+/// actions bar is shown under the player. The live player passes nothing
+/// and stays unchanged.
 class VideoPlayerScreen extends StatefulWidget {
-  const VideoPlayerScreen({super.key, required this.title, required this.url});
+  const VideoPlayerScreen({
+    super.key,
+    required this.title,
+    required this.url,
+    this.folder,
+    this.videoKey,
+    this.initialLike,
+    this.initialComment,
+  });
   final String title;
   final String url;
+  final String? folder;
+  final String? videoKey;
+  final int? initialLike;
+  final int? initialComment;
   @override
   State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
 }
@@ -21,10 +40,16 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   String? _error;
   bool _controls = true;
   Timer? _hideTimer;
+  int _likes = 0;
+  int _commentsCount = 0;
+
+  bool get _hasVideo => (widget.videoKey ?? '').isNotEmpty;
 
   @override
   void initState() {
     super.initState();
+    _likes = widget.initialLike ?? 0;
+    _commentsCount = widget.initialComment ?? 0;
     _init();
   }
 
@@ -75,6 +100,107 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     return h > 0 ? '$h:$m:$s' : '$m:$s';
   }
 
+  /// Same optimistic like as the videos list: bump the local count, write
+  /// videoNew/<folder>/<key>/like in the DB, rollback + error snack on
+  /// failure, per-device "already liked" guard in prefs.
+  Future<void> _like() async {
+    final folder = widget.folder ?? '';
+    final key = widget.videoKey ?? '';
+    if (folder.isEmpty || key.isEmpty) return;
+    if (AppPrefs.I.isVideoLiked(key)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('پێشتر لایکت کردووە'),
+          duration: Duration(milliseconds: 800)));
+      return;
+    }
+    final before = _likes;
+    setState(() => _likes = before + 1); // optimistic
+    final next = await Rtdb.I.likeVideo(folder, key, 'like');
+    if (!mounted) return;
+    if (next != null) {
+      AppPrefs.I.setVideoLiked(key, true);
+      setState(() => _likes = next);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('لایک کرا ❤️'),
+          duration: Duration(milliseconds: 900)));
+    } else {
+      // rollback the optimistic value on failure
+      setState(() => _likes = before);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              'لایک سەرکەوتوو نەبوو — ${Rtdb.I.lastError ?? 'ئینتەرنێت بپشکنە'}')));
+    }
+  }
+
+  Future<void> _openComments() async {
+    final folder = widget.folder ?? '';
+    final key = widget.videoKey ?? '';
+    if (key.isEmpty) return;
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppPrefs.I.day ? Colors.white : AppColors.nightCard,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (c) => CommentsSheet(
+          videoId: key, folder: folder, videoKey: key,
+          onCounted: (n) {
+            if (mounted) setState(() => _commentsCount = n);
+          }),
+    );
+    if (!mounted) return;
+    // Re-read the row so the counters reflect the database.
+    final fresh = await Rtdb.I.get('videoNew/$folder/$key');
+    if (fresh is Map && mounted) {
+      setState(() {
+        _likes = int.tryParse('${fresh['like']}') ?? _likes;
+        _commentsCount = int.tryParse('${fresh['comment']}') ?? _commentsCount;
+      });
+    }
+  }
+
+  /// Compact like/comment bar shown under the video (list videos only).
+  Widget _actionsBar(bool dark) {
+    final accent = dark ? AppColors.gold : AppColors.primaryDark;
+    final txt = dark ? Colors.white : Colors.black;
+    final liked = AppPrefs.I.isVideoLiked(widget.videoKey ?? '');
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+        decoration: BoxDecoration(
+          color: dark ? AppColors.nightCard : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: accent.withOpacity(.30)),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          IconButton(
+            tooltip: 'لایک',
+            visualDensity: VisualDensity.compact,
+            onPressed: _like,
+            icon: Icon(
+                liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                size: 20,
+                color: liked ? const Color(0xFFE91E63) : accent)),
+          Text('$_likes',
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: liked ? const Color(0xFFE91E63) : txt)),
+          const SizedBox(width: 24),
+          IconButton(
+            tooltip: 'سەرنجەکان',
+            visualDensity: VisualDensity.compact,
+            onPressed: _openComments,
+            icon: Icon(Icons.comment_rounded, size: 20, color: accent)),
+          Text('$_commentsCount',
+              style: TextStyle(
+                  fontSize: 13, fontWeight: FontWeight.bold, color: txt)),
+        ]),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _hideTimer?.cancel();
@@ -103,22 +229,27 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 child: Text(_error!,
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: Colors.white70, fontSize: 14))))
-            : !_ready
-                ? const Center(child: CircularProgressIndicator())
-                : GestureDetector(
-                    onTap: _toggle,
-                    child: Center(
-                      child: AspectRatio(
-                        aspectRatio: value!.aspectRatio == 0
-                            ? 16 / 9
-                            : value.aspectRatio,
-                        child: Stack(alignment: Alignment.bottomCenter, children: [
-                          VideoPlayer(_controller!),
-                          if (_controls) ..._controlsWidget(value),
-                        ]),
-                      ),
-                    ),
-                  ),
+            : Column(children: [
+                Expanded(
+                  child: !_ready
+                      ? const Center(child: CircularProgressIndicator())
+                      : GestureDetector(
+                          onTap: _toggle,
+                          child: Center(
+                            child: AspectRatio(
+                              aspectRatio: value!.aspectRatio == 0
+                                  ? 16 / 9
+                                  : value.aspectRatio,
+                              child: Stack(alignment: Alignment.bottomCenter, children: [
+                                VideoPlayer(_controller!),
+                                if (_controls) ..._controlsWidget(value),
+                              ]),
+                            ),
+                          ),
+                        ),
+                ),
+                if (_hasVideo) _actionsBar(dark),
+              ]),
       ),
     );
   }

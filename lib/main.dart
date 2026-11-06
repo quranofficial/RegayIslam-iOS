@@ -3,8 +3,9 @@ import 'package:flutter/services.dart';
 import 'core/prefs.dart';
 import 'screens/splash_screen.dart';
 
-/// Global notifier so theme changes (day/night) rebuild the whole app,
-/// mirroring the original "restart SplashActivity" behaviour.
+/// Global notifier so theme changes (day/night) repaint every screen live —
+/// item 12: switching dark mode must NOT restart the app through the Splash
+/// anymore; everything (colors, system bars, bottom sections) updates in place.
 final ValueNotifier<int> kThemeEpoch = ValueNotifier<int>(0);
 
 /// Draw behind the system bars with a transparent navigation bar and keep
@@ -41,11 +42,11 @@ class RegayIslamApp extends StatelessWidget {
         builder: (context, epoch, __) {
           final dark = !AppPrefs.I.day;
           applySystemUi(dark);
-          // Item 12: when night/day switches, the whole app restarts
-          // through the Splash like the original app, so every screen
-          // (colors, cached widgets, sounds) comes up in the new mode.
+          // Item 12: the theme changes IN PLACE (same MaterialApp, same
+          // navigator stack — no restart through the Splash). Screens listen
+          // to kThemeEpoch and repaint, so the whole app comes up in the
+          // new mode without losing the page the user is on.
           return MaterialApp(
-            key: ValueKey('regayislam-$epoch'),
             title: 'ڕێگای ئیسلام',
             debugShowCheckedModeBanner: false,
             theme: AppPrefs.I.theme,

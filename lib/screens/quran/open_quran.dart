@@ -53,6 +53,11 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
   Map<String, int> _timings = {};
   final ScrollController _scroll = ScrollController();
 
+  /// Item 10: one GlobalKey per ayah row so "recite from this ayah"
+  /// scrolls to the EXACT widget (the old fixed 170px estimate landed on
+  /// the wrong verse on long surahs).
+  final Map<int, GlobalKey> _ayahKeys = {};
+
   @override
   void initState() {
     super.initState();
@@ -158,11 +163,48 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
     }
   }
 
-  /// Item 10: recite from this ayah to the end of the surah, ayah by ayah,
-  /// with highlight + auto scroll. Falls back to surah audio + timings.
+  /// Item 10: recite from this ayah to the end of the surah.
+  /// Preferred: the SELECTED reciter's own surah audio seeked through its
+  /// timings db (highlights follow position). Fallback: per-ayah files.
   Future<void> _playFromAyah(int ayah) async {
+    final startMs = _timings['${widget.surahId}:$ayah'];
+    if (startMs != null && startMs > 0) {
+      setState(() { _ayahByAyah = false; _playingAyah = ayah; });
+      final ok = await _playSurahFrom(startMs);
+      if (ok) return;
+    }
     setState(() { _ayahByAyah = true; _playingAyah = ayah; });
     await _playAyahFile(ayah);
+  }
+
+  /// Play the selected reciter's surah audio and seek to [startMs].
+  Future<bool> _playSurahFrom(int startMs) async {
+    final link = _ayat.isEmpty ? '' : '${_ayat.first['link'] ?? ''}';
+    if (link.isEmpty) return false;
+    final url = Downloader.httpsify(_mp3Url(link));
+    try {
+      await _player.stop();
+      final cached = await _cachedAudio();
+      if (cached != null) {
+        await _player.play(DeviceFileSource(cached.path));
+      } else {
+        try {
+          await _player.play(UrlSource(url));
+        } catch (_) {
+          final file = await Downloader.download(url,
+              'quran_audio/${Downloader.safeName(AppPrefs.I.qariId)}_'
+              '${widget.surahId.toString().padLeft(3, '0')}.mp3',
+              timeout: const Duration(minutes: 3));
+          await _player.play(DeviceFileSource(file.path));
+        }
+      }
+      await _player.seek(Duration(milliseconds: startMs));
+      if (mounted) setState(() => _currentUrl = url);
+      _scrollToAyah(_playingAyah ?? 1);
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> _playAyahFile(int ayah) async {
@@ -236,8 +278,18 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
     super.dispose();
   }
 
-  /// Auto-scroll the ayah list to the currently recited ayah (item 20).
+  /// Auto-scroll the ayah list to the currently recited ayah — now exact,
+  /// via the row's GlobalKey (item 10: clicking a number used to land on
+  /// the wrong verse because the position was estimated).
   void _scrollToAyah(int ayahNum) {
+    final ctx = _ayahKeys[ayahNum]?.currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(ctx,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeOut,
+          alignment: 0.08);
+      return;
+    }
     if (!_scroll.hasClients) return;
     final itemIndex = _ayat.indexWhere(
         (a) => ((a['ayah'] as num?)?.toInt() ?? 0) == ayahNum);
@@ -320,6 +372,7 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                       final tafsir = '${a[_tafsir] ?? ''}';
                       final highlighted = _playingAyah == ayahNum;
                       return GestureDetector(
+                        key: _ayahKeys.putIfAbsent(ayahNum, () => GlobalKey()),
                         onTap: () => _copyAyah(ayahText, tafsir),
                         child: Container(
                           padding: const EdgeInsets.all(12),
@@ -426,7 +479,20 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                             setState(() { _ayahByAyah = false; _playingAyah = null; });
                           }
                         }
-                      : _playSurah,
+                      : () {
+                          if (_currentUrl != null &&
+                              (_state == PlayerState.playing ||
+                                  _state == PlayerState.paused)) {
+                            // pause/resume the running reciter audio
+                            if (_state == PlayerState.playing) {
+                              _player.pause();
+                            } else {
+                              _player.resume();
+                            }
+                          } else {
+                            _playSurah();
+                          }
+                        },
                   playing: _state == PlayerState.playing,
                 ),
               ]),

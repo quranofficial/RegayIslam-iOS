@@ -216,10 +216,52 @@ class _QariakanScreenState extends State<QariakanScreen> {
     }
   }
 
-  /// Item 10: avatar image of a reciter bundled under assets/images/qari.
-  ImageProvider? _qariAvatar(int? id) {
+  /// Item 10: avatar image of a reciter bundled under assets/images/qari
+  /// (1..81). The files are WebP with a .png name — Flutter decodes by
+  /// content, so they load fine; anything missing falls back to the mic
+  /// icon instead of an empty grey circle.
+  String? _qariAsset(int? id) {
     if (id == null || id < 1 || id > 81) return null;
-    return AssetImage('assets/images/qari/$id.png');
+    return 'assets/images/qari/$id.png';
+  }
+
+  /// The round reciter avatar used in the list — ring highlight when this
+  /// reciter is playing, dark-mode friendly (no bright grey plate behind
+  /// the transparent photos).
+  Widget _reciterAvatar(Map<String, dynamic> r, bool dark) {
+    final id = int.tryParse('${r['id'] ?? 0}');
+    final rid = r['id'] is int ? r['id'] as int : int.tryParse('${r['id']}');
+    final selected = _selected != null && _selected == rid;
+    final asset = _qariAsset(id);
+    return Container(
+      width: 50,
+      height: 50,
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: dark ? AppColors.nightCard : Colors.white,
+        border: Border.all(
+            color: selected
+                ? AppColors.gold
+                : (dark ? Colors.white24 : Colors.black12),
+            width: selected ? 2.4 : 1),
+      ),
+      child: ClipOval(
+        child: asset != null
+            ? Image.asset(asset,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Icon(Icons.mic_rounded,
+                    size: 22,
+                    color: selected
+                        ? AppColors.gold
+                        : (dark ? Colors.white54 : Colors.black45)))
+            : Icon(Icons.mic_rounded,
+                size: 22,
+                color: selected
+                    ? AppColors.gold
+                    : (dark ? Colors.white54 : Colors.black45)),
+      ),
+    );
   }
 
   @override
@@ -265,17 +307,7 @@ class _QariakanScreenState extends State<QariakanScreen> {
                             borderRadius: BorderRadius.circular(14)),
                         child: ListTile(
                           onTap: () => _play(r),
-                          leading: CircleAvatar(
-                              backgroundColor: (_selected == (r['id'] is int ? r['id'] : int.tryParse('${r['id']}')))
-                                  ? AppColors.primaryDark
-                                  : Colors.grey.shade300,
-                              // Item 10: real reciter avatars (assets/images/qari/<id>.png).
-                              backgroundImage: _qariAvatar(int.tryParse('${r['id'] ?? 0}')),
-                              child: _qariAvatar(int.tryParse('${r['id'] ?? 0}')) == null
-                                  ? Icon(Icons.mic_rounded,
-                                      color: (_selected == (r['id'] is int ? r['id'] : int.tryParse('${r['id']}')))
-                                          ? Colors.white : Colors.black45)
-                                  : null),
+                          leading: _reciterAvatar(r, dark),
                           title: Text('${r['name_ar'] ?? ''}',
                               style: TextStyle(fontWeight: FontWeight.bold, color: txt)),
                           subtitle: r['doxx'] == 'true'

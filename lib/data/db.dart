@@ -87,7 +87,7 @@ class Db {
   String _safeCol(String c) {
     const allowed = [
       'text', 'rebar', 'raman', 'roshn', 'sanahi', 'hazhar', 'tawhid',
-      'asan', 'masier', 'zhian', 'puxta'
+      'asan', 'maiser', 'zhin', 'puxta'
     ];
     return allowed.contains(c) ? c : 'rebar';
   }
@@ -166,6 +166,35 @@ class Db {
       return (rows.first['page_number'] as num?)?.toInt();
     } catch (_) {
       return null;
+    }
+  }
+
+  /// Which surahs appear on a mushaf page (for the page header chips).
+  /// Returns rows {soraid, name, firstAyah} ordered by surah id.
+  Future<List<Map<String, Object?>>> pageSurahs(int page) async {
+    try {
+      final lines = await _info!.rawQuery(
+          'SELECT surah_id, MIN(verse_id) AS firstAyah FROM page_data_line '
+          'WHERE page_number = ? GROUP BY surah_id ORDER BY surah_id',
+          [page]);
+      if (lines.isEmpty) return [];
+      final surahs = await surahs();
+      final out = <Map<String, Object?>>[];
+      for (final l in lines) {
+        final sid = (l['surah_id'] as num?)?.toInt() ?? 0;
+        final first = (l['firstAyah'] as num?)?.toInt() ?? 1;
+        final s = surahs
+            .where((r) => (r['soraid'] as num?)?.toInt() == sid)
+            .toList();
+        out.add({
+          'soraid': sid,
+          'name': s.isNotEmpty ? '${s.first['name'] ?? ''}' : '',
+          'firstAyah': first,
+        });
+      }
+      return out;
+    } catch (_) {
+      return [];
     }
   }
 

@@ -81,35 +81,59 @@ class Rtdb {
   }
 
   /// Remove a whole node (Firebase REST DELETE) — used by the admin panel.
+  /// Returns true only when Firebase really accepted the change.
   Future<bool> delete(String path) async {
     try {
       final r = await http.delete(Uri.parse('$base/$path.json'))
           .timeout(const Duration(seconds: 12));
+      _lastError = r.statusCode == 200 ? null : 'HTTP ${r.statusCode}';
       return r.statusCode == 200;
-    } catch (_) {
+    } catch (e) {
+      _lastError = e.toString();
       return false;
     }
   }
 
-  Future<void> push(String path, Map<String, dynamic> data) async {
+  /// Push a child node. Returns the new key on success, null on failure —
+  /// so callers (like/comment) can tell the user when a write failed
+  /// instead of failing silently.
+  Future<String?> push(String path, Map<String, dynamic> data) async {
+    _lastError = null;
     try {
-      await http
+      final r = await http
           .post(Uri.parse('$base/$path.json'),
               headers: {'Content-Type': 'application/json'},
               body: jsonEncode(data))
           .timeout(const Duration(seconds: 12));
-    } catch (_) {}
+      if (r.statusCode == 200) {
+        final v = jsonDecode(r.body);
+        return v is Map ? '${v['name'] ?? ''}' : null;
+      }
+      _lastError = 'HTTP ${r.statusCode}: ${r.body}';
+      return null;
+    } catch (e) {
+      _lastError = e.toString();
+      return null;
+    }
   }
 
   /// Merge fields into an existing node (Firebase PATCH via REST).
-  Future<void> patch(String path, Map<String, dynamic> data) async {
+  /// Returns true only when the DB really accepted the change.
+  Future<bool> patch(String path, Map<String, dynamic> data) async {
+    _lastError = null;
     try {
-      await http
+      final r = await http
           .patch(Uri.parse('$base/$path.json'),
               headers: {'Content-Type': 'application/json'},
               body: jsonEncode(data))
           .timeout(const Duration(seconds: 12));
-    } catch (_) {}
+      if (r.statusCode == 200) return true;
+      _lastError = 'HTTP ${r.statusCode}: ${r.body}';
+      return false;
+    } catch (e) {
+      _lastError = e.toString();
+      return false;
+    }
   }
 
   /// Sketchware saved some nodes as whole JSON arrays inside a string
@@ -210,21 +234,24 @@ class Rtdb {
       list('CommentVideo/$videoId');
 
   Future<void> sendFeedback(Map<String, dynamic> data) =>
-      push('feedback', data);
-  Future<void> sendComment(String videoId, Map<String, dynamic> data) =>
-      push('CommentVideo/$videoId', data);
+      push('feedback', data).then<void>((_) {});
+  Future<bool> sendComment(String videoId, Map<String, dynamic> data) =>
+      push('CommentVideo/$videoId', data).then<bool>((k) => k != null);
 
-  /// Item 17: the like counter lives on the video row (field "like");
+  /// Item 9: the like counter lives on the video row (field "like");
   /// increment it in the DB and return the new value, keeping the
-  /// per-device "already liked" guard in prefs.
+  /// per-device "already liked" guard in prefs. Returns null (with
+  /// lastError set) when the write failed so the UI can warn the user.
   Future<int?> likeVideo(String folder, String videoKey, String field) async {
     try {
       final v = await get('videoNew/$folder/$videoKey/$field');
       final cur = int.tryParse('$v') ?? 0;
       final next = cur + 1;
-      await patch('videoNew/$folder/$videoKey', {field: '$next'});
+      final ok = await patch('videoNew/$folder/$videoKey', {field: '$next'});
+      if (!ok) return null;
       return next;
-    } catch (_) {
+    } catch (e) {
+      _lastError = e.toString();
       return null;
     }
   }

@@ -153,6 +153,55 @@ class _FavoriteButtonState extends State<FavoriteButton> {
 /// home section labels to their screens so "section::" favorites jump back.
 typedef ScreenBuilder = Widget Function();
 
+/// Items 5 + 11: the full list of main sections — used by the
+/// "زیادکردنی بەش" picker inside دڵخوازەکان so any main section can be
+/// added to the wishlist directly, and jumps back with one tap.
+const List<String> kHomeSections = [
+  'دڵخوازەکان',
+  'ئیدیتی قورئان',
+  'نوێژکردن',
+  'ناوەکانی خودای گەورە',
+  'ئایەتی کورسی',
+  'پرسیار و وەڵام',
+  'ڤیدیۆی ئاینی',
+  'تاوەنە گەورەکان',
+  'کتێبخانە',
+  'ڕوقیەی شەرعی',
+  'زیکرەکان',
+  'فەرموودەکان',
+  'مانگی ڕەمەزان',
+  'ئافرەتان',
+  'دوعا و پاڕانەوە',
+  'چۆن تۆبە بکەم',
+  'حەج و عومرە',
+  'ئەهلی ئاگر',
+  'بەهەشت',
+  'دۆزەخ',
+  'خەونامە',
+  'ژیانی پێغەمبەرمان ﷺ',
+  'ژیانی پێغەمبەران',
+  'هاوەڵانی پێغەمبەر ﷺ',
+  'سونەت',
+  'زانیاری قورئان',
+  'ڕاو بۆچونەکان',
+  'وتە و ئامۆژگاری',
+  'حەڕام کراوەکان',
+  'زیانەکانی گۆرانی',
+  'تاوانی غەیبەت',
+  'چیرۆکی دەجال',
+  'قیبلەنما',
+  'دەنگی قورئان',
+  'گەڕان لە قورئان',
+  'دوعاکانی نوێژ',
+  'کاتەکانی مانگ',
+  'خوێندنی ئایەتەکان',
+  'دروستکردنی ڤیدیۆ و وێنە',
+  'ڕێکخستنی بەشەکان',
+  'کاتەکانی بانگ',
+  'تەسبیح',
+  'پەخشی ڕاستەوخۆ',
+];
+
 Widget? sectionScreenOf(String label) {
   switch (label) {
     case 'دڵخوازەکان':
@@ -255,7 +304,9 @@ class FavoritesScreen extends StatefulWidget {
 
 class _FavoritesScreenState extends State<FavoritesScreen> {
   List<FavoriteEntry> _items = [];
+  List<FavoriteEntry> _all = [];
   bool _loading = true;
+  String _q = '';
 
   @override
   void initState() {
@@ -265,7 +316,90 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   Future<void> _load() async {
     final rows = await FavoritesStore.all();
-    if (mounted) setState(() { _items = rows; _loading = false; });
+    if (mounted) {
+      setState(() { _all = rows; _items = _filter(rows); _loading = false; });
+    }
+  }
+
+  List<FavoriteEntry> _filter(List<FavoriteEntry> rows) {
+    final q = _q.trim().toLowerCase();
+    if (q.isEmpty) return rows;
+    return rows
+        .where((e) =>
+            e.title.toLowerCase().contains(q) ||
+            e.content.toLowerCase().contains(q) ||
+            _kindOf(e.id).label.toLowerCase().contains(q))
+        .toList();
+  }
+
+  /// Item 5: add ANY main section to the wishlist from one place —
+  /// no need to open the section first to find its bookmark icon.
+  Future<void> _addSections() async {
+    final saved = <String>{};
+    for (final e in _all) {
+      if (e.id.startsWith('section::')) saved.add(e.id);
+    }
+    final changed = await showDialog<bool>(
+      context: context,
+      builder: (c) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: StatefulBuilder(
+          builder: (c, setD) => AlertDialog(
+            title: const Text('زیادکردنی بەشە سەرەکییەکان'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: kHomeSections.length,
+                itemBuilder: (c, i) {
+                  final label = kHomeSections[i];
+                  final id = 'section::$label';
+                  final has = saved.contains(id);
+                  return CheckboxListTile(
+                    dense: true,
+                    value: has,
+                    title: Text(label, style: const TextStyle(fontSize: 13.5)),
+                    onChanged: (v) => setD(() {
+                      if (v == true) {
+                        saved.add(id);
+                      } else {
+                        saved.remove(id);
+                      }
+                    }),
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(c, false),
+                  child: const Text('لابردن')),
+              ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryDark,
+                      foregroundColor: Colors.white),
+                  onPressed: () => Navigator.pop(c, true),
+                  child: const Text('پاشەکەوت')),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (changed != true) return;
+    // sync every section favorite with the picked set
+    for (final label in kHomeSections) {
+      final id = 'section::$label';
+      final shouldSave = saved.contains(id);
+      final isSaved = _all.any((e) => e.id == id);
+      if (shouldSave && !isSaved) {
+        await FavoritesStore.toggle(FavoriteEntry(
+            id: id, title: label,
+            content: 'بەشی $label لە ئەپی ڕێگای ئیسلام', route: id));
+      } else if (!shouldSave && isSaved) {
+        await FavoritesStore.remove(id);
+      }
+    }
+    _load();
   }
 
   @override
@@ -281,19 +415,50 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           title: const Text('دڵخوازەکان', style: TextStyle(color: Colors.white)),
           actions: [
             IconButton(
+                tooltip: 'زیادکردنی بەشە سەرەکییەکان',
+                icon: const Icon(Icons.playlist_add_rounded, color: Colors.white),
+                onPressed: _addSections),
+            IconButton(
                 tooltip: 'هاوبەشی ئەپ',
                 icon: const Icon(Icons.share_rounded, color: Colors.white),
                 onPressed: () => sharePage('دڵخوازەکانی من لە ئەپی ڕێگای ئیسلام',
                     title: 'دڵخوازەکان')),
           ],
         ),
-        body: _loading ? const Center(child: CircularProgressIndicator())
-          : _items.isEmpty
+        body: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _items.isEmpty && _q.isEmpty
             ? Center(child: Text('هیچ بابەتێک لە دڵخوازەکانت نییە',
                 style: TextStyle(color: txt.withOpacity(.6))))
             // Item 7: fixed-height tiles — never overflow or fall apart.
-            : ListView.separated(
-                padding: EdgeInsets.fromLTRB(12, 12, 12, bottomInset(context, extra: 16)),
+            : Column(children: [
+                // Items 5 + 11: search inside the wishlist itself.
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+                  child: TextField(
+                    onChanged: (v) => setState(() {
+                      _q = v;
+                      _items = _filter(_all);
+                    }),
+                    decoration: InputDecoration(
+                      hintText: 'گەڕان لە دڵخوازەکان...',
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      filled: true,
+                      fillColor: dark ? AppColors.nightCard : Colors.white,
+                      contentPadding:
+                          const EdgeInsets.symmetric(vertical: 0),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: _items.isEmpty
+                      ? Center(child: Text('هیچ ئەنجامێک نەدۆزرایەوە',
+                          style: TextStyle(color: txt.withOpacity(.6))))
+                      : ListView.separated(
+                padding: EdgeInsets.fromLTRB(12, 6, 12, bottomInset(context, extra: 16)),
                 itemCount: _items.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 8),
                 itemBuilder: (context, i) {
@@ -356,6 +521,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   );
                 },
               ),
+                ),
+              ]),
       ),
     );
   }

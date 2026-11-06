@@ -7,9 +7,15 @@ import '../../data/favorites.dart';
 
 /// Original: RamazanActivity + Ramazan1Activity — Ramadan content from rm.db
 /// (sections: پێشوازی، ڕۆژوو، شەوی قەدر...) and the live Ramadan banner from
-/// Firebase "ramadan".
-class RamazanScreen extends StatelessWidget {
+/// Firebase "ramadan". Items 5 + 11: the sections list is searchable.
+class RamazanScreen extends StatefulWidget {
   const RamazanScreen({super.key});
+  @override
+  State<RamazanScreen> createState() => _RamazanScreenState();
+}
+
+class _RamazanScreenState extends State<RamazanScreen> {
+  String _q = '';
 
   @override
   Widget build(BuildContext context) {
@@ -31,8 +37,42 @@ class RamazanScreen extends StatelessWidget {
             if (!snap.hasData) {
               return const Center(child: CircularProgressIndicator(color: Colors.white));
             }
-            final titles = snap.data!;
+            final allTitles = snap.data!;
+            final q = _q.trim().toLowerCase();
+            final titles = q.isEmpty
+                ? allTitles
+                : allTitles
+                    .where((t) => '${t['titles'] ?? ''}'
+                        .toLowerCase()
+                        .contains(q))
+                    .toList();
             return ListView(padding: const EdgeInsets.all(12), children: [
+              // Items 5 + 11: search inside the section.
+              TextField(
+                onChanged: (v) => setState(() => _q = v),
+                decoration: InputDecoration(
+                  hintText: 'گەڕان لە بەشەکانی ڕەمەزان...',
+                  prefixIcon: const Icon(Icons.search_rounded, color: Colors.white70),
+                  hintStyle: const TextStyle(color: Colors.white54, fontSize: 13),
+                  isDense: true,
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(.12),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none),
+                ),
+                style: const TextStyle(color: Colors.white),
+              ),
+              const SizedBox(height: 10),
+              if (titles.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 30),
+                    child: Text('هیچ بەشێک نەدۆزرایەوە',
+                        style: TextStyle(color: Colors.white.withOpacity(.7))),
+                  ),
+                ),
               for (final t in titles)
                 Card(
                   color: dark ? AppColors.nightCard : Colors.white,

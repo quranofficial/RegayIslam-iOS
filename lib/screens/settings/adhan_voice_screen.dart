@@ -8,7 +8,8 @@ import 'package:path_provider/path_provider.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/downloader.dart';
-import '../../core/ui.dart' show AudioSetup;
+import '../../core/ui.dart' show AudioSetup, AudioPlayerBar, bottomInset;
+import 'open_quran.dart' show toArabicDigits;
 
 /// Original: KtebActivity — adhan reciter voice selection
 /// (هەڵبژاردنی دەنگی بانگبێژ). The voice list comes from the bundled
@@ -191,6 +192,7 @@ class _AdhanVoiceScreenState extends State<AdhanVoiceScreen> {
     final dark = !AppPrefs.I.day;
     final txt = dark ? Colors.white : Colors.black;
     final card = dark ? AppColors.nightCard : Colors.white;
+    final bottomInsetSafe = bottomInset(context, extra: 10);
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -259,9 +261,11 @@ class _AdhanVoiceScreenState extends State<AdhanVoiceScreen> {
                   child: _filtered.isEmpty
                       ? Center(child: Text('هیچ نەدۆزرایەوە',
                           style: TextStyle(color: txt.withOpacity(.5))))
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(12),
-                          itemCount: _filtered.length,
+                      : Column(children: [
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: _filtered.length,
                           itemBuilder: (context, i) {
                             final v = _filtered[i];
                             final file =
@@ -359,9 +363,20 @@ class _AdhanVoiceScreenState extends State<AdhanVoiceScreen> {
                             );
                           },
                         ),
+                    ),
+                    if (_playingFile != null)
+                      AudioPlayerBar(
+                        player: _player,
+                        dark: dark,
+                        card: card,
+                        title: 'تاقیکردنەوەی دەنگ — ${AppPrefs.I.adhanVoiceName}',
+                        onPlayPause: () => _play(_playingFile!),
+                        playing: _state == PlayerState.playing,
+                      ),
+                  ]),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                  padding: EdgeInsets.fromLTRB(12, 0, 12, bottomInsetSafe),
                   child: Text(
                       'تێبینی: ئاگەدارکردنەوەی بانگی نوێژ بە دەنگی هەڵبژێردراو لەناو ئەپەکە دەبیستیت؛ ئاگەدارکردنەوەی سیستەم (لە دەرەوەی ئەپ) دەنگی بنەڕەتی بەکاردەهێنێت.',
                       textAlign: TextAlign.center,

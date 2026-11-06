@@ -30,6 +30,9 @@ const String kDbUrl = 'https://regayislam-1-default-rtdb.firebaseio.com';
 /// Requested by the owner: "ismahil123".
 const String kAdminPassword = 'ismahil123';
 
+/// Tafsir columns of regayislam.db (ayah_text). The real column names are
+/// "maiser" and "zhin" — the old list said "masier"/"zhian" which made the
+/// whole Quran reader crash (empty list) whenever one of those was chosen.
 const List<String> kTafsirs = [
   'rebar',
   'raman',
@@ -38,8 +41,8 @@ const List<String> kTafsirs = [
   'hazhar',
   'tawhid',
   'asan',
-  'masier',
-  'zhian',
+  'maiser',
+  'zhin',
   'puxta',
 ];
 
@@ -51,9 +54,16 @@ const Map<String, String> kTafsirNames = {
   'hazhar': 'هەژار',
   'tawhid': 'تەوحید',
   'asan': 'ئاسان',
-  'masier': 'مەیسر',
-  'zhian': 'ژیان',
+  'maiser': 'مەیسر',
+  'zhin': 'ژیان',
   'puxta': 'پوختە',
+};
+
+/// Old saved prefs may still hold the pre-fix spellings — map them onto the
+/// real DB columns so no screen ever queries a missing column again.
+const Map<String, String> kTafsirLegacy = {
+  'masier': 'maiser',
+  'zhian': 'zhin',
 };
 
 const List<String> kFontsUi = ['Rabar', 'Rabar2', 'NRT', 'Rudaw', 'Speda', 'Oko', 'Zyad'];

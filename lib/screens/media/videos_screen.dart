@@ -24,6 +24,7 @@ class _VideosScreenState extends State<VideosScreen> {
   List<Map<String, dynamic>> _tags = [];
   Map<String, dynamic>? _selectedTag;
   bool _loading = true;
+  bool _failed = false; // list is empty because the request failed
   String? _error;
   String _q = '';
 
@@ -50,7 +51,14 @@ class _VideosScreenState extends State<VideosScreen> {
     setState(() {
       _videos = v;
       _loading = false;
-      _error = v.isEmpty ? 'هیچ ڤیدیۆیەک بەردەست نییە' : null;
+      // Empty because the DB/network request failed -> offer a retry,
+      // otherwise the plain "no videos" message.
+      _failed = v.isEmpty && Rtdb.I.lastError != null;
+      _error = v.isEmpty
+          ? (_failed
+              ? 'نەتوانرا ڤیدیۆکان بار بکرێن — ${Rtdb.I.lastError}'
+              : 'هیچ ڤیدیۆیەک بەردەست نییە')
+          : null;
     });
   }
 
@@ -86,7 +94,11 @@ class _VideosScreenState extends State<VideosScreen> {
     } else {
       Navigator.push(context, MaterialPageRoute(
           builder: (_) => VideoPlayerScreen(
-              title: '${v['name'] ?? v['title'] ?? 'ڤیدیۆ'}', url: link)));
+              title: '${v['name'] ?? v['title'] ?? 'ڤیدیۆ'}', url: link,
+              folder: '${v['folder'] ?? ''}',
+              videoKey: '${v['id'] ?? ''}',
+              initialLike: int.tryParse('${v['like']}') ?? 0,
+              initialComment: int.tryParse('${v['comment']}') ?? 0)));
     }
   }
 
@@ -163,21 +175,22 @@ class _VideosScreenState extends State<VideosScreen> {
           duration: Duration(milliseconds: 800)));
       return;
     }
-    setState(() => v['like'] = ((int.tryParse('${v['like'] ?? 0}') ?? 0) + 1));
+    final before = int.tryParse('${v['like']}') ?? 0;
+    setState(() => v['like'] = before + 1); // optimistic
     final next = await Rtdb.I.likeVideo(folder, id, 'like');
     if (!mounted) return;
     if (next != null) {
       AppPrefs.I.setVideoLiked(id, true);
       setState(() => v['like'] = next);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('لایک کرا ✅'),
-          duration: const Duration(milliseconds: 900)));
-    } else {
-      // rollback on failure
-      setState(() => v['like'] =
-          (int.tryParse('${v['like'] ?? 0}') ?? 1) - 1);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('لایک سەرکەوتوو نەبوو — ئینتەرنێت بپشکنە')));
+          content: Text('لایک کرا ❤️'),
+          duration: Duration(milliseconds: 900)));
+    } else {
+      // rollback the optimistic value on failure
+      setState(() => v['like'] = before);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              'لایک سەرکەوتوو نەبوو — ${Rtdb.I.lastError ?? 'ئینتەرنێت بپشکنە'}')));
     }
   }
 
@@ -196,7 +209,7 @@ class _VideosScreenState extends State<VideosScreen> {
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (c) =>
-          _CommentsSheet(videoId: id, folder: folder, videoKey: key,
+          CommentsSheet(videoId: id, folder: folder, videoKey: key,
               onCounted: (n) { if (mounted) setState(() => v['comment'] = n); }),
     );
     if (!mounted) return;
@@ -214,6 +227,7 @@ class _VideosScreenState extends State<VideosScreen> {
   Widget build(BuildContext context) {
     final dark = !AppPrefs.I.day;
     final txt = dark ? Colors.white : Colors.black;
+    final accent = dark ? AppColors.gold : AppColors.primaryDark;
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -241,9 +255,31 @@ class _VideosScreenState extends State<VideosScreen> {
         body: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? Center(child: Text(_error!,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: txt.withOpacity(.6))))
+                ? Center(
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Text(_error!,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: txt.withOpacity(.6), height: 1.6)),
+                      ),
+                      if (_failed) ...[
+                        const SizedBox(height: 14),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            setState(() => _loading = true);
+                            _load();
+                          },
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryDark,
+                              foregroundColor: Colors.white),
+                          icon: const Icon(Icons.refresh_rounded, size: 18),
+                          label: const Text('دووبارە هەوڵبدەرەوە'),
+                        ),
+                      ],
+                    ]),
+                  )
                 : Column(children: [
                     if (_tags.isNotEmpty)
                       SizedBox(
@@ -313,8 +349,10 @@ class _VideosScreenState extends State<VideosScreen> {
                         itemBuilder: (context, i) {
                           final v = _filtered[i];
                           final title = '${v['name'] ?? 'ڤیدیۆ'}';
-                          final likes = '${v['like'] ?? ''}';
-                          final comments = '${v['comment'] ?? ''}';
+                          final id = '${v['id'] ?? ''}';
+                          final likes = int.tryParse('${v['like']}') ?? 0;
+                          final comments = int.tryParse('${v['comment']}') ?? 0;
+                          final liked = AppPrefs.I.isVideoLiked(id);
                           final time = '${v['timevideo'] ?? ''}';
                           return Card(
                             color: dark ? AppColors.nightCard : Colors.white,
@@ -342,16 +380,39 @@ class _VideosScreenState extends State<VideosScreen> {
                                     Text('$time   ',
                                         style: TextStyle(fontSize: 11,
                                             color: txt.withOpacity(.55))),
-                                  const Icon(Icons.favorite_rounded,
-                                      size: 13, color: AppColors.primaryDark),
-                                  Text(' $likes   ',
-                                      style: TextStyle(fontSize: 11,
-                                          color: txt.withOpacity(.55))),
-                                  const Icon(Icons.comment_rounded,
-                                      size: 13, color: AppColors.primaryDark),
-                                  Text(' $comments',
-                                      style: TextStyle(fontSize: 11,
-                                          color: txt.withOpacity(.55))),
+                                  InkWell(
+                                    onTap: () => _like(v),
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 2),
+                                      child: Row(children: [
+                                        Icon(Icons.favorite_rounded,
+                                            size: 13,
+                                            color: liked
+                                                ? const Color(0xFFE91E63)
+                                                : accent),
+                                        Text(' $likes   ',
+                                            style: TextStyle(fontSize: 11,
+                                                color: txt.withOpacity(.55))),
+                                      ]),
+                                    ),
+                                  ),
+                                  InkWell(
+                                    onTap: () => _comments(v),
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 2),
+                                      child: Row(children: [
+                                        Icon(Icons.comment_rounded,
+                                            size: 13, color: accent),
+                                        Text(' $comments',
+                                            style: TextStyle(fontSize: 11,
+                                                color: txt.withOpacity(.55))),
+                                      ]),
+                                    ),
+                                  ),
                                 ]),
                               ),
                               trailing: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -359,18 +420,18 @@ class _VideosScreenState extends State<VideosScreen> {
                                   tooltip: 'لایک',
                                   onPressed: () => _like(v),
                                   icon: Icon(
-                                      AppPrefs.I.isVideoLiked('${v['id'] ?? ''}')
+                                      liked
                                           ? Icons.favorite_rounded
                                           : Icons.favorite_border_rounded,
                                       size: 22,
-                                      color: AppPrefs.I.isVideoLiked('${v['id'] ?? ''}')
+                                      color: liked
                                           ? const Color(0xFFE91E63)
-                                          : AppColors.primaryDark)),
+                                          : accent)),
                                 IconButton(
                                   tooltip: 'سەرنجەکان',
                                   onPressed: () => _comments(v),
-                                  icon: const Icon(Icons.comment_rounded,
-                                      size: 22, color: AppColors.primaryDark)),
+                                  icon: Icon(Icons.comment_rounded,
+                                      size: 22, color: accent)),
                                 FavoriteButton(
                                     id: 'video::${v['id'] ?? title}',
                                     title: title,
@@ -392,19 +453,20 @@ class _VideosScreenState extends State<VideosScreen> {
 
 /// Original: the comment dialog over "commentvideo" — {userrr, commenttt,
 /// date, comment_key, uid, verify}; stored per video id.
-class _CommentsSheet extends StatefulWidget {
+/// Public + reusable so VideoPlayerScreen can open it too.
+class CommentsSheet extends StatefulWidget {
   final String videoId;
   final String folder;
   final String videoKey;
   final ValueChanged<int>? onCounted;
-  const _CommentsSheet(
-      {required this.videoId, this.folder = '', this.videoKey = '',
+  const CommentsSheet(
+      {super.key, required this.videoId, this.folder = '', this.videoKey = '',
       this.onCounted});
   @override
-  State<_CommentsSheet> createState() => _CommentsSheetState();
+  State<CommentsSheet> createState() => _CommentsSheetState();
 }
 
-class _CommentsSheetState extends State<_CommentsSheet> {
+class _CommentsSheetState extends State<CommentsSheet> {
   List<Map<String, dynamic>> _items = [];
   bool _loading = true;
   bool _sending = false;
@@ -425,6 +487,22 @@ class _CommentsSheetState extends State<_CommentsSheet> {
     widget.onCounted?.call(_items.length);
   }
 
+  /// "ئێستا / ٥ خولەک لەمەوبەر / ٢ کاتژمێر لەمەوبەر / ٣ ڕۆژ لەمەوبەر"
+  String _when(Map<String, dynamic> m) {
+    final ms = int.tryParse('${m['date'] ?? ''}') ?? 0;
+    if (ms <= 0) return '';
+    final d = DateTime.fromMillisecondsSinceEpoch(ms);
+    final diff = DateTime.now().difference(d);
+    if (diff.inSeconds < 60) return 'ئێستا';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} خولەک لەمەوبەر';
+    if (diff.inHours < 24) return '${diff.inHours} کاتژمێر لەمەوبەر';
+    if (diff.inDays < 30) return '${diff.inDays} ڕۆژ لەمەوبەر';
+    return '${d.year}/${d.month}/${d.day}';
+  }
+
+  /// Sends the comment and STAYS OPEN: on failure the sheet is kept with an
+  /// error snack; on success the list reloads and the video's comment
+  /// counter is incremented in the DB and pushed to the caller.
   Future<void> _send() async {
     final text = _textC.text.trim();
     final name = _nameC.text.trim();
@@ -439,7 +517,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
     setState(() => _sending = true);
     AppPrefs.I.commentName = name;
     final key = 'c-${DateTime.now().millisecondsSinceEpoch}';
-    await Rtdb.I.sendComment(widget.videoId, {
+    final ok = await Rtdb.I.sendComment(widget.videoId, {
       'userrr': name,
       'commenttt': text,
       'date': DateTime.now().millisecondsSinceEpoch.toString(),
@@ -448,22 +526,30 @@ class _CommentsSheetState extends State<_CommentsSheet> {
       'verify': 'true',
       'video_id': widget.videoId,
     });
+    if (!ok) {
+      // Keep the sheet open and tell the user why nothing was sent.
+      if (!mounted) return;
+      setState(() => _sending = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              'سەرنجەکەت نەنێردرا — ${Rtdb.I.lastError ?? 'دووبارە هەوڵبدە'}')));
+      return;
+    }
     _textC.clear();
-    setState(() => _sending = false);
+    await _load();
     // Item 9: keep the comment counter on the video row in sync.
-    var counted = _items.length + 1;
+    var counted = _items.length;
     if (widget.folder.isNotEmpty && widget.videoKey.isNotEmpty) {
       final n = await Rtdb.I.likeVideo(widget.folder, widget.videoKey, 'comment');
       if (n != null) counted = n;
     }
     widget.onCounted?.call(counted);
-    await _load();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('سەرنجەکەت نێردرا ✅'),
-          duration: Duration(milliseconds: 900)));
-      Navigator.of(context, rootNavigator: true).maybePop();
-    }
+    if (!mounted) return;
+    setState(() => _sending = false);
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('سەرنجەکەت نێردرا ✅'),
+        duration: Duration(milliseconds: 900)));
+    // The sheet stays open so the user can keep commenting.
   }
 
   @override
@@ -499,6 +585,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                           itemBuilder: (context, i) {
                             final m = _items[i];
                             final user = '${m['userrr'] ?? ''}'.trim();
+                            final when = _when(m);
                             return ListTile(
                               leading: CircleAvatar(
                                   backgroundColor:
@@ -513,6 +600,12 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                                       fontSize: 13, color: txt)),
                               subtitle: Text('${m['commenttt'] ?? ''}',
                                   style: TextStyle(fontSize: 13, color: txt)),
+                              trailing: when.isEmpty
+                                  ? null
+                                  : Text(when,
+                                      style: TextStyle(
+                                          fontSize: 10,
+                                          color: txt.withOpacity(.45))),
                             );
                           },
                         ),

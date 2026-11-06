@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Item 4 — restyled prayer widget: gradient card + gold accents, a
+     highlighted "next prayer" pill and a clean 2-column time grid.
+     All remote-view IDs are unchanged (PrayerWidgetProvider reads them). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_prayer_root"
     android:layout_width="match_parent"
@@ -7,16 +10,23 @@
     android:padding="12dp"
     android:background="@drawable/widget_bg">
 
-    <!-- Header: app name + city -->
+    <!-- Header: brand + city -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@drawable/app_icon"
+            android:contentDescription="ڕێگای ئیسلام" />
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginStart="5dp"
             android:text="ڕێگای ئیسلام"
             android:textColor="#FFD54F"
             android:textSize="12sp"
@@ -32,54 +42,92 @@
             android:textSize="11sp" />
     </LinearLayout>
 
-    <!-- Next prayer highlight -->
-    <TextView
-        android:id="@+id/widget_next"
+    <!-- Next prayer highlight pill -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingTop="6dp"
-        android:textColor="#FFFFFF"
-        android:textSize="15sp"
-        android:textStyle="bold" />
+        android:orientation="vertical"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/widget_next_pill"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="7dp"
+        android:paddingBottom="7dp">
 
-    <TextView
-        android:id="@+id/widget_date"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingBottom="6dp"
-        android:textColor="#99FFFFFF"
-        android:textSize="10sp" />
+        <TextView
+            android:id="@+id/widget_next"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold" />
 
-    <!-- Divider -->
+        <TextView
+            android:id="@+id/widget_date"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#99FFFFFF"
+            android:textSize="9sp" />
+    </LinearLayout>
+
+    <!-- Gold hairline divider -->
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
+        android:layout_marginTop="8dp"
         android:layout_marginBottom="6dp"
-        android:background="#33FFD54F" />
+        android:background="#40C8A24B" />
 
-    <!-- Prayer rows: name (start) and time (end) -->
-    <LinearLayout style="@style/WidgetPrayerRow">
-        <TextView style="@style/WidgetPrayerLabel" android:text="بەیانی" />
-        <TextView android:id="@+id/widget_bayani" style="@style/WidgetPrayerTime" />
-    </LinearLayout>
-    <LinearLayout style="@style/WidgetPrayerRow">
-        <TextView style="@style/WidgetPrayerLabel" android:text="گزنک" />
-        <TextView android:id="@+id/widget_xorhalatn" style="@style/WidgetPrayerTime" />
-    </LinearLayout>
-    <LinearLayout style="@style/WidgetPrayerRow">
-        <TextView style="@style/WidgetPrayerLabel" android:text="نیوەڕۆ" />
-        <TextView android:id="@+id/widget_niwaro" style="@style/WidgetPrayerTime" />
-    </LinearLayout>
-    <LinearLayout style="@style/WidgetPrayerRow">
-        <TextView style="@style/WidgetPrayerLabel" android:text="عەسر" />
-        <TextView android:id="@+id/widget_asr" style="@style/WidgetPrayerTime" />
-    </LinearLayout>
-    <LinearLayout style="@style/WidgetPrayerRow">
-        <TextView style="@style/WidgetPrayerLabel" android:text="ئێوارە" />
-        <TextView android:id="@+id/widget_eywara" style="@style/WidgetPrayerTime" />
-    </LinearLayout>
-    <LinearLayout style="@style/WidgetPrayerRow" android:paddingBottom="0dp">
-        <TextView style="@style/WidgetPrayerLabel" android:text="خەوتنان" />
-        <TextView android:id="@+id/widget_esha" style="@style/WidgetPrayerTime" />
+    <!-- Times grid: two columns x three rows -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:baselineAligned="false">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <LinearLayout style="@style/WidgetPrayerRow">
+                <TextView style="@style/WidgetPrayerLabel" android:text="بەیانی" />
+                <TextView android:id="@+id/widget_bayani" style="@style/WidgetPrayerTime" />
+            </LinearLayout>
+
+            <LinearLayout style="@style/WidgetPrayerRow">
+                <TextView style="@style/WidgetPrayerLabel" android:text="گزنک" />
+                <TextView android:id="@+id/widget_xorhalatn" style="@style/WidgetPrayerTime" />
+            </LinearLayout>
+
+            <LinearLayout style="@style/WidgetPrayerRow">
+                <TextView style="@style/WidgetPrayerLabel" android:text="نیوەڕۆ" />
+                <TextView android:id="@+id/widget_niwaro" style="@style/WidgetPrayerTime" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <LinearLayout style="@style/WidgetPrayerRow">
+                <TextView style="@style/WidgetPrayerLabel" android:text="عەسر" />
+                <TextView android:id="@+id/widget_asr" style="@style/WidgetPrayerTime" />
+            </LinearLayout>
+
+            <LinearLayout style="@style/WidgetPrayerRow">
+                <TextView style="@style/WidgetPrayerLabel" android:text="ئێوارە" />
+                <TextView android:id="@+id/widget_eywara" style="@style/WidgetPrayerTime" />
+            </LinearLayout>
+
+            <LinearLayout style="@style/WidgetPrayerRow">
+                <TextView style="@style/WidgetPrayerLabel" android:text="خەوتنان" />
+                <TextView android:id="@+id/widget_esha" style="@style/WidgetPrayerTime" />
+            </LinearLayout>
+        </LinearLayout>
     </LinearLayout>
 </LinearLayout>

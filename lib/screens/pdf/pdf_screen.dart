@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -7,13 +8,21 @@ import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/downloader.dart';
 
+String _arDigits(int n) {
+  if (!AppPrefs.I.useKurdishDigits) return '$n';
+  const d = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  return '$n'.split('').map((c) => d[int.parse(c)]).join();
+}
+
 /// Original: PdfActivity — downloads a PDF (with progress) and renders it;
 /// downloaded books reopen offline.
 ///
 /// Item 7: the reader remembers WHERE you stopped (per book), reopens at
-/// that page automatically, shows "لاپەڕە x / y" and lets you jump to any
-/// page by number. The URL is re-encoded because some ktebakan entries mix
-/// raw Kurdish characters with %XX escapes.
+/// that page automatically, shows "لاپەڕە x / y", lets you jump to any
+/// page by number AND keeps a page HISTORY — the last 24 pages you visited
+/// are listed so you can go several pages back with one tap. The URL is
+/// re-encoded because some ktebakan entries mix raw Kurdish characters
+/// with %XX escapes.
 class PdfScreen extends StatefulWidget {
   const PdfScreen({super.key, required this.title, required this.url});
   final String title;
@@ -99,8 +108,11 @@ class _PdfScreenState extends State<PdfScreen> {
             controller: c,
             autofocus: true,
             keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: InputDecoration(
-                hintText: _pages > 0 ? 'لاپەڕە (١ - $_pages)' : 'ژمارەی لاپەڕە',
+                hintText: _pages > 0
+                    ? 'لاپەڕە (١ - ${_arDigits(_pages)})'
+                    : 'ژمارەی لاپەڕە',
                 border: const OutlineInputBorder()),
           ),
           actions: [
@@ -119,9 +131,76 @@ class _PdfScreenState extends State<PdfScreen> {
     );
     if (v == null || _pages == 0) return;
     final target = (v - 1).clamp(0, _pages - 1);
+    await _goTo(target);
+  }
+
+  Future<void> _goTo(int target) async {
     await _controller?.setPage(target);
     setState(() => _page = target);
     AppPrefs.I.setBookLastPage(widget.url, target);
+    AppPrefs.I.addBookPageHistory(widget.url, target);
+  }
+
+  /// Item 7: page HISTORY — every visited page is remembered per book so
+  /// "چەند لاپەڕە بگەڕێوە" is one tap, not one long swipe.
+  Future<void> _showHistory() async {
+    final pages = AppPrefs.I.bookPageHistory(widget.url);
+    if (pages.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('هێشتا مێژووی لاپەڕە نییە — لاپەڕەکان بگۆڕە'),
+          duration: Duration(milliseconds: 1200)));
+      return;
+    }
+    final target = await showDialog<int>(
+      context: context,
+      builder: (d) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('مێژووی لاپەڕەکان'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text('دوا لاپەڕەکانی خوێندنەوە — کلیک بکە بۆ گەڕانەوە',
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: AppPrefs.I.day ? Colors.black54 : Colors.white70)),
+              const SizedBox(height: 10),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 320),
+                child: SingleChildScrollView(
+                  child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (final p in pages)
+                          ActionChip(
+                              label: Text(
+                                  'لاپەڕە ${_arDigits(p + 1)}',
+                                  style: const TextStyle(fontSize: 12)),
+                              onPressed: () => Navigator.pop(d, p)),
+                      ]),
+                ),
+              ),
+            ]),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () {
+                  AppPrefs.I.clearBookPageHistory(widget.url);
+                  Navigator.pop(d);
+                },
+                child: const Text('سڕینەوەی مێژوو',
+                    style: TextStyle(color: Colors.red))),
+            TextButton(
+                onPressed: () => Navigator.pop(d),
+                child: const Text('داخستن')),
+          ],
+        ),
+      ),
+    );
+    if (target != null && _pages > 0) {
+      await _goTo(target.clamp(0, _pages - 1));
+    }
   }
 
   @override
@@ -138,17 +217,24 @@ class _PdfScreenState extends State<PdfScreen> {
             Text(widget.title,
                 style: const TextStyle(color: Colors.white, fontSize: 15)),
             if (_pages > 0)
-              Text('لاپەڕە ${_page + 1} / $_pages',
+              Text('لاپەڕە ${_arDigits(_page + 1)} / ${_arDigits(_pages)}',
                   style: const TextStyle(color: Colors.white70, fontSize: 11)),
           ]),
           actions: [
+            if (!_downloading && _localPath != null && _pages > 0)
+              IconButton(
+                  tooltip: 'مێژووی لاپەڕەکان',
+                  onPressed: _showHistory,
+                  icon: const Icon(Icons.history_rounded,
+                      color: Colors.white)),
             if (!_downloading && _localPath != null && _pages > 0)
               TextButton.icon(
                   onPressed: _askPage,
                   icon: const Icon(Icons.pin_drop_rounded,
                       color: Colors.white, size: 18),
-                  label: const Text('چوونە لاپەڕە',
-                      style: TextStyle(color: Colors.white, fontSize: 11.5))),
+                  label: Text('لاپەڕە ${_arDigits(_page + 1)}',
+                      style: const TextStyle(
+                          color: Colors.white, fontSize: 11.5))),
             if (!_downloading && _localPath == null)
               IconButton(
                   onPressed: _load,
@@ -226,8 +312,10 @@ class _PdfScreenState extends State<PdfScreen> {
                               onPageChanged: (page, total) {
                                 if (page == null) return;
                                 setState(() { _page = page; });
-                                // Item 7: remember the reading position.
+                                // Item 7: remember the reading position AND
+                                // the visited page (history).
                                 AppPrefs.I.setBookLastPage(widget.url, page);
+                                AppPrefs.I.addBookPageHistory(widget.url, page);
                                 if (total != null && total > 0 && mounted &&
                                     _pages != total) {
                                   setState(() => _pages = total);

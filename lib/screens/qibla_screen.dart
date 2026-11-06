@@ -165,7 +165,11 @@ class _QiblaScreenState extends State<QiblaScreen> {
                     color: aligned
                         ? AppColors.green.withOpacity(.15)
                         : (dark ? Colors.white.withOpacity(.06) : Colors.black.withOpacity(.05)),
-                    borderRadius: BorderRadius.circular(30)),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(
+                        color: aligned
+                            ? AppColors.green.withOpacity(.6)
+                            : Colors.transparent)),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Icon(aligned ? Icons.check_circle_rounded : Icons.explore_rounded,
                       size: 18,
@@ -182,51 +186,84 @@ class _QiblaScreenState extends State<QiblaScreen> {
               ),
               const SizedBox(height: 26),
               SizedBox(
-                width: 300, height: 300,
+                width: 320, height: 320,
                 child: Stack(alignment: Alignment.center, children: [
+                  // soft glow behind the dial
+                  Container(
+                    width: 320, height: 320,
+                    decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(colors: [
+                          (aligned ? AppColors.green : AppColors.primaryDark)
+                              .withOpacity(.10),
+                          Colors.transparent,
+                        ])),
+                  ),
                   // static dial with cardinal marks
                   CustomPaint(
-                      size: const Size(300, 300),
+                      size: const Size(320, 320),
                       painter: _DialPainter(dark: dark, heading: _heading)),
                   // rotating needle + Kaaba marker toward qibla
                   Transform.rotate(
                     angle: (_qiblaBearing ?? 0) * math.pi / 180 -
                         _heading * math.pi / 180,
                     child: SizedBox(
-                      width: 300, height: 300,
+                      width: 320, height: 320,
                       child: CustomPaint(painter: _QiblaPainter(
                           dark: dark, aligned: aligned)),
                     ),
                   ),
-                  Container(
-                    width: 66, height: 66,
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    width: 70, height: 70,
                     decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: dark ? AppColors.nightCard : Colors.white,
+                        border: Border.all(
+                            color: aligned
+                                ? AppColors.green
+                                : (dark ? AppColors.gold.withOpacity(.4) : AppColors.primaryDark.withOpacity(.3)),
+                            width: aligned ? 2.4 : 1.4),
                         boxShadow: [
                           BoxShadow(
                               color: (aligned ? AppColors.green : AppColors.primaryDark)
-                                  .withOpacity(.35),
-                              blurRadius: aligned ? 24 : 12),
+                                  .withOpacity(aligned ? .45 : .3),
+                              blurRadius: aligned ? 26 : 12),
                         ]),
                     child: Icon(Icons.mosque_rounded, size: 38,
                         color: aligned ? AppColors.green : AppColors.primaryDark),
                   ),
                 ]),
               ),
-              const SizedBox(height: 24),
-              Text(
-                  'گۆشەی قیبلە: ${_qiblaBearing?.toStringAsFixed(1) ?? '--'}°',
-                  style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold,
-                      color: dark ? AppColors.gold : AppColors.primaryDark)),
-              const SizedBox(height: 6),
-              if (_lat != null && _lng != null)
-                Text(
-                    'دووری قەبە: ${_distanceKm(_lat!, _lng!).toStringAsFixed(0)} کم',
-                    style: TextStyle(fontSize: 12.5, color: txt.withOpacity(.6))),
-              const SizedBox(height: 4),
-              Text('ناوخۆکەت: ${_lat?.toStringAsFixed(2) ?? '--'}, ${_lng?.toStringAsFixed(2) ?? '--'}',
-                  style: TextStyle(fontSize: 11, color: txt.withOpacity(.4))),
+              const SizedBox(height: 22),
+              // bearing + distance info card
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                decoration: BoxDecoration(
+                    color: dark ? Colors.white.withOpacity(.05) : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                        color: dark ? Colors.white10 : Colors.black12)),
+                child: Column(children: [
+                  Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.rotate_right_rounded, size: 15,
+                        color: dark ? AppColors.gold : AppColors.primaryDark),
+                    const SizedBox(width: 5),
+                    Text(
+                        'گۆشەی قیبلە: ${_qiblaBearing?.toStringAsFixed(1) ?? '--'}°',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
+                            color: dark ? AppColors.gold : AppColors.primaryDark)),
+                  ]),
+                  if (_lat != null && _lng != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                        'دووری قەبە: ${_distanceKm(_lat!, _lng!).toStringAsFixed(0)} کم — ناوخۆکەت: ${_lat!.toStringAsFixed(2)}, ${_lng!.toStringAsFixed(2)}',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 11.5,
+                            color: txt.withOpacity(.6))),
+                  ],
+                ]),
+              ),
               const SizedBox(height: 14),
               Text('مۆبایلەکە تەخت ڕابگرە و لە دوور لە مێتال بەکاری بهێنە',
                   style: TextStyle(fontSize: 11, color: txt.withOpacity(.4))),

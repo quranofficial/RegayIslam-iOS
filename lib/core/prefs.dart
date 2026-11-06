@@ -41,8 +41,13 @@ class AppPrefs {
   String get fontQuran => _p.getString('fontquran') ?? 'Quran';
   set fontQuran(String v) => _p.setString('fontquran', v);
 
-  String get tafsir => _p.getString('tafsir') ?? 'rebar';
-  set tafsir(String v) => _p.setString('tafsir', v);
+  String get tafsir {
+    // Normalise the legacy spellings ("masier"/"zhian" never existed as DB
+    // columns) so an old install can never break the Quran reader again.
+    final raw = _p.getString('tafsir') ?? 'rebar';
+    return kTafsirLegacy[raw] ?? raw;
+  }
+  set tafsir(String v) => _p.setString('tafsir', kTafsirLegacy[v] ?? v);
 
   String get cityId => _p.getString('city') ?? 'Hawler';
   set cityId(String v) => _p.setString('city', v);
@@ -225,11 +230,43 @@ class AppPrefs {
   String get adminGhToken => _p.getString('admin_gh_token') ?? '';
   set adminGhToken(String v) => _p.setString('admin_gh_token', v);
 
+  // --- item 13: the Quran Studio (image/video creator) remembers the
+  //     last design so reopening the section shows the same look ---
+  int get studioFontIndex => _p.getInt('studioFontIndex') ?? 0;
+  set studioFontIndex(int v) => _p.setInt('studioFontIndex', v);
+  double get studioTextSize => _p.getDouble('studioTextSize') ?? 46;
+  set studioTextSize(double v) => _p.setDouble('studioTextSize', v);
+  int get studioTextColor => _p.getInt('studioTextColor') ?? 0xFFFFFFFF;
+  set studioTextColor(int v) => _p.setInt('studioTextColor', v);
+  int get studioBgColor => _p.getInt('studioBgColor') ?? 0xFF0D2137;
+  set studioBgColor(int v) => _p.setInt('studioBgColor', v);
+  int get studioAnimation => _p.getInt('studioAnimation') ?? 0;
+  set studioAnimation(int v) => _p.setInt('studioAnimation', v);
+
   // --- books: last read page per book url (reading history) ---
   int bookLastPage(String url) => _p.getInt('bookpage_$url') ?? 0;
   void setBookLastPage(String url, int page) {
     if (page > 0) _p.setInt('bookpage_$url', page);
   }
+
+  // --- item 7: page HISTORY per book (last visited pages, so the reader
+  //     can jump back several pages with one tap, not only the last one) ---
+  List<int> bookPageHistory(String url) {
+    final raw = _p.getStringList('bookhist_$url') ?? <String>[];
+    return raw.map(int.tryParse).whereType<int>().toList();
+  }
+
+  void addBookPageHistory(String url, int page) {
+    if (page < 0) return;
+    final list = bookPageHistory(url);
+    list.remove(page);
+    list.insert(0, page);
+    _p.setStringList('bookhist_$url',
+        list.take(24).map((e) => '$e').toList());
+  }
+
+  void clearBookPageHistory(String url) =>
+      _p.remove('bookhist_$url');
 
   // --- last mushaf page the user was reading ---
   int get mushafLastPage => _p.getInt('mushafLastPage') ?? 0;

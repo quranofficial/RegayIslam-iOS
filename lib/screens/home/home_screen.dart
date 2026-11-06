@@ -19,6 +19,7 @@ import '../media/videos_screen.dart';
 import '../quran/ayat_screen.dart';
 import '../quran/ayatul_kursi_screen.dart';
 import '../quran/name_screen.dart';
+import '../quran/open_quran.dart' show toArabicDigits;
 import '../quran/qariakan_screen.dart';
 import '../quran/quran_search_screen.dart';
 import '../ramadan/ramazan_screen.dart';
@@ -52,11 +53,19 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Map<String, dynamic>> _live = [];
   Map<String, Object?>? _bannerAyah;
   List<Map<String, Object?>>? _bannerPool;
+  final PageController _bannerPager = PageController();
+  int _bannerIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _bannerPager.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -71,7 +80,11 @@ class _HomeScreenState extends State<HomeScreen> {
       if (r.isNotEmpty && mounted) setState(() => _ramadanDay = r.last);
     } catch (_) {}
     try {
-      final l = await Rtdb.I.liveMuslim();
+      // Item 2: the "پەخشی ڕاستەوخۆ" banner must count the REAL channels of
+      // the "Live" node (مەککە + مەدینە = 2 کەناڵ) — it used the old
+      // "livemuslim" node and showed "1" while the live page has 2.
+      var l = await Rtdb.I.liveChannels();
+      if (l.isEmpty) l = await Rtdb.I.liveMuslim();
       if (mounted) setState(() => _live = l);
     } catch (_) {}
     _loadBannerAyah();
@@ -92,6 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
         if (pool.isEmpty || !mounted) return;
         final idx = Random(now.day * 31 + now.month).nextInt(pool.length);
         setState(() { _bannerPool = pool; _bannerAyah = pool[idx]; });
+        _jumpBanner(idx);
         AppPrefs.I.ayahDay = dayKey;
         AppPrefs.I.ayahBannerSeed = idx;
         HomeWidgets.updateAyah(
@@ -108,11 +122,20 @@ class _HomeScreenState extends State<HomeScreen> {
       if (pool.isEmpty || !mounted) return;
       final idx = seed < pool.length ? seed : 0;
       setState(() { _bannerPool = pool; _bannerAyah = pool[idx]; });
+      _jumpBanner(idx);
       HomeWidgets.updateAyah(
         text: '${pool[idx]['text'] ?? ''}',
         reference:
             '${pool[idx]['sura_name_ar'] ?? ''} — ئایەتی ${pool[idx]['ayah'] ?? ''}');
     } catch (_) {}
+  }
+
+  /// The gallery starts on today's picked ayah.
+  void _jumpBanner(int idx) {
+    if (idx <= 0) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _bannerPager.hasClients) _bannerPager.jumpToPage(idx);
+    });
   }
 
   void _openReorder() {
@@ -189,12 +212,42 @@ class _HomeScreenState extends State<HomeScreen> {
       ]);
 
   Widget _ayatBanner(Color card, Color txt, bool dark) {
-    final r = _bannerAyah;
-    final tafsir = r == null ? '' : '${r[AppPrefs.I.tafsir] ?? ''}';
-    final body = r == null
-        ? 'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ'
-        : '${r['text'] ?? ''}';
-    return InkWell(
+    final pool = _bannerPool;
+    if (_bannerAyah == null || pool == null || pool.isEmpty) {
+      return _bannerCard(
+        r: _bannerAyah,
+        text: 'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ',
+        tafsir: '',
+        dark: dark,
+      );
+    }
+    // Item 1: the daily-ayah banner is a GALLERY — one swipe moves to the
+    // next verse, no button press needed. It still starts on today's ayah.
+    return SizedBox(
+      height: 262,
+      child: PageView.builder(
+        controller: _bannerPager,
+        reverse: true,
+        itemCount: pool.length,
+        onPageChanged: (i) => setState(() => _bannerIndex = i),
+        itemBuilder: (context, i) {
+          final r = pool[i];
+          return _bannerCard(
+            r: r,
+            text: '${r['text'] ?? ''}',
+            tafsir: '${r[AppPrefs.I.tafsir] ?? ''}',
+            dark: dark,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _bannerCard({Map<String, Object?>? r, required String text,
+      required String tafsir, required bool dark}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () => Navigator.push(context,
             MaterialPageRoute(builder: (_) => const AyatScreen())),
@@ -203,7 +256,8 @@ class _HomeScreenState extends State<HomeScreen> {
             decoration: BoxDecoration(
                 color: dark ? AppColors.nightCard : const Color(0xFF004D7B),
                 borderRadius: BorderRadius.circular(16)),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
               Row(children: [
                 Icon(Icons.auto_stories_rounded,
                     color: dark ? AppColors.gold : Colors.white70, size: 18),
@@ -232,18 +286,24 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: const Icon(Icons.add_circle_outline_rounded,
                         color: Colors.white70, size: 19)),
                 const SizedBox(width: 4),
-                const Icon(Icons.lock_clock_rounded, color: Colors.white54, size: 16),
+                Icon(Icons.swipe_left_rounded, color: Colors.white54, size: 16),
                 const SizedBox(width: 6),
-                const Icon(Icons.chevron_left, color: Colors.white70, size: 18),
+                if (_bannerPool != null && _bannerPool!.isNotEmpty)
+                  Text(
+                      '${toArabicDigits(_bannerIndex + 1)} / ${toArabicDigits(_bannerPool!.length)}',
+                      style: const TextStyle(
+                          color: Colors.white60, fontSize: 10.5)),
               ]),
               const SizedBox(height: 8),
               if (r != null)
                 Row(children: [
-                  Text(suraLabel('${r['sura_name_ar'] ?? ''}') +
-                      ' • ئایەتی ${(r['ayah'] ?? 0)}',
+                  Flexible(child: Text(
+                      suraLabel('${r['sura_name_ar'] ?? ''}') +
+                          ' • ئایەتی ${(r['ayah'] ?? 0)}',
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                           color: dark ? AppColors.gold : Colors.white70,
-                          fontSize: 11, fontWeight: FontWeight.bold)),
+                          fontSize: 11, fontWeight: FontWeight.bold))),
                   const Spacer(),
                   FavoriteButton(
                     id: 'daily_ayah::${r['suraId'] ?? ''}::${r['ayah'] ?? ''}',
@@ -261,28 +321,31 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: const Icon(Icons.share_rounded,
                         color: Colors.white70, size: 19)),
                 ]),
-              if (r != null) const SizedBox(height: 6),
-              Directionality(
-                textDirection: TextDirection.rtl,
-                child: Text(body,
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontFamily: 'Quran',
-                        fontSize: AppPrefs.I.ayahFontSize.toDouble(),
-                        height: 1.8)),
+              if (r != null) const SizedBox(height: 4),
+              Expanded(
+                child: Directionality(
+                  textDirection: TextDirection.rtl,
+                  child: Text(text,
+                      maxLines: 6, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontFamily: 'Quran',
+                          fontSize: AppPrefs.I.ayahFontSize.toDouble(),
+                          height: 1.8)),
+                ),
               ),
-              if (tafsir.trim().isNotEmpty) ...[
-                const SizedBox(height: 6),
+              if (tafsir.trim().isNotEmpty)
                 Directionality(
                   textDirection: TextDirection.rtl,
                   child: Text(tafsir,
-                      maxLines: 3, overflow: TextOverflow.ellipsis,
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                           color: Colors.white.withOpacity(.75),
                           fontSize: 12, height: 1.7)),
                 ),
-              ],
-            ])));
+            ])),
+      ),
+    );
   }
 
   Widget _banner({required IconData icon, required String title,
@@ -489,7 +552,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _G('ڤیدیۆی ئاینی', Icons.ondemand_video_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VideosScreen()))),
       _G('تاوەنە گەورەکان', Icons.warning_amber_rounded,
-          () => _openJson('assets/data/tawanakan.json', 'تاوەنە گەورەکان')),
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TawanakanmScreen()))),
       _G('کتێبخانە', Icons.local_library_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KtebScreen()))),
       _G('ڕوقیەی شەرعی', Icons.healing_rounded,
@@ -526,8 +589,6 @@ class _HomeScreenState extends State<HomeScreen> {
           () => _openJson('assets/data/swnat.json', 'سونەت')),
       _G('زانیاری قورئان', Icons.info_rounded,
           () => _openJson('assets/data/zanyaryquran.json', 'زانیاری قورئان')),
-      _G('تاوانەگەورەکان', Icons.gavel_rounded,
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TawanakanmScreen()))),
       _G('ڕاو بۆچونەکان', Icons.forum_rounded,
           () => _openJson('assets/data/rawbochwn.json', 'ڕاو بۆچونەکان')),
       _G('وتە و ئامۆژگاری', Icons.record_voice_over_rounded,
