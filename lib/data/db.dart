@@ -40,7 +40,7 @@ class Db {
     }
     return databaseFactory.openDatabase(
       path,
-      options: const OpenDatabaseOptions(readOnly: true),
+      options: OpenDatabaseOptions(readOnly: true),
     );
   }
 
@@ -117,7 +117,7 @@ class Db {
       }
       final db = await databaseFactory.openDatabase(
         path,
-        options: const OpenDatabaseOptions(readOnly: true),
+        options: OpenDatabaseOptions(readOnly: true),
       );
       final rows = await db.query('timings');
       final out = <String, int>{};
