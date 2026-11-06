@@ -174,7 +174,7 @@ const List<String> kHomeSections = [
   'ئایەتی کورسی',
   'پرسیار و وەڵام',
   'ڤیدیۆی ئاینی',
-  'تاوەنە گەورەکان',
+  'تاوانەگەورەکان',
   'کتێبخانە',
   'ڕوقیەی شەرعی',
   'زیکرەکان',
@@ -229,7 +229,7 @@ Widget? sectionScreenOf(String label) {
       return const QuestionScreen();
     case 'ڤیدیۆی ئاینی':
       return const VideosScreen();
-    case 'تاوەنە گەورەکان':
+    case 'تاوانەگەورەکان':
       return const TawanakanmScreen();
     case 'کتێبخانە':
       return const KtebScreen();
