@@ -581,7 +581,7 @@ class _HomeScreenState extends State<HomeScreen> {
           () => _openJson('assets/data/xaybat.json', 'تاوانی غەیبەت')),
       _G('چیرۆکی دەجال', Icons.crisis_alert_rounded,
           () => _openJson('assets/data/dajal.json', 'چیرۆکی دەجال')),
-      _G('قیبلەنما', Icons.explore_rounded,
+      _G('قیبلە', Icons.explore_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QiblaScreen()))),
       _G('دەنگی قورئان', Icons.graphic_eq_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QariakanScreen()))),
