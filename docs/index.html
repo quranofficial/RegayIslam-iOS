@@ -212,18 +212,17 @@ const KU_MONTHS=['کانوونی دووەم','شوبات','ئازار','نیسا
 const HIJRI_MONTHS=['موحەڕەم','سەفەر','ڕەبیع الاول','ڕەبیعی دووەم','جەمادیولولا','جەمادیولاخر','ڕەجەب','شەعبان','ڕەمەزان','شەوال','زولقەعدە','زولحەججە'];
 const WEEK=['دووشەممە','سێشەممە','چوارشەممە','پێنجشەممە','هەینی','شەممە','یەکشەممە'];
 function hijriOf(d){
-  const a=(14-d.getMonth()-1)||0; // not used — keep formula simple below
-  const A=(14-(d.getMonth()+1))>>0; // month 1..12
-  const y2=d.getFullYear()+4800-((14-(d.getMonth()+1))/12|0);
-  const m2=(d.getMonth()+1)+12*((14-(d.getMonth()+1))/12|0)-3;
-  let jdn=d.getDate()+((153*m2+2)/5|0)+365*y2+(y2/4|0)-(y2/100|0)+(y2/400|0)-32045;
+  const F=Math.floor;
+  const y2=d.getFullYear()+4800-F((14-(d.getMonth()+1))/12);
+  const m2=(d.getMonth()+1)+12*F((14-(d.getMonth()+1))/12)-3;
+  let jdn=d.getDate()+F((153*m2+2)/5)+365*y2+F(y2/4)-F(y2/100)+F(y2/400)-32045;
   let l=jdn-1948440+10632;
-  const n=(l-1)/10631|0;
+  const n=F((l-1)/10631);
   l=l-10631*n+354;
-  const j=((10985-l)/5316|0)*((50*l)/17719|0)+((l/5670)|0)*((43*l)/15238|0);
-  l=l-((30-j)/15|0)*((17719*j)/50|0)-((j/16)|0)*((15238*j)/43|0)+29;
-  const hm=(24*l)/709|0;
-  const hd=l-(709*hm)/24|0;
+  const j=F((10985-l)/5316)*F((50*l)/17719)+F(l/5670)*F((43*l)/15238);
+  l=l-F((30-j)/15)*F((17719*j)/50)-F(j/16)*F((15238*j)/43)+29;
+  const hm=F((24*l)/709);
+  const hd=l-F((709*hm)/24);
   const hy=30*n+j-30;
   return [hy,hm,hd];
 }
