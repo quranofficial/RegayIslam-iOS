@@ -18,11 +18,6 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  /// Item 18: the splash shows ONLY the logo + progress + one fixed line
-  /// ("ڕێکخستن...") — no changing status texts, no pickers, nothing else
-  /// for the user to read or touch while the app prepares itself.
-  static const String _status = 'ڕێکخستن...';
-
   @override
   void initState() {
     super.initState();
@@ -141,23 +136,12 @@ class _SplashScreenState extends State<SplashScreen> {
             Image.asset('assets/images/app_icon.png', width: 120, height: 120,
                 errorBuilder: (_, __, ___) => const Icon(Icons.mosque,
                     size: 110, color: AppColors.primaryDark)),
-            const SizedBox(height: 18),
-            Text('ڕێگای ئیسلام',
-                style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: dark ? Colors.white : Colors.black)),
             const SizedBox(height: 26),
             SizedBox(
                 width: 26, height: 26,
                 child: CircularProgressIndicator(
                     strokeWidth: 2.4,
                     color: dark ? AppColors.gold : AppColors.primaryDark)),
-            const SizedBox(height: 12),
-            Text(_status,
-                style: TextStyle(
-                    fontSize: 13,
-                    color: dark ? Colors.white70 : Colors.black54)),
           ]),
         ),
       ),
