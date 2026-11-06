@@ -178,12 +178,12 @@ class Db {
           'WHERE page_number = ? GROUP BY surah_id ORDER BY surah_id',
           [page]);
       if (lines.isEmpty) return [];
-      final surahs = await surahs();
+      final sRows = await surahs();
       final out = <Map<String, Object?>>[];
       for (final l in lines) {
         final sid = (l['surah_id'] as num?)?.toInt() ?? 0;
         final first = (l['firstAyah'] as num?)?.toInt() ?? 1;
-        final s = surahs
+        final s = sRows
             .where((r) => (r['soraid'] as num?)?.toInt() == sid)
             .toList();
         out.add({

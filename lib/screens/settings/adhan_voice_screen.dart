@@ -9,7 +9,6 @@ import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/downloader.dart';
 import '../../core/ui.dart' show AudioSetup, AudioPlayerBar, bottomInset;
-import 'open_quran.dart' show toArabicDigits;
 
 /// Original: KtebActivity — adhan reciter voice selection
 /// (هەڵبژاردنی دەنگی بانگبێژ). The voice list comes from the bundled
