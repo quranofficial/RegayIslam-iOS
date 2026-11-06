@@ -200,7 +200,7 @@ class _HomeScreenState extends State<HomeScreen> {
         const Spacer(),
         IconButton(
             tooltip: 'هاوبەشی ئەپ',
-            onPressed: () => sharePage('ڕێگای ئیسلام — قورئان، کاتەکانی نوێژ، زیکر و زانیاری ئاینی'),
+            onPressed: shareApp,
             icon: Icon(Icons.share_rounded, size: 20,
                 color: txt.withOpacity(.6))),
         IconButton(
