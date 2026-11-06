@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -1224,7 +1223,7 @@ class _AdminGithubPageState extends _AdminPageState<_AdminGithubPage> {
 
   /// Upload an image / file / video / text straight into the GitHub repo
   /// (PUT /contents) and get back the raw link for the app.
-  Future<void> _upload({File? file, String? textContent}) async {
+  Future<void> _upload({XFile? file, String? textContent}) async {
     final token = _token.text.trim();
     final repo = _repo.text.trim();
     final path = _path.text.trim().replaceAll(RegExp(r'^/+'), '');
@@ -1292,11 +1291,10 @@ class _AdminGithubPageState extends _AdminPageState<_AdminGithubPage> {
   Future<void> _pickAndUpload() async {
     final picked = await ImagePicker().pickMedia();
     if (picked == null) return;
-    final f = File(picked.path);
     if (_path.text.trim().isEmpty) {
       setState(() => _path.text = picked.name);
     }
-    await _upload(file: f);
+    await _upload(file: picked);
   }
 
   void _copy() {
