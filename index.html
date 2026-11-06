@@ -2,391 +2,49 @@
 <html lang="ckb" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ڕێگای ئیسلام — قورئان، کاتەکانی نوێژ، قیبلەنما و ناوەکانی خودا</title>
-<meta name="description" content="وێبسایتی ڕێگای ئیسلام — قورئانی پیرۆز بە دەنگی قارئەکان، کاتەکانی نوێژ، قیبلەنما، ناوەکانی خودای گەورە و زیاتر — بەخۆڕایی ٢٤/٧">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ڕێگای ئیسلام</title>
+<meta name="description" content="ڕێگای ئیسلام — قورئان، کاتەکانی نوێژ، قیبلەنما، ناوەکانی خودا، ڤیدیۆ، کتێب و زیاتر — وەک ئەپەکە بەخۆڕایی ٢٤/٧">
 <meta name="theme-color" content="#004D7B">
 <link rel="icon" href="favicon.png">
+<link rel="apple-touch-icon" href="logo.png">
+<link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Noto+Kufi+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --primary:#004D7B; --primary-2:#00639b; --gold:#C8A24B; --bg:#F4F5F7;
-    --card:#ffffff; --txt:#1c1c1c; --muted:#6b7280; --night:#1b1b1b; --night-card:#242424;
-    --green:#4CAF50; --red:#F44336;
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Noto Kufi Arabic',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh}
-  header{background:linear-gradient(135deg,var(--primary),var(--primary-2));color:#fff;padding:18px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:9;box-shadow:0 2px 10px rgba(0,0,0,.15)}
-  header img{width:44px;height:44px;border-radius:12px;background:#fff;padding:3px}
-  header h1{font-size:20px;font-weight:700}
-  header .sub{font-size:11px;opacity:.85}
-  nav{display:flex;gap:6px;overflow-x:auto;padding:10px 12px;background:var(--card);border-bottom:1px solid #e5e7eb;position:sticky;top:76px;z-index:8}
-  nav button{border:none;background:#eef2f6;color:var(--txt);padding:9px 14px;border-radius:24px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
-  nav button.active{background:var(--primary);color:#fff}
-  main{max-width:860px;margin:0 auto;padding:14px 12px 90px}
-  .card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
-  .card h2{font-size:16px;margin-bottom:10px;color:var(--primary);display:flex;align-items:center;gap:8px}
-  .ayah{font-family:'Amiri',serif;font-size:26px;line-height:2;text-align:center;padding:14px 6px}
-  .ref{color:var(--gold);font-size:13px;font-weight:700;text-align:center}
-  .tafsir{font-size:13px;color:var(--muted);line-height:1.9;margin-top:8px;text-align:center}
-  .times{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-  .time{text-align:center;background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:10px 4px}
-  .time .n{font-size:11px;color:var(--muted)}
-  .time .v{font-size:16px;font-weight:700;color:var(--primary)}
-  .date3{text-align:center;font-size:12.5px;color:var(--muted);margin-bottom:10px;line-height:1.9}
-  .date3 b{color:var(--primary)}
-  select,input{font-family:inherit;padding:10px 12px;border:1px solid #d1d5db;border-radius:12px;font-size:13.5px;width:100%;background:#fff;color:var(--txt)}
-  .row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
-  .row>*{flex:1;min-width:140px}
-  .btn{background:var(--primary);color:#fff;border:none;padding:11px 18px;border-radius:12px;font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer}
-  .btn.gold{background:var(--gold);color:#111}
-  .btn.block{width:100%}
-  .list{max-height:420px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:12px}
-  .item{padding:12px 14px;border-bottom:1px solid #f0f0f0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px}
-  .item:hover{background:#f8fafc}
-  .item .num{background:#e8f0fe;color:var(--primary);font-weight:700;border-radius:8px;padding:2px 9px;font-size:12px}
-  .verse{padding:16px 12px;border-bottom:1px solid #f0f0f0}
-  .verse .a{font-family:'Amiri',serif;font-size:24px;line-height:2.1}
-  .verse .t{font-size:13px;color:var(--muted);line-height:1.9;margin-top:6px}
-  .verse .top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-  .verse .top .n{font-size:11px;color:var(--gold);font-weight:700}
-  .verse audio{width:100%;height:34px;margin-top:8px}
-  .name{display:flex;gap:12px;align-items:flex-start;padding:14px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer}
-  .name .ar{font-family:'Amiri',serif;font-size:26px;color:var(--primary);min-width:120px}
-  .name .ku{font-size:12.5px;line-height:1.8;color:var(--muted)}
-  .name .loc{font-size:11.5px;color:var(--gold);font-weight:700;margin-top:4px}
-  .compass{width:280px;height:280px;margin:10px auto;border-radius:50%;background:conic-gradient(#e8f0fe 0 360deg);border:4px solid var(--primary);position:relative;box-shadow:0 4px 24px rgba(0,77,123,.15)}
-  .needle{position:absolute;left:50%;top:50%;width:6px;height:120px;background:linear-gradient(var(--green) 50%,transparent 50%);transform-origin:50% 100%;transform:translate(-50%,-100%) rotate(0deg);transition:transform .2s}
-  .needle::after{content:"🕋";position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:22px}
-  .deg{position:absolute;inset:auto 0 12px 0;text-align:center;font-size:14px;font-weight:700;color:var(--primary)}
-  .comp-note{text-align:center;font-size:12px;color:var(--muted);line-height:1.9}
-  .comp-note.ok{color:var(--green);font-weight:700}
-  footer{background:var(--night);color:#cbd5e1;padding:26px 16px;text-align:center;font-size:12.5px;line-height:2.2}
-  footer a{color:var(--gold);text-decoration:none}
-  .dl{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
-  .spinner{width:22px;height:22px;border:3px solid #e5e7eb;border-top-color:var(--primary);border-radius:50%;animation:spin 1s linear infinite;margin:14px auto}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--primary);color:#fff;padding:10px 20px;border-radius:24px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .3s;z-index:99}
-  .toast.show{opacity:1}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  @media(max-width:640px){.grid2{grid-template-columns:1fr}.times{grid-template-columns:repeat(3,1fr)}}
-</style>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..700,0..1,0&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header>
-  <img src="favicon.png" alt="ڕێگای ئیسلام" onerror="this.style.display='none'">
-  <div>
-    <h1>ڕێگای ئیسلام</h1>
-    <div class="sub">وێبسایتی فەرمی — وەک ئەپەکە، بەخۆڕایی ٢٤/٧</div>
-  </div>
-</header>
 
-<nav id="tabs">
-  <button class="active" data-tab="home">سەرەتا</button>
-  <button data-tab="quran">قورئانی پیرۆز</button>
-  <button data-tab="names">ناوەکانی خودا</button>
-  <button data-tab="qibla">قیبلەنما</button>
-  <button data-tab="dl">داگرتن و بەستەرەکان</button>
-</nav>
+<!-- splash: logo + progress only (same as app) -->
+<div id="splash"><img src="logo.png" alt="ڕێگای ئیسلام"><div class="spinner"></div></div>
 
-<main>
-  <!-- ================= سەرەتا ================= -->
-  <section id="tab-home">
-    <div class="card">
-      <h2>📖 ئایەتی ڕۆژ</h2>
-      <div id="daily"><div class="spinner"></div></div>
-    </div>
-    <div class="card">
-      <h2>🕌 کاتەکانی نوێژ</h2>
-      <div class="row">
-        <select id="city">
-          <option value="36.19,44.01">هەولێر</option>
-          <option value="35.56,45.43">سلێمانی</option>
-          <option value="35.47,44.39">کەرکوک</option>
-          <option value="36.87,42.99">دهۆک</option>
-          <option value="35.18,45.99">هەڵەبجە</option>
-          <option value="37.02,42.35">زاخۆ</option>
-          <option value="33.51,44.42">بەغدا</option>
-          <option value="33.31,44.36">موسڵ</option>
-        </select>
-        <button class="btn" onclick="loadTimes()">نوێکردنەوە</button>
-      </div>
-      <div id="date3" class="date3"></div>
-      <div id="times" class="times"><div class="spinner"></div></div>
-    </div>
-  </section>
-
-  <!-- ================= قورئان ================= -->
-  <section id="tab-quran" style="display:none">
-    <div class="card">
-      <h2>📚 سوورەتەکان</h2>
-      <input id="sq" placeholder="گەڕان بۆ سوورەت..." oninput="filterSurahs()">
-      <div id="surahs" class="list" style="margin-top:8px"><div class="spinner"></div></div>
-    </div>
-    <div class="card" id="readerCard" style="display:none">
-      <h2 id="readerTitle">سوورەت</h2>
-      <button class="btn gold block" onclick="closeReader()">گەڕانەوە بۆ لیستەکە</button>
-      <div id="verses" style="margin-top:10px"><div class="spinner"></div></div>
-    </div>
-  </section>
-
-  <!-- ================= ناوەکانی خودا ================= -->
-  <section id="tab-names" style="display:none">
-    <div class="card">
-      <h2>🕋 ناوەکانی خودای گەورە (٩٩ ناو)</h2>
-      <input id="nq" placeholder="گەڕان..." oninput="filterNames()">
-      <div id="names" class="list" style="margin-top:8px"><div class="spinner"></div></div>
-      <p style="font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.9">
-        کرتە لەسەر ناوێک بکە بۆ بینینی تەفسیری سۆرانی و بادینی و شوێنی ناوەکە لە قورئان.
-      </p>
-    </div>
-  </section>
-
-  <!-- ================= قیبلەنما ================= -->
-  <section id="tab-qibla" style="display:none">
-    <div class="card">
-      <h2>🧭 قیبلەنما</h2>
-      <div class="compass"><div class="needle" id="needle"></div><div class="deg" id="qdeg">--</div></div>
-      <div class="comp-note" id="qnote">مۆبایلەکە ڕابگرە و دەستی لێبدە بۆ کردنەوەی کۆمپاسی</div>
-      <button class="btn block" onclick="startCompass()">کردنەوەی قیبلەنما</button>
-    </div>
-  </section>
-
-  <!-- ================= داگرتن ================= -->
-  <section id="tab-dl" style="display:none">
-    <div class="card">
-      <h2>⬇️ داگرتنی ئەپەکە</h2>
-      <p style="font-size:13px;line-height:2;margin-bottom:12px">
-        ئەپی ڕێگای ئیسلام بۆ ئەندرۆید و ئایفۆن — قورئان، بانگ، زیکر، کتێب و زانیاری ئاینی بە کوردی.
-      </p>
-      <div class="dl">
-        <a class="btn" href="https://linkakam.com/Regayislam" target="_blank" rel="noopener">🌐 linkakam.com/Regayislam</a>
-        <a class="btn gold" href="https://github.com/quranofficial/RegayIslam-iOS/releases" target="_blank" rel="noopener">📦 APK لە GitHub Releases</a>
-        <a class="btn" href="https://github.com/quranofficial/RegayIslam-iOS" target="_blank" rel="noopener">💻 سۆرسی پڕۆژە لە GitHub</a>
-      </div>
-    </div>
-    <div class="card">
-      <h2>🔗 بەستەرە بەکارهێنراوەکان (GitHub)</h2>
-      <p style="font-size:12.5px;line-height:2.2;color:var(--muted)">
-        • دەنگی قارئەکان: <a href="https://github.com/quranofficial/RegayIslam-iOS" target="_blank" style="color:var(--primary)">GitHub — qari audio</a><br>
-        • کتێبەکان (PDF): <a href="https://github.com/quranofficial/RegayIslam-iOS" target="_blank" style="color:var(--primary)">GitHub — books</a><br>
-        • داتابەیسەکان: <a href="https://github.com/quranofficial/RegayIslam-iOS/tree/main/assets/db" target="_blank" style="color:var(--primary)">GitHub — assets/db</a><br>
-        • ڤیدیۆکان: <a href="https://github.com/quranofficial/Videokan" target="_blank" style="color:var(--primary)">GitHub — Videokan</a>
-      </p>
-    </div>
-  </section>
-</main>
-
-<footer>
-  ڕێگای ئیسلام — خزمەتگوزاری ئاینی بە زمانی کوردی<br>
-  وێبسایت: <a href="https://linkakam.com/Regayislam">linkakam.com/Regayislam</a> •
-  سۆرس: <a href="https://github.com/quranofficial/RegayIslam-iOS">GitHub</a><br>
-  #ڕێگای_ئیسلام
-</footer>
+<div id="app" style="display:none">
+  <header id="hdr">
+    <button class="icbtn" id="hBack" style="display:none" onclick="history.back()"><span class="msr">arrow_forward</span></button>
+    <img src="logo.png" alt="" onclick="nav('#/')">
+    <div id="hTitle" onclick="nav('#/')">ڕێگای ئیسلام</div>
+    <span style="flex:1"></span>
+    <button class="icbtn" onclick="shareApp()" title="هاوبەشی ئەپ"><span class="msr">share</span></button>
+    <button class="icbtn" id="hTheme" onclick="toggleTheme()"><span class="msr">dark_mode</span></button>
+  </header>
+  <main id="view"></main>
+  <nav id="bnav">
+    <button class="active" data-r="#/" onclick="nav('#/')"><span class="msr">home</span><b>سەرەتا</b></button>
+    <button data-r="#/quran" onclick="nav('#/quran')"><span class="msr">menu_book</span><b>قورئان</b></button>
+    <button data-r="#/tasbih" onclick="nav('#/tasbih')"><span class="msr">fingerprint</span><b>تەسبیح</b></button>
+    <button data-r="#/settings" onclick="nav('#/settings')"><span class="msr">settings</span><b>ڕێکخستن</b></button>
+  </nav>
+</div>
 
 <div class="toast" id="toast"></div>
+<div id="sheet" class="sheet" onclick="if(event.target===this)closeSheet()"><div class="sheet-in" id="sheetIn"></div></div>
 
-<script>
-/* ======================= helpers ======================= */
-const $ = s => document.querySelector(s);
-const AR = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
-const ku = n => String(n).split('').map(c => /\d/.test(c) ? AR[+c] : c).join('');
-function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
-
-/* tabs */
-document.querySelectorAll('#tabs button').forEach(b=>{
-  b.onclick=()=>{
-    document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('active'));
-    b.classList.add('active');
-    ['home','quran','names','qibla','dl'].forEach(t=>{
-      $('#tab-'+t).style.display = t===b.dataset.tab?'':'none';
-    });
-    if(b.dataset.tab==='quran' && !surahsLoaded) loadSurahs();
-    if(b.dataset.tab==='names' && !namesLoaded) loadNames();
-  };
-});
-
-/* ======================= daily ayah ======================= */
-const KU_MONTHS=['کانوونی دووەم','شوبات','ئازار','نیسان','ئایار','حوزەیران','تەمووز','ئاب','ئەیلوول','تشرینی یەکەم','تشرینی دووەم','کانوونی یەکەم'];
-const HIJRI_MONTHS=['موحەڕەم','سەفەر','ڕەبیع الاول','ڕەبیعی دووەم','جەمادیولولا','جەمادیولاخر','ڕەجەب','شەعبان','ڕەمەزان','شەوال','زولقەعدە','زولحەججە'];
-const WEEK=['دووشەممە','سێشەممە','چوارشەممە','پێنجشەممە','هەینی','شەممە','یەکشەممە'];
-function hijriOf(d){
-  const F=Math.floor;
-  const y2=d.getFullYear()+4800-F((14-(d.getMonth()+1))/12);
-  const m2=(d.getMonth()+1)+12*F((14-(d.getMonth()+1))/12)-3;
-  let jdn=d.getDate()+F((153*m2+2)/5)+365*y2+F(y2/4)-F(y2/100)+F(y2/400)-32045;
-  let l=jdn-1948440+10632;
-  const n=F((l-1)/10631);
-  l=l-10631*n+354;
-  const j=F((10985-l)/5316)*F((50*l)/17719)+F(l/5670)*F((43*l)/15238);
-  l=l-F((30-j)/15)*F((17719*j)/50)-F(j/16)*F((15238*j)/43)+29;
-  const hm=F((24*l)/709);
-  const hd=l-F((709*hm)/24);
-  const hy=30*n+j-30;
-  return [hy,hm,hd];
-}
-function date3(){
-  const d=new Date();
-  const [hy,hm,hd]=hijriOf(d);
-  $('#date3').innerHTML=`<b>${WEEK[(d.getDay()+6)%7]}</b> — ${ku(d.getDate())}ی ${KU_MONTHS[d.getMonth()]} ${ku(d.getFullYear())} — ${ku(hd)}ی ${HIJRI_MONTHS[hm-1]} ${ku(hy)}`;
-}
-async function loadDaily(){
-  const d=new Date();
-  const sura=(d.getDate()*31+d.getMonth()*7)%114+1;
-  try{
-    const r=await fetch(`https://api.alquran.cloud/v1/ayah/${sura}:${(d.getDate()%40)+1}/editions/quran-uthmani,ku`);
-    const j=await r.json();
-    const ar=j.data[0], tr=j.data[1];
-    $('#daily').innerHTML=`
-      <div class="ayah">${ar.text}</div>
-      <div class="ref">${ar.surah.name} — ئایەتی ${ku(ar.numberInSurah)}</div>
-      <div class="tafsir">${tr?tr.text:'—'}</div>`;
-  }catch(e){
-    $('#daily').innerHTML='<div class="tafsir">ئایەتی ڕۆژ بارنەبوو — ئینتەرنێت بپشکنە</div>';
-  }
-}
-
-/* ======================= prayer times ======================= */
-async function loadTimes(){
-  const [lat,lng]=$('#city').value.split(',');
-  $('#times').innerHTML='<div class="spinner"></div>';
-  date3();
-  try{
-    const r=await fetch(`https://api.aladhan.com/v1/timings/${(new Date()).toISOString().slice(0,10)}?latitude=${lat}&longitude=${lng}&method=9&school=0`);
-    const j=await r.json();
-    const t=j.data.timings;
-    const rows=[['بەیانی',t.Fajr],['گزنک',t.Sunrise],['نیوەڕۆ',t.Dhuhr],['عەسر',t.Asr],['ئێوارە',t.Maghrib],['خەوتنان',t.Isha]];
-    $('#times').innerHTML=rows.map(([n,v])=>`<div class="time"><div class="n">${n}</div><div class="v">${v.slice(0,5)}</div></div>`).join('');
-  }catch(e){
-    $('#times').innerHTML='<div class="tafsir">کێشە لە هێنانی کاتەکان — ئینتەرنێت بپشکنە</div>';
-  }
-}
-
-/* ======================= quran ======================= */
-let surahsLoaded=false, allSurahs=[];
-async function loadSurahs(){
-  try{
-    const r=await fetch('https://api.alquran.cloud/v1/surah');
-    const j=await r.json();
-    allSurahs=j.data.map(s=>({n:s.number,name:s.name,aya:s.numberOfAyah}));
-    renderSurahs(allSurahs);
-    surahsLoaded=true;
-  }catch(e){
-    $('#surahs').innerHTML='<div class="tafsir">لیستەکە بارنەبوو — دووبارە هەوڵبدەرەوە</div>';
-  }
-}
-function renderSurahs(list){
-  $('#surahs').innerHTML=list.map(s=>`
-    <div class="item" onclick="openSurah(${s.n})">
-      <span>${s.name}</span><span class="num">${ku(s.n)} • ${ku(s.aya)} ئایەت</span>
-    </div>`).join('');
-}
-function filterSurahs(){
-  const q=$('#sq').value.trim();
-  renderSurahs(allSurahs.filter(s=>!q||s.name.includes(q)||String(s.n)===q));
-}
-async function openSurah(n){
-  $('#readerCard').style.display='';
-  $('#verses').innerHTML='<div class="spinner"></div>';
-  const s=allSurahs.find(x=>x.n===n);
-  $('#readerTitle').textContent=s?s.name:'سوورەت';
-  try{
-    const r=await fetch(`https://api.alquran.cloud/v1/surah/${n}/editions/quran-uthmani`);
-    const j=await r.json();
-    const ayat=j.data[0].ayahs;
-    $('#verses').innerHTML=ayat.map(a=>`
-      <div class="verse">
-        <div class="top"><span class="num">${ku(a.numberInSurah)}</span><span class="n">ئایەتی ${ku(a.numberInSurah)}</span></div>
-        <div class="a">${a.text}</div>
-        <audio controls preload="none" src="https://cdn.islamic.network/quran/audio/128/ar.alafasy/${a.number}.mp3"></audio>
-      </div>`).join('');
-    $('#readerCard').scrollIntoView({behavior:'smooth'});
-  }catch(e){
-    $('#verses').innerHTML='<div class="tafsir">سوورەتەکە بارنەبوو — دووبارە هەوڵبدەرەوە</div>';
-  }
-}
-function closeReader(){
-  $('#readerCard').style.display='none';
-  $('#tab-quran .card').scrollIntoView({behavior:'smooth'});
-}
-
-/* ======================= 99 names ======================= */
-let namesLoaded=false, allNames=[];
-async function loadNames(){
-  try{
-    const r=await fetch('names.json');
-    allNames=await r.json();
-    renderNames(allNames);
-    namesLoaded=true;
-  }catch(e){
-    $('#names').innerHTML='<div class="tafsir">لیستەکە بارنەبوو</div>';
-  }
-}
-function renderNames(list){
-  $('#names').innerHTML=list.map(n=>`
-    <div class="name" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
-      <div class="ar">${n.arabic}</div>
-      <div>
-        <div class="ku" style="color:var(--txt);font-weight:600">${n.sorani}</div>
-        <div class="loc">📍 سوڕەتی ${n.surah_ayah}</div>
-      </div>
-    </div>
-    <div style="display:none;padding:0 14px 14px;border-bottom:1px solid #f0f0f0">
-      <div class="ku"><b>سۆرانی:</b> ${n.sorani}</div>
-      <div class="ku"><b>بادینی:</b> ${n.badini}</div>
-      <audio controls preload="none" style="width:100%;height:34px;margin-top:8px"
-        src="https://cdn.islamic.network/quran/audio/128/ar.alafasy/${(n.global||1)}.mp3"></audio>
-    </div>`).join('');
-}
-function filterNames(){
-  const q=$('#nq').value.trim();
-  renderNames(allNames.filter(n=>!q||n.arabic.includes(q)||n.sorani.includes(q)||n.badini.includes(q)));
-}
-
-/* ======================= qibla ======================= */
-let qiblaBearing=null;
-function bearingToKaaba(lat,lng){
-  const kLat=21.4225*Math.PI/180, kLng=39.8262*Math.PI/180;
-  const p1=lat*Math.PI/180, dl=(kLng-lng*Math.PI/180);
-  const y=Math.sin(dl)*Math.cos(kLat);
-  const x=Math.cos(p1)*Math.sin(kLat)-Math.sin(p1)*Math.cos(kLat)*Math.cos(dl);
-  return (Math.atan2(y,x)*180/Math.PI+360)%360;
-}
-function startCompass(){
-  if(!navigator.geolocation){ $('#qnote').textContent='ناوخۆکە بەردەست نییە'; return; }
-  navigator.geolocation.getCurrentPosition(p=>{
-    qiblaBearing=bearingToKaaba(p.coords.latitude,p.coords.longitude);
-    $('#qdeg').textContent='گۆشەی قیبلە: '+qiblaBearing.toFixed(1)+'°';
-    $('#qnote').textContent='مۆبایلەکە بچرخێنە هەتا کەعبەکە بۆ سەرەوە بێت';
-    listenCompass();
-  },()=>{$('#qnote').textContent='ڕێگەی ناوخۆکە نەدرا';});
-}
-function listenCompass(){
-  const handler=e=>{
-    if(e.alpha==null) return;
-    const heading=360-e.alpha;
-    const rot=qiblaBearing!=null?(qiblaBearing-heading):(0-heading);
-    $('#needle').style.transform=`translate(-50%,-100%) rotate(${rot}deg)`;
-    if(qiblaBearing!=null){
-      const diff=Math.abs((qiblaBearing-heading+540)%360-180);
-      $('#qnote').className='comp-note'+(diff<8?' ok':'');
-      $('#qnote').textContent=diff<8?'ئەمە ئاڕاستەی قیبلەیە ✅':'مۆبایلەکە بچرخێنە هەتا کەعبەکە بۆ سەرەوە بێت';
-    }
-  };
-  if(window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission){
-    DeviceOrientationEvent.requestPermission().then(s=>{
-      if(s==='granted') window.addEventListener('deviceorientation',handler,true);
-    }).catch(()=>{});
-  } else {
-    window.addEventListener('deviceorientationabsolute',handler,true);
-    window.addEventListener('deviceorientation',handler,true);
-  }
-}
-
-/* boot */
-loadDaily();
-loadTimes();
-</script>
+<script src="js/core.js"></script>
+<script src="js/data.js"></script>
+<script src="js/views_a.js"></script>
+<script src="js/views_b.js"></script>
+<script src="js/main.js"></script>
 </body>
 </html>
