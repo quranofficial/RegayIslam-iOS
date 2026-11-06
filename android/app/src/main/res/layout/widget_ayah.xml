@@ -4,23 +4,39 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="12dp"
+    android:padding="14dp"
     android:background="@drawable/widget_bg">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="﴾ ئایەتی ڕۆژ ﴿"
+        android:textColor="#FFD54F"
+        android:textSize="12sp"
+        android:textStyle="bold" />
 
     <TextView
         android:id="@+id/widget_ayah_text"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical"
+        android:text="رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ"
         android:textColor="#FFFFFF"
-        android:textSize="15sp"
-        android:lineSpacingMultiplier="1.5" />
+        android:textSize="14sp"
+        android:lineSpacingMultiplier="1.7" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginBottom="6dp"
+        android:background="#33FFD54F" />
 
     <TextView
         android:id="@+id/widget_ayah_ref"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingTop="6dp"
-        android:textColor="#FFD54F"
-        android:textSize="12sp" />
+        android:textColor="#CCFFD54F"
+        android:textSize="11sp" />
 </LinearLayout>

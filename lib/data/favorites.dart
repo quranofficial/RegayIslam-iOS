@@ -8,23 +8,57 @@ import '../data/downloader.dart';
 import '../data/db.dart';
 import '../screens/media/video_player_screen.dart';
 import '../screens/media/live_screen.dart';
+import '../screens/media/videos_screen.dart';
 import '../screens/quran/open_quran.dart';
 import '../screens/quran/qariakan_screen.dart';
 import '../screens/quran/ayat_screen.dart';
+import '../screens/quran/ayatul_kursi_screen.dart';
+import '../screens/quran/ayah_range_screen.dart';
+import '../screens/quran/quran_search_screen.dart';
+import '../screens/quran/name_screen.dart';
+import '../screens/quran/quran_studio_screen.dart';
 import '../screens/ramadan/ramazan_screen.dart';
 import '../screens/articles/json_article_screen.dart';
+import '../screens/misc/zikr_detail_screen.dart';
+import '../screens/books/kteb_screen.dart';
+import '../screens/books/farmwda_screen.dart';
+import '../screens/books/tawba_screen.dart';
+import '../screens/home/prayer/nwezh_hub.dart';
+import '../screens/nwezh/dasalatakan_screen.dart';
+import '../screens/nwezh/prayers_month.dart';
+import '../screens/nwezh/prayer_times_screen.dart';
+import '../screens/nwezh/ruqya_audio_screen.dart';
+import '../screens/settings/tawanakanm_screen.dart';
+import '../screens/settings/women_screen.dart';
+import '../screens/settings/question_screen.dart';
+import '../screens/quiz/quiz_screen.dart';
+import '../screens/tasbih/tasbih_counter.dart';
+import '../screens/qibla_screen.dart';
+import '../screens/home/home_reorder_screen.dart';
 
 class FavoriteEntry {
-  const FavoriteEntry({required this.id, required this.title, required this.content});
+  const FavoriteEntry({
+    required this.id,
+    required this.title,
+    required this.content,
+    this.route = '',
+  });
   final String id;
   final String title;
   final String content;
 
-  Map<String, dynamic> toJson() => {'id': id, 'title': title, 'content': content};
+  /// Deep-link hint: "section::<label>", "surah::<id>", "book::<name>::<url>",
+  /// "allahname::<id>", "friday", ... — lets the wishlist jump back to the
+  /// exact screen with one click (items 5 + 11).
+  final String route;
+
+  Map<String, dynamic> toJson() =>
+      {'id': id, 'title': title, 'content': content, 'route': route};
   factory FavoriteEntry.fromJson(Map<String, dynamic> json) => FavoriteEntry(
     id: '${json['id'] ?? ''}',
     title: '${json['title'] ?? ''}',
     content: '${json['content'] ?? ''}',
+    route: '${json['route'] ?? ''}',
   );
 }
 
@@ -61,11 +95,21 @@ class FavoritesStore {
 }
 
 class FavoriteButton extends StatefulWidget {
-  const FavoriteButton({super.key, required this.id, required this.title, required this.content, this.color});
+  const FavoriteButton({
+    super.key,
+    required this.id,
+    required this.title,
+    required this.content,
+    this.color,
+    this.route,
+    this.iconSize,
+  });
   final String id;
   final String title;
   final String content;
   final Color? color;
+  final String? route;
+  final double? iconSize;
 
   @override
   State<FavoriteButton> createState() => _FavoriteButtonState();
@@ -85,11 +129,16 @@ class _FavoriteButtonState extends State<FavoriteButton> {
   @override
   Widget build(BuildContext context) => IconButton(
     tooltip: _saved ? 'لابردن لە دڵخوازەکان' : 'زیادکردن بۆ دڵخوازەکان',
+    iconSize: widget.iconSize,
+    visualDensity: widget.iconSize == null ? null : VisualDensity.compact,
+    padding: widget.iconSize == null ? null : EdgeInsets.zero,
+    constraints: widget.iconSize == null ? null : const BoxConstraints(),
     icon: Icon(_saved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
       color: widget.color ?? (_saved ? AppColors.gold : null)),
     onPressed: () async {
       final saved = await FavoritesStore.toggle(FavoriteEntry(
-        id: widget.id, title: widget.title, content: widget.content));
+        id: widget.id, title: widget.title, content: widget.content,
+        route: widget.route ?? ''));
       if (!mounted) return;
       setState(() => _saved = saved);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -97,6 +146,105 @@ class _FavoriteButtonState extends State<FavoriteButton> {
         duration: const Duration(seconds: 1)));
     },
   );
+}
+
+/// Item 11: every screen can save an item to the wishlist, and from the
+/// wishlist one click returns to the very same place. This table maps the
+/// home section labels to their screens so "section::" favorites jump back.
+typedef ScreenBuilder = Widget Function();
+
+Widget? sectionScreenOf(String label) {
+  switch (label) {
+    case 'دڵخوازەکان':
+      return const FavoritesScreen();
+    case 'ئیدیتی قورئان':
+    case 'دروستکردنی ڤیدیۆ و وێنە':
+      return const QuranStudioScreen();
+    case 'نوێژکردن':
+      return const NwezhHubScreen();
+    case 'ناوەکانی خودای گەورە':
+      return const NameScreen();
+    case 'ئایەتی کورسی':
+      return const AyatulKursiScreen();
+    case 'پرسیار و وەڵام':
+      return const QuestionScreen();
+    case 'ڤیدیۆی ئاینی':
+      return const VideosScreen();
+    case 'تاوەنە گەورەکان':
+      return const TawanakanmScreen();
+    case 'کتێبخانە':
+      return const KtebScreen();
+    case 'ڕوقیەی شەرعی':
+      return const RuqyaAudioScreen();
+    case 'زیکرەکان':
+      return const JsonArticleScreen(file: 'assets/data/zikrakan.json', title: 'زیکرەکان');
+    case 'فەرموودەکان':
+      return const FarmwdaScreen();
+    case 'مانگی ڕەمەزان':
+      return const RamazanScreen();
+    case 'ئافرەتان':
+      return const WomenScreen();
+    case 'دوعا و پاڕانەوە':
+      return const JsonArticleScreen(file: 'assets/data/duha.json', title: 'دوعا و پاڕانەوە');
+    case 'چۆن تۆبە بکەم':
+      return const TawbaScreen();
+    case 'حەج و عومرە':
+      return const JsonArticleScreen(file: 'assets/data/hajw.json', title: 'حەج و عومرە');
+    case 'ئەهلی ئاگر':
+      return const JsonArticleScreen(file: 'assets/data/agr.json', title: 'ئەهلی ئاگر');
+    case 'بەهەشت':
+      return const JsonArticleScreen(file: 'assets/data/bahasht.json', title: 'بەهەشت');
+    case 'دۆزەخ':
+      return const JsonArticleScreen(file: 'assets/data/dozax.json', title: 'دۆزەخ');
+    case 'خەونامە':
+      return const JsonArticleScreen(file: 'assets/data/xawn.json', title: 'خەونامە');
+    case 'ژیانی پێغەمبەرمان ﷺ':
+      return const JsonArticleScreen(file: 'assets/data/pexambarman.json', title: 'ژیانی پێغەمبەرمان ﷺ');
+    case 'ژیانی پێغەمبەران':
+      return const JsonArticleScreen(file: 'assets/data/pexambaran.json', title: 'ژیانی پێغەمبەران');
+    case 'هاوەڵانی پێغەمبەر ﷺ':
+      return const JsonArticleScreen(file: 'assets/data/hawal.json', title: 'هاوەڵانی پێغەمبەر ﷺ');
+    case 'سونەت':
+      return const JsonArticleScreen(file: 'assets/data/swnat.json', title: 'سونەت');
+    case 'زانیاری قورئان':
+      return const JsonArticleScreen(file: 'assets/data/zanyaryquran.json', title: 'زانیاری قورئان');
+    case 'ڕاو بۆچونەکان':
+      return const JsonArticleScreen(file: 'assets/data/rawbochwn.json', title: 'ڕاو بۆچونەکان');
+    case 'وتە و ئامۆژگاری':
+      return const JsonArticleScreen(file: 'assets/data/wta.json', title: 'وتە و ئامۆژگاری');
+    case 'حەڕام کراوەکان':
+      return const JsonArticleScreen(file: 'assets/data/haram.json', title: 'حەڕام کراوەکان');
+    case 'زیانەکانی گۆرانی':
+      return const JsonArticleScreen(file: 'assets/data/zianakanygorani.json', title: 'زیانەکانی گۆرانی');
+    case 'تاوانی غەیبەت':
+      return const JsonArticleScreen(file: 'assets/data/xaybat.json', title: 'تاوانی غەیبەت');
+    case 'چیرۆکی دەجال':
+      return const JsonArticleScreen(file: 'assets/data/dajal.json', title: 'چیرۆکی دەجال');
+    case 'قیبلەنما':
+      return const QiblaScreen();
+    case 'دەنگی قورئان':
+      return const QariakanScreen();
+    case 'گەڕان لە قورئان':
+      return const QuranSearchScreen();
+    case 'دوعاکانی نوێژ':
+      return const DasalatakanScreen();
+    case 'کاتەکانی مانگ':
+      return const PrayersMonthScreen();
+    case 'خوێندنی ئایەتەکان':
+      return const AyahRangeScreen();
+    case 'ڕێکخستنی بەشەکان':
+      return const HomeReorderScreen();
+    case 'کاتەکانی بانگ':
+      return const PrayerTimesScreen();
+    case 'تەسبیح':
+      return const TasbihCounterScreen();
+    case 'پەخشی ڕاستەوخۆ':
+      return const LiveScreen();
+    case 'پرسیار و وەڵام (یاری)':
+      return const QuizScreen();
+    default:
+      return null;
+  }
 }
 
 class FavoritesScreen extends StatefulWidget {
@@ -212,13 +360,14 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     );
   }
 
-  /// Item 17: favorites keep their origin. Tapping one navigates back into
-  /// the section it came from (video player, surah, reciter, article...)
-  /// instead of showing a raw URL.
+  /// Items 5 + 11: favorites keep their origin. One tap navigates straight
+  /// back into the screen the item was saved from — never a raw URL.
   Future<void> _open(BuildContext context, FavoriteEntry item) async {
     final id = item.id;
-    final parts = id.split('::');
-    if (parts.length >= 2 && parts[0] == 'video') {
+    final route = item.route.isNotEmpty ? item.route : id;
+    final parts = route.split('::');
+
+    if (parts.isNotEmpty && parts[0] == 'video') {
       Navigator.push(context, MaterialPageRoute(
           builder: (_) => VideoPlayerScreen(
               title: item.title, url: Downloader.httpsify(item.content))));
@@ -237,6 +386,36 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               ayaCount: s.isNotEmpty ? ((s.first['aya'] as num?)?.toInt() ?? 7) : 7,
               place: s.isNotEmpty ? '${s.first['place'] ?? ''}' : '',
               juz: s.isNotEmpty ? '${s.first['juz'] ?? ''}' : '')));
+      return;
+    }
+    if (parts.length >= 2 && parts[0] == 'surah') {
+      final surahId = int.tryParse(parts[1]) ?? 1;
+      final s = (await Db.I.surahs())
+          .where((r) => (r['soraid'] as num?)?.toInt() == surahId)
+          .toList();
+      if (!context.mounted) return;
+      Navigator.push(context, MaterialPageRoute(
+          builder: (_) => OpenQuranScreen(
+              surahId: surahId,
+              surahName: s.isNotEmpty ? '${s.first['name'] ?? ''}' : item.title,
+              ayaCount: s.isNotEmpty ? ((s.first['aya'] as num?)?.toInt() ?? 7) : 7,
+              place: s.isNotEmpty ? '${s.first['place'] ?? ''}' : '',
+              juz: s.isNotEmpty ? '${s.first['juz'] ?? ''}' : '')));
+      return;
+    }
+    if (parts.length >= 2 && parts[0] == 'book') {
+      // content = pdf url, title = book name
+      Navigator.push(context, MaterialPageRoute(
+          builder: (_) => BookDetailScreen(
+              book: {'name': item.title, 'url': item.content},
+              url: item.content,
+              downloaded: AppPrefs.I.pdfCachePath(item.content) != null &&
+                  (AppPrefs.I.pdfCachePath(item.content) ?? '').isNotEmpty)));
+      return;
+    }
+    if (parts.length >= 2 && parts[0] == 'allahname') {
+      Navigator.push(context, MaterialPageRoute(
+          builder: (_) => const NameScreen()));
       return;
     }
     if (parts.length >= 2 && parts[0] == 'reciter') {
@@ -259,27 +438,35 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           builder: (_) => const RamazanScreen()));
       return;
     }
+    if (route == 'friday') {
+      AppPrefs.I.zikrName = 'ڕۆژی هەینی';
+      AppPrefs.I.zikrBody =
+          '١ - خۆشۆردن\n٢ - خۆبۆنخۆشکردن و سەرچاککردن\n٣ - زوو گەیشتن بە نوێژی هەینی\n٤ - خوێندنی سوورەتی کەهف\n٥ - زۆر سەڵاوات لەسەر پێغەمبەر ﷺ';
+      AppPrefs.I.zikrVip = 'سونەتەکانی ڕۆژی هەینی';
+      Navigator.push(context, MaterialPageRoute(
+          builder: (_) => const ZikrDetailScreen()));
+      return;
+    }
+    if (parts.length >= 2 && parts[0] == 'section') {
+      final label = route.substring('section::'.length);
+      final screen = sectionScreenOf(label);
+      if (screen != null) {
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => screen));
+      } else {
+        _showDetail(context, item);
+      }
+      return;
+    }
     if (parts.length >= 2 && parts[0].endsWith('.json')) {
       Navigator.push(context, MaterialPageRoute(
           builder: (_) => JsonArticleScreen(file: parts[0], title: item.title)));
       return;
     }
-    if (parts.length >= 2 && parts[0] == 'section') {
-      // Home sections can't be deep-linked; show the saved description.
-      showDialog<void>(
-        context: context,
-        builder: (_) => Directionality(
-          textDirection: TextDirection.rtl,
-          child: AlertDialog(
-            title: Text(item.title),
-            content: SelectableText(item.content),
-            actions: [TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('داخستن'))],
-          )),
-      );
-      return;
-    }
+    _showDetail(context, item);
+  }
+
+  void _showDetail(BuildContext context, FavoriteEntry item) {
     showDialog<void>(
       context: context,
       builder: (_) => Directionality(
@@ -301,6 +488,12 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         return _FavKind(Icons.ondemand_video_rounded, 'ڤیدیۆ — کلیک بکە بۆ لێدان');
       case 'quran':
         return _FavKind(Icons.menu_book_rounded, 'ئایەتی قورئان — کلیک بکە بۆ خوێندنەوە');
+      case 'surah':
+        return _FavKind(Icons.auto_stories_rounded, 'سوورەت — کلیک بکە بۆ خوێندنەوە');
+      case 'book':
+        return _FavKind(Icons.local_library_rounded, 'کتێب — کلیک بکە بۆ خوێندنەوە');
+      case 'allahname':
+        return _FavKind(Icons.badge_rounded, 'ناوی خودای گەورە — کلیک بکە');
       case 'reciter':
         return _FavKind(Icons.mic_rounded, 'دەنگی قورئان — کلیک بکە بۆ قاریەکان');
       case 'live':
@@ -309,8 +502,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         return _FavKind(Icons.auto_stories_rounded, 'ئایەتی ڕۆژ — کلیک بکە');
       case 'ramadan_section':
         return _FavKind(Icons.dark_mode_rounded, 'مانگی ڕەمەزان — کلیک بکە');
+      case 'friday':
+        return _FavKind(Icons.favorite_rounded, 'ڕۆژی هەینی — کلیک بکە');
       case 'section':
-        return _FavKind(Icons.category_rounded, 'بەش — وردەکاری');
+        return _FavKind(Icons.category_rounded, 'بەش — کلیک بکە بۆ کردنەوە');
     }
     if (head.endsWith('.json')) {
       return _FavKind(Icons.article_rounded, 'بابەت — کلیک بکە بۆ کردنەوە');

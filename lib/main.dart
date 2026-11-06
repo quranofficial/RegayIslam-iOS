@@ -38,10 +38,14 @@ class RegayIslamApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<int>(
         valueListenable: kThemeEpoch,
-        builder: (context, _, __) {
+        builder: (context, epoch, __) {
           final dark = !AppPrefs.I.day;
           applySystemUi(dark);
+          // Item 12: when night/day switches, the whole app restarts
+          // through the Splash like the original app, so every screen
+          // (colors, cached widgets, sounds) comes up in the new mode.
           return MaterialApp(
+            key: ValueKey('regayislam-$epoch'),
             title: 'ڕێگای ئیسلام',
             debugShowCheckedModeBanner: false,
             theme: AppPrefs.I.theme,

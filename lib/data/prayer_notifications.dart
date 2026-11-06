@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 import '../core/prefs.dart';
@@ -43,12 +45,52 @@ class PrayerNotifications {
     return _canUseExactAlarms;
   }
 
-  Future<void> showNow(String title, String body) async {
+  /// Item 3 + item 12: the notification rings with the SELECTED adhan voice
+  /// when it was downloaded for offline use, otherwise with the bundled
+  /// res/raw/adhan.mp3 — so the adhan always sounds, even with no internet.
+  AndroidNotificationSound? _notificationSound() {
+    if (!AppPrefs.I.adhanSoundEnabled) return null;
+    try {
+      final f = _downloadedVoiceFile();
+      if (f != null && f.existsSync() && f.lengthSync() > 0) {
+        return UriAndroidNotificationSound(Uri.file(f.path).toString());
+      }
+    } catch (_) {}
+    return const RawResourceAndroidNotificationSound('adhan');
+  }
+
+  static File? _downloadedVoiceFile() {
+    try {
+      final file = AppPrefs.I.adhanVoiceFile.replaceAll('.mp3', '');
+      if (file.isEmpty) return null;
+      // Documents dir is resolved lazily; keep it best-effort.
+      final dir = _docsDir;
+      if (dir == null) return null;
+      return File('${dir.path}/bang/$file.mp3');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Directory? _docsDir;
+
+  /// Cache the documents dir at startup so scheduled notifications can find
+  /// the downloaded adhan voice even when the app is idle.
+  static Future<void> warmUp() async {
+    try {
+      _docsDir = await getApplicationDocumentsDirectory();
+    } catch (_) {
+      _docsDir = null;
+    }
+  }
+
+  AndroidNotificationDetails _androidDetails() {
     final p = AppPrefs.I;
-    final android = AndroidNotificationDetails(
-        'adhan_channel_v2_${p.adhanSoundEnabled ? 'sound' : 'silent'}', 'بانگی نوێژ',
+    return AndroidNotificationDetails(
+        'adhan_channel_v2_${p.adhanSoundEnabled ? 'sound' : 'silent'}',
+        'بانگی نوێژ',
         channelDescription: 'ئاگادارکردنەوە و دەنگی بانگی نوێژ',
-        sound: p.adhanSoundEnabled ? const RawResourceAndroidNotificationSound('adhan') : null,
+        sound: _notificationSound(),
         playSound: p.adhanSoundEnabled,
         importance: Importance.max,
         priority: Priority.high,
@@ -56,10 +98,18 @@ class PrayerNotifications {
         ledColor: const Color(0xFFF44336),
         enableVibration: p.adhanVibrationEnabled,
         visibility: NotificationVisibility.public);
+  }
+
+  Future<void> showNow(String title, String body) async {
+    final p = AppPrefs.I;
     await _plugin.show(
         DateTime.now().millisecondsSinceEpoch ~/ 1000 % 100000,
         title, body,
-        NotificationDetails(android: android, iOS: DarwinNotificationDetails(presentSound: p.adhanSoundEnabled)));
+        NotificationDetails(
+            android: _androidDetails(),
+            iOS: DarwinNotificationDetails(
+                presentSound: p.adhanSoundEnabled,
+                sound: p.adhanSoundEnabled ? 'adhan.mp3' : null)));
   }
 
   /// Item 2: fire one immediate notification so the user can verify the
@@ -109,19 +159,14 @@ class PrayerNotifications {
           final when = tz.TZDateTime(tz.local, date.year, date.month,
                   date.day, h, m).add(Duration(minutes: offset));
           if (when.isBefore(tz.TZDateTime.now(tz.local))) continue;
-          final android = AndroidNotificationDetails(
-              'adhan_channel_v2_${p.adhanSoundEnabled ? 'sound' : 'silent'}', 'بانگی نوێژ',
-              channelDescription: 'دەنگی بانگی نوێژ',
-              sound: p.adhanSoundEnabled ? const RawResourceAndroidNotificationSound('adhan') : null,
-              playSound: p.adhanSoundEnabled,
-              importance: Importance.max,
-              priority: Priority.high,
-              enableVibration: p.adhanVibrationEnabled,
-              visibility: NotificationVisibility.public);
           await _plugin.zonedSchedule(
               id++, names[entry.key] ?? entry.key,
               'ئێستا کاتی ${names[entry.key]}ـە لە ${p.cityName}', when,
-              NotificationDetails(android: android, iOS: DarwinNotificationDetails(presentSound: p.adhanSoundEnabled)),
+              NotificationDetails(
+                  android: _androidDetails(),
+                  iOS: DarwinNotificationDetails(
+                      presentSound: p.adhanSoundEnabled,
+                      sound: p.adhanSoundEnabled ? 'adhan.mp3' : null)),
               androidScheduleMode: _canUseExactAlarms
                   ? AndroidScheduleMode.exactAllowWhileIdle
                   : AndroidScheduleMode.inexactAllowWhileIdle,

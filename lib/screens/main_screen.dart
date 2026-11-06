@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
 import '../core/prefs.dart';
+import '../data/home_widgets.dart';
+import '../data/prayer_notifications.dart';
 import 'home/home_screen.dart';
 import 'quran/quran_tab.dart';
 import 'tasbih/tasbih_list.dart';
@@ -14,7 +16,8 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends State<MainScreen>
+    with WidgetsBindingObserver {
   final PageController _pager = PageController();
   int _position = 0;
 
@@ -24,6 +27,33 @@ class _MainScreenState extends State<MainScreen> {
     ('تەسبیح', Icons.fingerprint_rounded),
     ('ڕێکخستن', Icons.settings_rounded),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _pager.dispose();
+    super.dispose();
+  }
+
+  /// Item 3: every time the app comes back to the foreground the adhan
+  /// notifications are re-scheduled for the coming days, so the prayer
+  /// times never run out even when the phone stayed off for a while.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      try {
+        PrayerNotifications.I.scheduleAll();
+        HomeWidgets.updatePrayer();
+        HomeWidgets.pushDailyAyah();
+      } catch (_) {}
+    }
+  }
 
   void _select(int i) {
     _pager.animateToPage(i,

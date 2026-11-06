@@ -1,9 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="rectangle">
-    <gradient
-        android:angle="270"
-        android:startColor="#1B5E20"
-        android:endColor="#004D40" />
-    <corners android:radius="18dp" />
-</shape>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Base: deep teal gradient with rounded corners -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="315"
+                android:startColor="#05324B"
+                android:centerColor="#004D7B"
+                android:endColor="#0A3D2E"
+                android:type="linear" />
+            <corners android:radius="22dp" />
+        </shape>
+    </item>
+    <!-- Subtle gold top-light -->
+    <item android:top="0dp" android:left="0dp" android:right="0dp" android:bottom="70dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="#26FFD54F"
+                android:endColor="#00FFD54F"
+                android:type="linear" />
+            <corners android:radius="22dp" />
+        </shape>
+    </item>
+    <!-- Gold hairline border -->
+    <item>
+        <shape android:shape="rectangle">
+            <stroke android:width="1dp" android:color="#59C8A24B" />
+            <corners android:radius="22dp" />
+            <solid android:color="#00000000" />
+        </shape>
+    </item>
+</layer-list>

@@ -225,7 +225,11 @@ class _JsonArticleScreenState extends State<JsonArticleScreen> {
                                                 height: 1.9, color: txt)),
                                       ),
                                       Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                                        FavoriteButton(id: '${widget.file}::$i', title: title.isEmpty ? widget.title : title, content: text),
+                                        FavoriteButton(
+                                            id: '${widget.file}::$i',
+                                            title: title.isEmpty ? widget.title : title,
+                                            content: text,
+                                            route: '${widget.file}::$i'),
                                         TextButton.icon(
                                             onPressed: () {
                                               Clipboard.setData(ClipboardData(

@@ -8,8 +8,12 @@ import '../../core/prefs.dart';
 import '../../data/downloader.dart';
 
 /// Original: PdfActivity — downloads a PDF (with progress) and renders it;
-/// downloaded books reopen offline. The URL is re-encoded because some
-/// ktebakan entries mix raw Kurdish characters with %XX escapes.
+/// downloaded books reopen offline.
+///
+/// Item 7: the reader remembers WHERE you stopped (per book), reopens at
+/// that page automatically, shows "لاپەڕە x / y" and lets you jump to any
+/// page by number. The URL is re-encoded because some ktebakan entries mix
+/// raw Kurdish characters with %XX escapes.
 class PdfScreen extends StatefulWidget {
   const PdfScreen({super.key, required this.title, required this.url});
   final String title;
@@ -23,10 +27,16 @@ class _PdfScreenState extends State<PdfScreen> {
   bool _downloading = false;
   int _progress = 0;
   String? _error;
+  PDFViewController? _controller;
+  int _pages = 0;
+  int _page = 0;
+  int _lastReadPage = 0;
+  bool _restored = false;
 
   @override
   void initState() {
     super.initState();
+    _lastReadPage = AppPrefs.I.bookLastPage(widget.url);
     _load();
   }
 
@@ -42,7 +52,8 @@ class _PdfScreenState extends State<PdfScreen> {
       }
       // 2) download with progress, like PRDownloader in the original
       final file = await Downloader.download(
-        widget.url, 'ktebakan/${Downloader.safeName(widget.title)}.pdf',
+        Downloader.httpsify(widget.url),
+        'ktebakan/${Downloader.safeName(widget.title)}.pdf',
         onProgress: (received, total) {
           if (mounted) {
             setState(() => _progress = (received / total * 100).round());
@@ -75,6 +86,44 @@ class _PdfScreenState extends State<PdfScreen> {
     } catch (_) {}
   }
 
+  /// Item 7: jump to a page by number.
+  Future<void> _askPage() async {
+    final c = TextEditingController(text: _page > 0 ? '${_page + 1}' : '');
+    final v = await showDialog<int>(
+      context: context,
+      builder: (d) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('چوونە لاپەڕە'),
+          content: TextField(
+            controller: c,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+                hintText: _pages > 0 ? 'لاپەڕە (١ - $_pages)' : 'ژمارەی لاپەڕە',
+                border: const OutlineInputBorder()),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(d),
+                child: const Text('لابردن')),
+            ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryDark,
+                    foregroundColor: Colors.white),
+                onPressed: () => Navigator.pop(d, int.tryParse(c.text.trim())),
+                child: const Text('بڕوان')),
+          ],
+        ),
+      ),
+    );
+    if (v == null || _pages == 0) return;
+    final target = (v - 1).clamp(0, _pages - 1);
+    await _controller?.setPage(target);
+    setState(() => _page = target);
+    AppPrefs.I.setBookLastPage(widget.url, target);
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = !AppPrefs.I.day;
@@ -84,9 +133,22 @@ class _PdfScreenState extends State<PdfScreen> {
         backgroundColor: dark ? AppColors.nightBg : Colors.white,
         appBar: AppBar(
           backgroundColor: dark ? AppColors.nightCard : AppColors.primaryDark,
-          title: Text(widget.title,
-              style: const TextStyle(color: Colors.white, fontSize: 16)),
+          title: Column(crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min, children: [
+            Text(widget.title,
+                style: const TextStyle(color: Colors.white, fontSize: 15)),
+            if (_pages > 0)
+              Text('لاپەڕە ${_page + 1} / $_pages',
+                  style: const TextStyle(color: Colors.white70, fontSize: 11)),
+          ]),
           actions: [
+            if (!_downloading && _localPath != null && _pages > 0)
+              TextButton.icon(
+                  onPressed: _askPage,
+                  icon: const Icon(Icons.pin_drop_rounded,
+                      color: Colors.white, size: 18),
+                  label: const Text('چوونە لاپەڕە',
+                      style: TextStyle(color: Colors.white, fontSize: 11.5))),
             if (!_downloading && _localPath == null)
               IconButton(
                   onPressed: _load,
@@ -130,15 +192,51 @@ class _PdfScreenState extends State<PdfScreen> {
                     ? const SizedBox()
                     : Platform.isIOS
                         ? _iosNotice()
-                        : PDFView(
-                            filePath: _localPath,
-                            enableSwipe: true,
-                            swipeHorizontal: false,
-                            autoSpacing: true,
-                            pageFling: true,
-                            onError: (e) => setState(
-                                () => _error = 'کردنەوەی فایلەکە سەرکەوتوو نەبوو'),
-                          ),
+                        : Stack(children: [
+                            PDFView(
+                              filePath: _localPath,
+                              enableSwipe: true,
+                              swipeHorizontal: false,
+                              autoSpacing: true,
+                              pageFling: true,
+                              // Item 7: reopen exactly where reading stopped.
+                              defaultPage:
+                                  _lastReadPage > 0 ? _lastReadPage : 0,
+                              onViewCreated: (c) async {
+                                _controller = c;
+                                if (_lastReadPage > 0 && !_restored) {
+                                  try {
+                                    await c.setPage(_lastReadPage);
+                                  } catch (_) {}
+                                  _restored = true;
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                        content: Text(
+                                            'لە لاپەڕەی ${_lastReadPage + 1}ەوە بەردەوام بوو — دوا جار ئێرە خوێندرایە'),
+                                        duration:
+                                            const Duration(milliseconds: 1500)));
+                                  }
+                                }
+                              },
+                              onRender: (total) {
+                                if (mounted) {
+                                  setState(() => _pages = total ?? 0);
+                                }
+                              },
+                              onPageChanged: (page, total) {
+                                if (page == null) return;
+                                setState(() { _page = page; });
+                                // Item 7: remember the reading position.
+                                AppPrefs.I.setBookLastPage(widget.url, page);
+                                if (total != null && total > 0 && mounted &&
+                                    _pages != total) {
+                                  setState(() => _pages = total);
+                                }
+                              },
+                              onError: (e) => setState(
+                                  () => _error = 'کردنەوەی فایلەکە سەرکەوتوو نەبوو'),
+                            ),
+                          ]),
       ),
     );
   }

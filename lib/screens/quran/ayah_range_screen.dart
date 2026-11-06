@@ -8,6 +8,7 @@ import '../../core/prefs.dart';
 import '../../core/ui.dart';
 import '../../data/db.dart';
 import '../../data/downloader.dart';
+import 'mushaf_screen.dart';
 import 'open_quran.dart' show toArabicDigits;
 import 'quran_settings_sheet.dart';
 
@@ -467,37 +468,10 @@ class _AyahRangeScreenState extends State<AyahRangeScreen> {
   }
 
   Widget _mushafView(bool dark, Color txt) {
-    final focus = _currentAyah ?? _from;
-    return FutureBuilder<int?>(
-      future: Db.I.ayahPage(((_surah?['soraid'] ?? 1) as num).toInt(), focus),
-      builder: (context, snap) {
-        final page = snap.data;
-        final path = page == null ? null : 'assets/images/mushaf/$page.png';
-        if (path == null) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.menu_book_rounded, size: 44,
-                    color: dark ? AppColors.gold : AppColors.primaryDark),
-                const SizedBox(height: 12),
-                Text('وێنەی لاپەڕەی مەشەف بۆ ئەم ئایەتە بەردەست نییە',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: txt.withOpacity(.7), fontSize: 13)),
-              ]),
-            ),
-          );
-        }
-        return InteractiveViewer(
-          maxScale: 4,
-          child: Center(
-            child: Image.asset(path,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => Text('لاپەڕە $page بارنەبوو',
-                    style: TextStyle(color: txt))),
-          ),
-        );
-      },
-    );
+    // Item 10: the real 604-page mushaf, opened at the current ayah.
+    return MushafScreen(
+        surahId: ((_surah?['soraid'] ?? 1) as num).toInt(),
+        ayah: _currentAyah ?? _from,
+        title: '${_surah?['name'] ?? ''}');
   }
 }

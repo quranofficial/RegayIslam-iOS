@@ -2,12 +2,17 @@ import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
 import '../../data/favorites.dart';
 
 /// Original: NameActivity — the 99 names of Allah (name.db) with
 /// Sorani/Badini/English/Farsi meanings.
+///
+/// Item 6: every name now speaks — the Arabic name is recited with the
+/// device TTS (works offline), the playing name is highlighted, and
+/// "لێدانی هەموو" walks through all 99 names one after another.
 class NameScreen extends StatefulWidget {
   const NameScreen({super.key});
   @override
@@ -18,17 +23,79 @@ class _NameScreenState extends State<NameScreen> {
   List<Map<String, Object?>> _rows = [];
   List<Map<String, Object?>> _filtered = [];
   int? _open;
+  int? _speakingId;
+  bool _playAll = false;
+  final FlutterTts _tts = FlutterTts();
+  bool _ttsReady = false;
 
   @override
   void initState() {
     super.initState();
+    _initTts();
     _load();
+  }
+
+  Future<void> _initTts() async {
+    try {
+      await _tts.setLanguage('ar');
+      await _tts.setSpeechRate(0.42);
+      await _tts.setPitch(1.0);
+      await _tts.setVolume(1.0);
+      await _tts.awaitSpeakCompletion(true);
+      _tts.setCompletionHandler(() {
+        if (mounted) setState(() => _speakingId = null);
+      });
+      if (mounted) setState(() => _ttsReady = true);
+    } catch (_) {}
   }
 
   Future<void> _load() async {
     final rows = await Db.I.names();
     if (!mounted) return;
     setState(() { _rows = rows; _filtered = rows; });
+  }
+
+  Future<void> _speak(Map<String, Object?> r) async {
+    if (!_ttsReady) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('دەنگی ئەم مۆبایلە بەردەست نییە'),
+            duration: Duration(milliseconds: 900)));
+      }
+      return;
+    }
+    final id = (r['_id'] as num?)?.toInt() ?? 0;
+    final text = '${r['highlight_section'] ?? r['arabic'] ?? ''}';
+    try {
+      await _tts.stop();
+      if (mounted) setState(() => _speakingId = id);
+      await _tts.speak(text);
+      // awaitSpeakCompletion(true) resolves when done
+      if (mounted && _speakingId == id) setState(() => _speakingId = null);
+    } catch (_) {
+      if (mounted) setState(() => _speakingId = null);
+    }
+  }
+
+  /// Item 6: recite ALL 99 names one by one with highlight.
+  Future<void> _togglePlayAll() async {
+    if (_playAll) {
+      _playAll = false;
+      await _tts.stop();
+      if (mounted) setState(() => _speakingId = null);
+      return;
+    }
+    _playAll = true;
+    if (mounted) setState(() {});
+    for (final r in _rows) {
+      if (!_playAll || !mounted) break;
+      final id = (r['_id'] as num?)?.toInt() ?? 0;
+      setState(() => _speakingId = id);
+      await _speak(r);
+      await Future.delayed(const Duration(milliseconds: 250));
+    }
+    _playAll = false;
+    if (mounted) setState(() => _speakingId = null);
   }
 
   void _filter(String q) {
@@ -45,6 +112,13 @@ class _NameScreenState extends State<NameScreen> {
   }
 
   @override
+  void dispose() {
+    _playAll = false;
+    try { _tts.stop(); } catch (_) {}
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final dark = !AppPrefs.I.day;
     final txt = dark ? Colors.white : Colors.black;
@@ -57,6 +131,14 @@ class _NameScreenState extends State<NameScreen> {
           title: const Text('ناوەکانی خودای گەورە',
               style: TextStyle(color: Colors.white, fontSize: 17,
                   fontWeight: FontWeight.bold)),
+          actions: [
+            IconButton(
+              tooltip: _playAll ? 'وەستان' : 'لێدانی هەموو ناوەکان',
+              icon: Icon(_playAll ? Icons.stop_circle_rounded : Icons.graphic_eq_rounded,
+                  color: Colors.white),
+              onPressed: _togglePlayAll,
+            ),
+          ],
         ),
         body: Column(children: [
           Padding(
@@ -81,12 +163,19 @@ class _NameScreenState extends State<NameScreen> {
               itemCount: _filtered.length,
               itemBuilder: (context, i) {
                 final r = _filtered[i];
+                final id = (r['_id'] as num?)?.toInt() ?? i + 1;
                 final open = _open == i;
+                final speaking = _speakingId == id;
                 return Card(
-                  color: dark ? AppColors.nightCard : Colors.white,
+                  color: speaking
+                      ? (dark ? AppColors.gold.withOpacity(.18) : const Color(0xFFE8F5E9))
+                      : (dark ? AppColors.nightCard : Colors.white),
                   margin: const EdgeInsets.only(bottom: 8),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
+                      borderRadius: BorderRadius.circular(14),
+                      side: speaking
+                          ? const BorderSide(color: AppColors.gold, width: 1.4)
+                          : BorderSide.none),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(14),
                     onTap: () => setState(() => _open = open ? null : i),
@@ -97,10 +186,12 @@ class _NameScreenState extends State<NameScreen> {
                             Row(children: [
                               CircleAvatar(
                                   radius: 20,
-                                  backgroundColor: dark
-                                      ? AppColors.gold.withOpacity(.15)
-                                      : AppColors.primaryDark.withOpacity(.08),
-                                  child: Text('${(r['_id'] as num?)?.toInt() ?? i + 1}',
+                                  backgroundColor: speaking
+                                      ? AppColors.gold.withOpacity(.3)
+                                      : (dark
+                                          ? AppColors.gold.withOpacity(.15)
+                                          : AppColors.primaryDark.withOpacity(.08)),
+                                  child: Text('${id}',
                                       style: TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.bold,
@@ -113,6 +204,23 @@ class _NameScreenState extends State<NameScreen> {
                                         fontFamily: 'Quran', fontSize: 22, color: txt)),
                               ),
                               const Spacer(),
+                              // Item 6: speak this name.
+                              InkWell(
+                                onTap: () => _speak(r),
+                                borderRadius: BorderRadius.circular(20),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(6),
+                                  child: Icon(
+                                      speaking
+                                          ? Icons.volume_up_rounded
+                                          : Icons.volume_up_outlined,
+                                      size: 26,
+                                      color: speaking
+                                          ? AppColors.gold
+                                          : (dark ? AppColors.gold : AppColors.primaryDark)),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
                               Icon(open
                                   ? Icons.expand_less_rounded
                                   : Icons.expand_more_rounded,
@@ -128,7 +236,8 @@ class _NameScreenState extends State<NameScreen> {
                                 _m('فارسی', '${r['farsi']}', txt, dark),
                               Row(mainAxisAlignment: MainAxisAlignment.end, children: [
                                 FavoriteButton(id: 'allahname::${r['_id'] ?? i}',
-                                  title: '${r['arabic']}', content: '${r['sorani']}'),
+                                  title: '${r['arabic']}', content: '${r['sorani']}',
+                                  route: 'allahname::${r['_id'] ?? i}'),
                                 TextButton.icon(
                                     onPressed: () {
                                       Clipboard.setData(ClipboardData(

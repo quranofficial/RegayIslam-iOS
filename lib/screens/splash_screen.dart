@@ -34,6 +34,7 @@ class _SplashScreenState extends State<SplashScreen> {
     setState(() => _status = 'ڕێکخستنی ئاگادارکردنەوەکان...');
     try {
       await PrayerNotifications.I.init();
+      await PrayerNotifications.warmUp(); // find downloaded adhan voices
       await PrayerNotifications.I.requestPermission();
       await PrayerNotifications.I.scheduleAll();
       await HomeWidgets.updatePrayer();

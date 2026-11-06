@@ -150,9 +150,9 @@ class _VideosScreenState extends State<VideosScreen> {
             'ناردن سەرکەوتوو بوو. چاوەروان بە بەزووترین کات پێداچوونەوە بۆ ڤیدیۆکە ئەکرێ و قبووڵ ئەکرێت.')));
   }
 
-  /// Item 17: a real like — writes the incremented counter back to
-  /// videoNew/<folder>/<key>/like; one like per device, kept in prefs so it
-  /// survives restarts.
+  /// Item 9: a real like — increments the counter in
+  /// videoNew/<folder>/<key>/like, updates the row on screen immediately and
+  /// keeps the per-device "already liked" guard in prefs.
   Future<void> _like(Map<String, dynamic> v) async {
     final id = '${v['id'] ?? ''}';
     final folder = '${v['folder'] ?? ''}';
@@ -163,33 +163,51 @@ class _VideosScreenState extends State<VideosScreen> {
           duration: Duration(milliseconds: 800)));
       return;
     }
+    setState(() => v['like'] = ((int.tryParse('${v['like'] ?? 0}') ?? 0) + 1));
     final next = await Rtdb.I.likeVideo(folder, id, 'like');
-    if (next != null && mounted) {
+    if (!mounted) return;
+    if (next != null) {
       AppPrefs.I.setVideoLiked(id, true);
-      setState(() {});
+      setState(() => v['like'] = next);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('لایک کرا ✅ ($next)'),
+          content: Text('لایک کرا ✅'),
           duration: const Duration(milliseconds: 900)));
+    } else {
+      // rollback on failure
+      setState(() => v['like'] =
+          (int.tryParse('${v['like'] ?? 0}') ?? 1) - 1);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('لایک سەرکەوتوو نەبوو — ئینتەرنێت بپشکنە')));
     }
   }
 
-  /// Item 17: comments always bind to the video's stable id (the push key),
-  /// not the mutable date field, and open straight from the favorites too.
-  void _comments(Map<String, dynamic> v) {
+  /// Item 9: comments bind to the video's stable push key and refresh the
+  /// visible counter as soon as the sheet closes.
+  Future<void> _comments(Map<String, dynamic> v) async {
     final id = '${v['id'] ?? ''}'.trim().isNotEmpty
         ? '${v['id']}'
         : '${v['date'] ?? v['name'] ?? 'video'}';
     final folder = '${v['folder'] ?? ''}';
     final key = '${v['id'] ?? ''}';
-    showModalBottomSheet(
+    await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: AppPrefs.I.day ? Colors.white : AppColors.nightCard,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (c) =>
-          _CommentsSheet(videoId: id, folder: folder, videoKey: key),
+          _CommentsSheet(videoId: id, folder: folder, videoKey: key,
+              onCounted: (n) { if (mounted) setState(() => v['comment'] = n); }),
     );
+    if (!mounted) return;
+    // Re-read the row so like/comment counters reflect the database.
+    final fresh = await Rtdb.I.get('videoNew/$folder/$key');
+    if (fresh is Map && mounted) {
+      setState(() {
+        v['like'] = '${fresh['like'] ?? v['like'] ?? 0}';
+        v['comment'] = '${fresh['comment'] ?? v['comment'] ?? 0}';
+      });
+    }
   }
 
   @override
@@ -356,7 +374,8 @@ class _VideosScreenState extends State<VideosScreen> {
                                 FavoriteButton(
                                     id: 'video::${v['id'] ?? title}',
                                     title: title,
-                                    content: _link(v)),
+                                    content: _link(v),
+                                    route: 'video::${v['id'] ?? title}'),
                                 const Icon(Icons.play_circle_rounded,
                                     size: 30, color: AppColors.primaryDark),
                               ]),
@@ -377,8 +396,10 @@ class _CommentsSheet extends StatefulWidget {
   final String videoId;
   final String folder;
   final String videoKey;
+  final ValueChanged<int>? onCounted;
   const _CommentsSheet(
-      {required this.videoId, this.folder = '', this.videoKey = ''});
+      {required this.videoId, this.folder = '', this.videoKey = '',
+      this.onCounted});
   @override
   State<_CommentsSheet> createState() => _CommentsSheetState();
 }
@@ -401,12 +422,20 @@ class _CommentsSheetState extends State<_CommentsSheet> {
     final v = await Rtdb.I.comments(widget.videoId);
     if (!mounted) return;
     setState(() { _items = v.reversed.toList(); _loading = false; });
+    widget.onCounted?.call(_items.length);
   }
 
   Future<void> _send() async {
     final text = _textC.text.trim();
     final name = _nameC.text.trim();
-    if (text.isEmpty || _sending) return;
+    if (text.isEmpty || _sending) {
+      if (text.isEmpty && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('تکایە سەرنجەکەت بنووسە'),
+            duration: Duration(milliseconds: 800)));
+      }
+      return;
+    }
     setState(() => _sending = true);
     AppPrefs.I.commentName = name;
     final key = 'c-${DateTime.now().millisecondsSinceEpoch}';
@@ -421,12 +450,20 @@ class _CommentsSheetState extends State<_CommentsSheet> {
     });
     _textC.clear();
     setState(() => _sending = false);
-    // Item 17: keep the comment counter on the video row in sync.
+    // Item 9: keep the comment counter on the video row in sync.
+    var counted = _items.length + 1;
     if (widget.folder.isNotEmpty && widget.videoKey.isNotEmpty) {
-      await Rtdb.I.likeVideo(widget.folder, widget.videoKey, 'comment');
+      final n = await Rtdb.I.likeVideo(widget.folder, widget.videoKey, 'comment');
+      if (n != null) counted = n;
     }
+    widget.onCounted?.call(counted);
     await _load();
-    if (mounted) Navigator.of(context, rootNavigator: true).maybePop();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('سەرنجەکەت نێردرا ✅'),
+          duration: Duration(milliseconds: 900)));
+      Navigator.of(context, rootNavigator: true).maybePop();
+    }
   }
 
   @override

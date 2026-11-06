@@ -9,6 +9,8 @@ import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../core/ui.dart' show bottomInset;
 import '../../data/downloader.dart';
+import '../../data/favorites.dart';
+import '../../data/rtdb.dart';
 import '../pdf/pdf_screen.dart';
 
 /// Original: MeoActivity (کتێبخانە) — the book grid comes from the online
@@ -60,6 +62,25 @@ class _KtebScreenState extends State<KtebScreen> {
         rows = _parse(await rootBundle.loadString('assets/data/ktebakan.json'));
       } catch (_) {}
     }
+    // 4) books added by the admin panel live in the "ktebakan" Firebase node
+    try {
+      final extra = await Rtdb.I.list('ktebakan');
+      if (extra.isNotEmpty) {
+        final known = rows.map((b) => '${b['url'] ?? ''}').toSet();
+        for (final b in extra) {
+          final url = '${b['url'] ?? ''}'.trim();
+          if (url.isNotEmpty && !known.contains(url)) {
+            rows.add({
+              'name': '${b['name'] ?? b['title'] ?? 'کتێب'}',
+              'url': url,
+              'image': '${b['image'] ?? ''}',
+              'admin': '${b['admin'] ?? b['author'] ?? ''}',
+              'about': '${b['about'] ?? ''}',
+            });
+          }
+        }
+      }
+    } catch (_) {}
     final downloaded = <String>{};
     for (final b in rows) {
       final url = '${b['url'] ?? ''}'.trim();
@@ -125,7 +146,7 @@ class _KtebScreenState extends State<KtebScreen> {
   void _openBook(Map<String, dynamic> b) async {
     final url = '${b['url'] ?? ''}'.trim();
     await Navigator.push(context, MaterialPageRoute(
-        builder: (_) => _BookDetailScreen(
+        builder: (_) => BookDetailScreen(
             book: b, url: url, downloaded: _downloadedUrls.contains(url))));
     if (mounted) {
       final cached = AppPrefs.I.pdfCachePath(url);
@@ -344,18 +365,19 @@ class _KtebScreenState extends State<KtebScreen> {
 
 /// Original: BookActivity — book detail (ناوی کتێب / کورتە / نوسەر) with the
 /// خوێندنەوەی کتێب button opening the PDF reader and a داگرتن button that
-/// stores the book for offline reading.
-class _BookDetailScreen extends StatefulWidget {
+/// stores the book for offline reading. Public so the wishlist can jump
+/// straight back to a saved book (item 11).
+class BookDetailScreen extends StatefulWidget {
   final Map<String, dynamic> book;
   final String url;
   final bool downloaded;
-  const _BookDetailScreen(
-      {required this.book, required this.url, this.downloaded = false});
+  const BookDetailScreen(
+      {super.key, required this.book, required this.url, this.downloaded = false});
   @override
-  State<_BookDetailScreen> createState() => _BookDetailScreenState();
+  State<BookDetailScreen> createState() => _BookDetailScreenState();
 }
 
-class _BookDetailScreenState extends State<_BookDetailScreen> {
+class _BookDetailScreenState extends State<BookDetailScreen> {
   bool _downloading = false;
   int _progress = 0;
   bool _downloaded = false;
@@ -406,6 +428,12 @@ class _BookDetailScreenState extends State<_BookDetailScreen> {
               style: const TextStyle(color: Colors.white, fontSize: 16,
                   fontWeight: FontWeight.bold)),
           actions: [
+            FavoriteButton(
+                id: 'book::${widget.book['name'] ?? 'کتێب'}::${widget.url}',
+                title: '${b['name'] ?? 'کتێب'}',
+                content: widget.url,
+                route: 'book::${widget.book['name'] ?? 'کتێب'}::${widget.url}',
+                color: Colors.white),
             IconButton(
                 onPressed: () => Share.share(
                     '${b['name'] ?? ''}\n${b['url'] ?? ''}\n\n#ڕێگای ئیسلام'),

@@ -34,7 +34,7 @@ class _LiveScreenState extends State<LiveScreen> {
 
   void _open(Map<String, dynamic> s) {
     final link = '${s['url'] ?? s['link'] ?? s['video'] ?? s['stream'] ?? ''}'.trim();
-    final title = '${s['name'] ?? s['title'] ?? 'پەخشی ڕاستەوخۆ'}';
+    final title = _channelName(s);
     if (link.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لینکی پەخش لە Firebase نییە')));
       return;
@@ -52,6 +52,15 @@ class _LiveScreenState extends State<LiveScreen> {
       Navigator.push(context, MaterialPageRoute(
           builder: (_) => VideoPlayerScreen(title: title, url: link)));
     }
+  }
+
+  /// Item 2: every channel always carries a visible name — when the DB has
+  /// no name the channel is labeled "کەناڵی ١", "کەناڵی ٢", ... in order.
+  String _channelName(Map<String, dynamic> s) {
+    final n = '${s['name'] ?? s['title'] ?? ''}'.trim();
+    if (n.isNotEmpty) return n;
+    final i = _streams.indexOf(s) + 1;
+    return 'کەناڵی $i';
   }
 
   @override
@@ -94,12 +103,19 @@ class _LiveScreenState extends State<LiveScreen> {
                                     : const Icon(Icons.wifi_tethering_rounded,
                                         color: Colors.white)),
                             title: Text(
-                                '${s['name'] ?? s['title'] ?? 'پەخش'}',
+                                _channelName(s),
                                 style: TextStyle(fontWeight: FontWeight.bold,
                                     color: txt)),
+                            subtitle: Text(
+                                'پەخشی ڕاستەوخۆ — کلیک بکە بۆ بینین',
+                                style: TextStyle(fontSize: 11,
+                                    color: txt.withOpacity(.5))),
                             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                              FavoriteButton(id: 'live::${s['url'] ?? s['name'] ?? 'live_stream'}',
-                                title: '${s['name'] ?? s['title'] ?? 'پەخش'}', content: '${s['url'] ?? s['link'] ?? ''}'),
+                              FavoriteButton(
+                                  id: 'live::${s['url'] ?? s['name'] ?? 'live_stream'}',
+                                  title: _channelName(s),
+                                  content: '${s['url'] ?? s['link'] ?? ''}',
+                                  route: 'live::${s['url'] ?? s['name'] ?? 'live_stream'}'),
                               const Icon(Icons.play_circle_rounded,
                                 color: Color(0xFFD32F2F), size: 30),
                             ]),

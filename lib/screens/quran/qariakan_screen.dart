@@ -216,6 +216,12 @@ class _QariakanScreenState extends State<QariakanScreen> {
     }
   }
 
+  /// Item 10: avatar image of a reciter bundled under assets/images/qari.
+  ImageProvider? _qariAvatar(int? id) {
+    if (id == null || id < 1 || id > 81) return null;
+    return AssetImage('assets/images/qari/$id.png');
+  }
+
   @override
   void dispose() {
     _player.dispose();
@@ -263,9 +269,13 @@ class _QariakanScreenState extends State<QariakanScreen> {
                               backgroundColor: (_selected == (r['id'] is int ? r['id'] : int.tryParse('${r['id']}')))
                                   ? AppColors.primaryDark
                                   : Colors.grey.shade300,
-                              child: Icon(Icons.mic_rounded,
-                                  color: (_selected == (r['id'] is int ? r['id'] : int.tryParse('${r['id']}')))
-                                      ? Colors.white : Colors.black45)),
+                              // Item 10: real reciter avatars (assets/images/qari/<id>.png).
+                              backgroundImage: _qariAvatar(int.tryParse('${r['id'] ?? 0}')),
+                              child: _qariAvatar(int.tryParse('${r['id'] ?? 0}')) == null
+                                  ? Icon(Icons.mic_rounded,
+                                      color: (_selected == (r['id'] is int ? r['id'] : int.tryParse('${r['id']}')))
+                                          ? Colors.white : Colors.black45)
+                                  : null),
                           title: Text('${r['name_ar'] ?? ''}',
                               style: TextStyle(fontWeight: FontWeight.bold, color: txt)),
                           subtitle: r['doxx'] == 'true'
@@ -275,7 +285,8 @@ class _QariakanScreenState extends State<QariakanScreen> {
                           trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                             FavoriteButton(id: 'reciter::${r['id']}',
                               title: '${r['name_ar'] ?? 'قاری'}',
-                              content: 'دەنگی قورئان — ${r['name_ar'] ?? ''}'),
+                              content: 'دەنگی قورئان — ${r['name_ar'] ?? ''}',
+                              route: 'reciter::${r['id']}'),
                             FutureBuilder<File>(
                               future: _audioFile(r),
                               builder: (context, fileSnap) {

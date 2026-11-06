@@ -3,9 +3,11 @@ import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../core/ui.dart' show bottomInset, sharePage, suraLabel;
 import '../../data/db.dart';
+import '../../data/favorites.dart';
+import 'mushaf_screen.dart';
 import 'open_quran.dart' show OpenQuranScreen, toArabicDigits;
 import 'quran_search_screen.dart';
-import 'quran_editor_screen.dart';
+import 'quran_studio_screen.dart';
 
 /// Original: QurannFragmentActivity — surah list with live search filter.
 /// Item 3: the Quran can also be browsed by جوزئی (پارە) — 30 parts, each
@@ -87,10 +89,15 @@ class _QuranTabState extends State<QuranTab> {
               style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           actions: [
             IconButton(
+                tooltip: 'مەشەف',
+                icon: const Icon(Icons.menu_book_rounded, color: Colors.white),
+                onPressed: () => Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => const MushafScreen()))),
+            IconButton(
                 tooltip: 'ئیدیتی قورئان',
                 icon: const Icon(Icons.edit_note_rounded, color: Colors.white),
                 onPressed: () => Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => const QuranEditorScreen()))),
+                    builder: (_) => const QuranStudioScreen()))),
             IconButton(
                 tooltip: 'گەڕان لە ناو ئایەتەکان',
                 icon: const Icon(Icons.travel_explore_rounded, color: Colors.white),
@@ -197,8 +204,17 @@ class _QuranTabState extends State<QuranTab> {
                                     '${toArabicDigits(int.tryParse('${s['aya']}') ?? 0)} ئایەت • ${s['place']} • ${s['juz']}',
                                     style: TextStyle(
                                         fontSize: 12, color: txt.withOpacity(.6))),
-                                trailing: Icon(Icons.chevron_left,
-                                    color: txt.withOpacity(.4)),
+                                trailing: Row(mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      FavoriteButton(
+                                        id: 'surah::$num',
+                                        title: suraLabel('${s['name']}'),
+                                        content: '${s['place']} • ${s['juz']}',
+                                        route: 'surah::$num',
+                                        iconSize: 20),
+                                      Icon(Icons.chevron_left,
+                                          color: txt.withOpacity(.4)),
+                                    ]),
                               ),
                             );
                           },

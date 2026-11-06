@@ -209,7 +209,7 @@ class _SettingTabState extends State<SettingTab> {
                   style: TextStyle(fontSize: 14, color: txt)),
               trailing: const Icon(Icons.chevron_left),
               onTap: () => _openAdmin(context)),
-          Center(child: Text('ڕێگای ئیسلام — v70.1',
+          Center(child: Text('ڕێگای ئیسلام — v70.2',
               style: TextStyle(fontSize: 12, color: txt.withOpacity(.4)))),
           const SizedBox(height: 20),
         ]),

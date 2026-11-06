@@ -211,6 +211,30 @@ class AppPrefs {
   String get widgetAyahDay => _p.getString('widgetAyahDay') ?? '';
   set widgetAyahDay(String v) => _p.setString('widgetAyahDay', v);
 
+  // --- smart daily ayah: the banner changes once per calendar day ---
+  String get ayahDay => _p.getString('ayahDay') ?? '';
+  set ayahDay(String v) => _p.setString('ayahDay', v);
+
+  // --- Quran reader custom colors (studio editor). 0 = follow theme ---
+  int get quranTextColor => _p.getInt('quranTextColor') ?? 0;
+  set quranTextColor(int v) => _p.setInt('quranTextColor', v);
+  int get quranBgColor => _p.getInt('quranBgColor') ?? 0;
+  set quranBgColor(int v) => _p.setInt('quranBgColor', v);
+
+  // --- admin panel: saved GitHub token so it is entered only once ---
+  String get adminGhToken => _p.getString('admin_gh_token') ?? '';
+  set adminGhToken(String v) => _p.setString('admin_gh_token', v);
+
+  // --- books: last read page per book url (reading history) ---
+  int bookLastPage(String url) => _p.getInt('bookpage_$url') ?? 0;
+  void setBookLastPage(String url, int page) {
+    if (page > 0) _p.setInt('bookpage_$url', page);
+  }
+
+  // --- last mushaf page the user was reading ---
+  int get mushafLastPage => _p.getInt('mushafLastPage') ?? 0;
+  set mushafLastPage(int v) => _p.setInt('mushafLastPage', v);
+
   ThemeData get theme => ThemeData(
         brightness: day ? Brightness.light : Brightness.dark,
         colorScheme: ColorScheme.fromSeed(

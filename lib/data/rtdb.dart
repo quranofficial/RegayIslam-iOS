@@ -80,6 +80,17 @@ class Rtdb {
     return out;
   }
 
+  /// Remove a whole node (Firebase REST DELETE) — used by the admin panel.
+  Future<bool> delete(String path) async {
+    try {
+      final r = await http.delete(Uri.parse('$base/$path.json'))
+          .timeout(const Duration(seconds: 12));
+      return r.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> push(String path, Map<String, dynamic> data) async {
     try {
       await http

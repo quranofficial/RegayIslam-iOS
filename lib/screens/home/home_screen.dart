@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/ui.dart';
 import 'home_reorder_screen.dart';
-import '../quran/quran_creator_screen.dart';
+import '../quran/quran_studio_screen.dart';
 import '../quran/ayah_range_screen.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
@@ -18,7 +18,6 @@ import '../media/live_screen.dart';
 import '../media/videos_screen.dart';
 import '../quran/ayat_screen.dart';
 import '../quran/ayatul_kursi_screen.dart';
-import '../quran/quran_editor_screen.dart';
 import '../quran/name_screen.dart';
 import '../quran/qariakan_screen.dart';
 import '../quran/quran_search_screen.dart';
@@ -78,28 +77,42 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadBannerAyah();
   }
 
-  /// Daily ayah for the home banner: deterministic day-of-year pick, and
-  /// every tap loads the next random one (item 5).
+  /// Smart daily ayah (item 1): the banner picks ONE ayah per calendar day
+  /// and keeps it the whole day — opening the app again or re-tapping the
+  /// card never shuffles it. The pick stays in sync with the home widget.
   Future<void> _loadBannerAyah() async {
     try {
-      final sura = Random(DateTime.now().day).nextInt(114) + 1;
-      final pool = await Db.I.ayat(sura, AppPrefs.I.tafsir);
-      if (pool.isEmpty || !mounted) return;
+      final now = DateTime.now();
+      final dayKey = '${now.year}-${now.month}-${now.day}';
       final seed = AppPrefs.I.ayahBannerSeed;
-      final idx = seed >= 0 && seed < pool.length ? seed : Random(DateTime.now().day).nextInt(pool.length);
+      final sameDay = AppPrefs.I.ayahDay == dayKey && seed >= 0;
+      if (!sameDay) {
+        final sura = Random(now.day * 31 + now.month).nextInt(114) + 1;
+        final pool = await Db.I.ayat(sura, AppPrefs.I.tafsir);
+        if (pool.isEmpty || !mounted) return;
+        final idx = Random(now.day * 31 + now.month).nextInt(pool.length);
+        setState(() { _bannerPool = pool; _bannerAyah = pool[idx]; });
+        AppPrefs.I.ayahDay = dayKey;
+        AppPrefs.I.ayahBannerSeed = idx;
+        HomeWidgets.updateAyah(
+          text: '${pool[idx]['text'] ?? ''}',
+          reference:
+              '${pool[idx]['sura_name_ar'] ?? ''} — ئایەتی ${pool[idx]['ayah'] ?? ''}');
+        return;
+      }
+      // Same day: show exactly the ayah saved for today (no re-shuffle).
+      final saved = _bannerAyah;
+      if (saved != null) return;
+      final sura = Random(now.day * 31 + now.month).nextInt(114) + 1;
+      final pool = _bannerPool ?? await Db.I.ayat(sura, AppPrefs.I.tafsir);
+      if (pool.isEmpty || !mounted) return;
+      final idx = seed < pool.length ? seed : 0;
       setState(() { _bannerPool = pool; _bannerAyah = pool[idx]; });
       HomeWidgets.updateAyah(
         text: '${pool[idx]['text'] ?? ''}',
-        reference: '${pool[idx]['sura_name_ar'] ?? ''} — ئایەتی ${pool[idx]['ayah'] ?? ''}');
+        reference:
+            '${pool[idx]['sura_name_ar'] ?? ''} — ئایەتی ${pool[idx]['ayah'] ?? ''}');
     } catch (_) {}
-  }
-
-  void _nextBannerAyah() {
-    final pool = _bannerPool;
-    if (pool == null || pool.length < 2) return;
-    final idx = Random().nextInt(pool.length);
-    AppPrefs.I.ayahBannerSeed = idx;
-    setState(() => _bannerAyah = pool[idx]);
   }
 
   void _openReorder() {
@@ -134,6 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
               title: 'پەخشی ڕاستەوخۆ',
               sub: _live.isEmpty ? 'Live' : '${_live.length} کەناڵ بەردەستە',
               color: const Color(0xFFD32F2F),
+              favId: 'section::پەخشی ڕاستەوخۆ',
               onTap: () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const LiveScreen()))),
           const SizedBox(height: 10),
@@ -182,9 +196,8 @@ class _HomeScreenState extends State<HomeScreen> {
         : '${r['text'] ?? ''}';
     return InkWell(
         borderRadius: BorderRadius.circular(16),
-        onLongPress: () => Navigator.push(context,
+        onTap: () => Navigator.push(context,
             MaterialPageRoute(builder: (_) => const AyatScreen())),
-        onTap: _nextBannerAyah,
         child: Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -219,7 +232,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: const Icon(Icons.add_circle_outline_rounded,
                         color: Colors.white70, size: 19)),
                 const SizedBox(width: 4),
-                const Icon(Icons.refresh_rounded, color: Colors.white70, size: 18),
+                const Icon(Icons.lock_clock_rounded, color: Colors.white54, size: 16),
                 const SizedBox(width: 6),
                 const Icon(Icons.chevron_left, color: Colors.white70, size: 18),
               ]),
@@ -236,6 +249,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     id: 'daily_ayah::${r['suraId'] ?? ''}::${r['ayah'] ?? ''}',
                     title: '${suraLabel('${r['sura_name_ar'] ?? ''}')} • ئایەتی ${r['ayah'] ?? ''}',
                     content: '${r['text'] ?? ''}\n\n${r[AppPrefs.I.tafsir] ?? ''}',
+                    route: 'daily_ayah::${r['suraId'] ?? ''}',
                     color: Colors.white70),
                   IconButton(visualDensity: VisualDensity.compact,
                     tooltip: 'هاوبەشی',
@@ -272,7 +286,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _banner({required IconData icon, required String title,
-      required String sub, required Color color, required VoidCallback onTap}) =>
+      required String sub, required Color color, required VoidCallback onTap,
+      String? favId}) =>
       InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: onTap,
@@ -292,6 +307,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(sub, style: TextStyle(color: Colors.white.withOpacity(.8), fontSize: 12)),
                 ]),
                 const Spacer(),
+                if (favId != null)
+                  FavoriteButton(
+                      id: favId,
+                      title: title,
+                      content: 'بەشی $title لە ئەپی ڕێگای ئیسلام',
+                      route: favId,
+                      color: Colors.white70,
+                      iconSize: 20),
                 const Icon(Icons.chevron_left, color: Colors.white),
               ])));
 
@@ -316,6 +339,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: TextStyle(color: Colors.white.withOpacity(.85), fontSize: 12)),
             ])),
             const Icon(Icons.chevron_left, color: Colors.white70),
+            FavoriteButton(
+                id: 'section::مانگی ڕەمەزان',
+                title: 'مانگی ڕەمەزان',
+                content: 'بەشی مانگی ڕەمەزان لە ئەپی ڕێگای ئیسلام',
+                route: 'section::مانگی ڕەمەزان',
+                color: Colors.white70,
+                iconSize: 20),
           ])));
 
   Widget _fridayBanner(Color card, Color txt, bool dark) => InkWell(
@@ -349,6 +379,13 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ])),
             const Icon(Icons.chevron_left, color: Colors.white70),
+            FavoriteButton(
+                id: 'friday',
+                title: 'ڕۆژی هەینی',
+                content: 'سونەتەکانی ڕۆژی هەینی و سەڵاوات',
+                route: 'friday',
+                color: Colors.white70,
+                iconSize: 20),
           ])));
 
   Widget _tasbihCard(Color card, Color txt, bool dark) => InkWell(
@@ -373,6 +410,12 @@ class _HomeScreenState extends State<HomeScreen> {
               Text('ژماردنی زیکر و تەسبیحات', style: TextStyle(fontSize: 12, color: txt.withOpacity(.6))),
             ]),
             const Spacer(),
+            FavoriteButton(
+                id: 'section::تەسبیح',
+                title: 'تەسبیح',
+                content: 'بەشی تەسبیح لە ئەپی ڕێگای ئیسلام',
+                route: 'section::تەسبیح',
+                iconSize: 20),
             const Icon(Icons.chevron_left),
           ])));
 
@@ -395,6 +438,12 @@ class _HomeScreenState extends State<HomeScreen> {
               const Spacer(),
               Text(AppPrefs.I.cityName,
                   style: TextStyle(fontSize: 13, color: txt.withOpacity(.6))),
+              FavoriteButton(
+                  id: 'section::کاتەکانی بانگ',
+                  title: 'کاتەکانی بانگ',
+                  content: 'کاتەکانی نوێژ و بانگ لە ${AppPrefs.I.cityName}',
+                  route: 'section::کاتەکانی بانگ',
+                  iconSize: 20),
             ]),
             const SizedBox(height: 10),
             if (_timesError)
@@ -428,7 +477,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _G('دڵخوازەکان', Icons.bookmarks_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesScreen()))),
       _G('ئیدیتی قورئان', Icons.edit_note_rounded,
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuranEditorScreen()))),
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuranStudioScreen()))),
       _G('نوێژکردن', Icons.mosque_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NwezhHubScreen()))),
       _G('ناوەکانی خودای گەورە', Icons.badge_rounded,
@@ -439,8 +488,8 @@ class _HomeScreenState extends State<HomeScreen> {
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuestionScreen()))),
       _G('ڤیدیۆی ئاینی', Icons.ondemand_video_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VideosScreen()))),
-      _G('تاوانەکانم', Icons.warning_amber_rounded,
-          () => _openJson('assets/data/tawanakan.json', 'تاوانەگەورەکان')),
+      _G('تاوەنە گەورەکان', Icons.warning_amber_rounded,
+          () => _openJson('assets/data/tawanakan.json', 'تاوەنە گەورەکان')),
       _G('کتێبخانە', Icons.local_library_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KtebScreen()))),
       _G('ڕوقیەی شەرعی', Icons.healing_rounded,
@@ -504,7 +553,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _G('خوێندنی ئایەتەکان', Icons.surround_sound_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AyahRangeScreen()))),
       _G('دروستکردنی ڤیدیۆ و وێنە', Icons.movie_creation_rounded,
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuranCreatorScreen()))),
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuranStudioScreen()))),
       _G('ڕێکخستنی بەشەکان', Icons.swap_vert_rounded, _openReorder),
     ], dark, card, txt);
     return GridView.count(
@@ -540,7 +589,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       Positioned(top: -8, left: -8,
                         child: FavoriteButton(id: 'section::${g.label}',
                           title: names[g.label] ?? g.label,
-                          content: 'بەشی ${names[g.label] ?? g.label} لە ئەپی ڕێگای ئیسلام')),
+                          content: 'بەشی ${names[g.label] ?? g.label} لە ئەپی ڕێگای ئیسلام',
+                          route: 'section::${g.label}',
+                          iconSize: 18)),
                     ]))),
         ]);
   }
