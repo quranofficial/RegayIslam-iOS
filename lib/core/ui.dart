@@ -11,9 +11,9 @@ const String kAppUrl = 'https://linkakam.com/Regayislam';
 const String kRepoUrl = 'https://github.com/quranofficial/RegayIslam-iOS';
 /// Item 6: the GitHub raw bases that replace the un-usable store links —
 /// reciter audio, books (PDFs) and the databases are served from GitHub.
-const String kQariRepoUrl = 'https://github.com/quranofficial/RegayIslam-iOS';
-const String kBooksUrl = 'https://github.com/quranofficial/RegayIslam-iOS';
-const String kDatabaseUrl = 'https://github.com/quranofficial/RegayIslam-iOS';
+const String kQariRepoUrl = 'https://github.com/Hiwaselah/audio003';
+const String kBooksUrl = 'https://github.com/quranofficial/ktebakan';
+const String kDatabaseUrl = 'https://github.com/quranofficial/RegayIslam-iOS/tree/main/assets/db';
 
 /// The original DB already writes some sura names as "سوڕەتی الفاتحة", so
 /// composing "سوڕەتی $name" produced "سوڕەتی سوڕەتی الفاتحة". Strip the
@@ -27,6 +27,19 @@ String suraLabel(String name) {
 }
 
 /// Share helper used by every screen: title + body + app link.
+/// Share the app's verified public destinations, keeping the app URL
+/// separate from the source code, reciter audio, book catalogue and DB files.
+Future<void> shareApp() async {
+  final text = 'ڕێگای ئیسلام — قورئان، کاتەکانی نوێژ، قیبلە و زیکر\n\n'
+      'وێبسایتی ئەپ: $kAppUrl\n'
+      'سەرچاوەی GitHub: $kRepoUrl\n'
+      'دەنگی قارئان: $kQariRepoUrl\n'
+      'کتێبەکان: $kBooksUrl\n'
+      'داتابەیس: $kDatabaseUrl\n'
+      '#ڕێگای_ئیسلام';
+  await Share.share(text);
+}
+
 Future<void> sharePage(String body, {String? title}) async {
   final head = (title == null || title.isEmpty) ? '' : '$title\n\n';
   final text = '$head$body\n\n'
