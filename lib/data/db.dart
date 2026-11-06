@@ -1,8 +1,10 @@
 import 'dart:convert';
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'db_factory_stub.dart'
+    if (dart.library.html) 'db_factory_web.dart' as platform_db;
 
 /// Port of MydbClass.java — copies the bundled SQLite databases from assets
 /// to the app documents directory on first run and exposes typed queries.
@@ -21,19 +23,29 @@ class Db {
   Database? _ramazanew; // ramazanew.db
   Database? _info; // ayah_info.db   (mushaf glyph layout: ayah -> page)
 
+  Future<String> _databasePath(String file) async {
+    // Browser SQLite stores its virtual files in IndexedDB, so it uses a
+    // stable logical filename rather than a device filesystem path.
+    if (kIsWeb) return file;
+    return join(await getDatabasesPath(), file);
+  }
+
   Future<Database> _open(String file) async {
-    final dir = await getDatabasesPath();
-    final path = join(dir, file);
-    if (!await File(path).exists()) {
+    final path = await _databasePath(file);
+    if (!await databaseFactory.databaseExists(path)) {
       final data = await rootBundle.load('assets/db/$file');
       final bytes = data.buffer.asUint8List(
           data.offsetInBytes, data.lengthInBytes);
-      await File(path).writeAsBytes(bytes, flush: true);
+      await databaseFactory.writeDatabaseBytes(path, bytes);
     }
-    return openDatabase(path, readOnly: true);
+    return databaseFactory.openDatabase(
+      path,
+      options: const OpenDatabaseOptions(readOnly: true),
+    );
   }
 
   Future<void> init() async {
+    platform_db.configureDatabaseFactory();
     _quran = await _open('regayislam.db');
     _surat = await _open('surat.db');
     _times = await _open('time2.db');
@@ -95,16 +107,18 @@ class Db {
   /// Recitation timings db for a reciter id (assets/db/<id>.db).
   Future<Map<String, int>> timings(String reciterId) async {
     final f = '${reciterId.replaceAll(RegExp(r'[^0-9]'), '')}.db';
-    final dir = await getDatabasesPath();
-    final path = join(dir, f);
+    final path = await _databasePath(f);
     try {
-      if (!await File(path).exists()) {
+      if (!await databaseFactory.databaseExists(path)) {
         final data = await rootBundle.load('assets/db/$f');
         final bytes =
             data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-        await File(path).writeAsBytes(bytes, flush: true);
+        await databaseFactory.writeDatabaseBytes(path, bytes);
       }
-      final db = await openDatabase(path, readOnly: true);
+      final db = await databaseFactory.openDatabase(
+        path,
+        options: const OpenDatabaseOptions(readOnly: true),
+      );
       final rows = await db.query('timings');
       final out = <String, int>{};
       for (final r in rows) {
