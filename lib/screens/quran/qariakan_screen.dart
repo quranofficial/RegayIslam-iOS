@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -131,6 +132,7 @@ class _QariakanScreenState extends State<QariakanScreen> {
   }
 
   Future<void> _download(Map<String, dynamic> r) async {
+    if (kIsWeb) return; // Browser playback streams audio; native file downloads are mobile-only.
     final id = '${r['id'] ?? r['name_ar'] ?? ''}';
     if (_downloadingId != null) return;
     setState(() => _downloadingId = id);
@@ -169,17 +171,22 @@ class _QariakanScreenState extends State<QariakanScreen> {
       AppPrefs.I.qariUrl = '${r['url'] ?? ''}'
           .replaceFirst(RegExp(r'^http://', caseSensitive: false), 'https://');
       await _player.stop();
-      final local = await _audioFile(r);
-      if (await local.exists() && await local.length() > 0) {
-        await _player.play(DeviceFileSource(local.path));
+      if (kIsWeb) {
+        // Browser cannot use path_provider / DeviceFileSource; stream directly.
+        await _player.play(UrlSource(Downloader.httpsify(url)));
       } else {
-        try {
-          await _player.play(UrlSource(Downloader.httpsify(url)));
-        } catch (_) {
-          // streaming refused — download then play, like PRDownloader
-          setState(() => _downloadingId = '${r['id'] ?? ''}');
-          await _fetchToFile(r);
+        final local = await _audioFile(r);
+        if (await local.exists() && await local.length() > 0) {
           await _player.play(DeviceFileSource(local.path));
+        } else {
+          try {
+            await _player.play(UrlSource(Downloader.httpsify(url)));
+          } catch (_) {
+            // Native fallback: download then play from the offline cache.
+            setState(() => _downloadingId = '${r['id'] ?? ''}');
+            await _fetchToFile(r);
+            await _player.play(DeviceFileSource(local.path));
+          }
         }
       }
       setState(() => _selected = rid);
@@ -198,7 +205,7 @@ class _QariakanScreenState extends State<QariakanScreen> {
   /// Item 18: "داگرتنی هەموو سوورەتەکان" — batch-download all surahs of one
   /// reciter into the offline cache with progress + cancel.
   Future<void> _downloadAll(Map<String, dynamic> r) async {
-    if (_downloadingId != null) return;
+    if (kIsWeb || _downloadingId != null) return;
     final name = '${r['name_ar'] ?? 'قاری'}'.trim();
     final done = ValueNotifier<int>(0);
     final failed = ValueNotifier<int>(0);
@@ -363,7 +370,7 @@ class _QariakanScreenState extends State<QariakanScreen> {
                               title: '${r['name_ar'] ?? 'قاری'}',
                               content: 'دەنگی قورئان — ${r['name_ar'] ?? ''}',
                               route: 'reciter::${r['id']}'),
-                            FutureBuilder<File>(
+                            if (!kIsWeb) FutureBuilder<File>(
                               future: _audioFile(r),
                               builder: (context, fileSnap) {
                                 final downloaded = fileSnap.hasData && fileSnap.data!.existsSync();
@@ -377,7 +384,7 @@ class _QariakanScreenState extends State<QariakanScreen> {
                                     color: AppColors.primaryDark));
                               },
                             ),
-                            IconButton(
+                            if (!kIsWeb) IconButton(
                               tooltip: 'داگرتنی هەموو سوورەتەکانی ئەم قارییە',
                               onPressed: _downloadingId != null
                                   ? null
