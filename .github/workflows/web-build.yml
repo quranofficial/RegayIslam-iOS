@@ -32,6 +32,8 @@ jobs:
 
       - name: Resolve dependencies
         run: flutter pub get
+      - name: Run unit tests
+        run: flutter test --reporter expanded
 
       - name: Prepare SQLite WebAssembly worker
         run: dart run sqflite_common_ffi_web:setup
