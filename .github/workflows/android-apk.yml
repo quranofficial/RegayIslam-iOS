@@ -31,6 +31,8 @@ jobs:
 
       - name: Get Flutter packages
         run: flutter pub get
+      - name: Run unit tests
+        run: flutter test --reporter expanded
 
       - name: Generate Android platform
         run: flutter create --platforms=android --org com.nwezhakanm --project-name regayislam .
