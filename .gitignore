@@ -1,3 +1,18 @@
-
-.dart_tool/
 .idea/
+
+# Flutter / Dart generated output
+/build/
+/.dart_tool/
+/.flutter-plugins
+/.flutter-plugins-dependencies
+/.packages
+/coverage/
+
+# Platform-generated caches and local configuration
+/android/.gradle/
+/android/local.properties
+/ios/Pods/
+/ios/.symlinks/
+/ios/Flutter/ephemeral/
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/flutter_export_environment.sh
