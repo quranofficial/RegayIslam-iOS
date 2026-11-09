@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/rtdb.dart';
@@ -32,7 +34,7 @@ class _LiveScreenState extends State<LiveScreen> {
     setState(() { _streams = l; _loading = false; _error = l.isEmpty ? 'پەخشێک بەردەست نییە — دواتر دووبارە هەوڵبدەرەوە' : null; });
   }
 
-  void _open(Map<String, dynamic> s) {
+  Future<void> _open(Map<String, dynamic> s) async {
     final link = '${s['url'] ?? s['link'] ?? s['video'] ?? s['stream'] ?? ''}'.trim();
     final title = _channelName(s);
     if (link.isEmpty) {
@@ -45,11 +47,26 @@ class _LiveScreenState extends State<LiveScreen> {
       return;
     }
     final yt = link.contains('youtube.com') || link.contains('youtu.be');
+    if (yt && kIsWeb) {
+      // webview_flutter has no browser-hosted WebView implementation here.
+      // Open YouTube directly from the user's tap instead of pushing a
+      // native-only WebView route that cannot play in the web build.
+      var opened = false;
+      try {
+        opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } catch (_) {}
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('نەتوانرا پەخشی YouTube بکرێتەوە')),
+        );
+      }
+      return;
+    }
     if (yt) {
-      Navigator.push(context, MaterialPageRoute(
+      await Navigator.push(context, MaterialPageRoute(
           builder: (_) => WebViewScreen(title: title, url: link)));
     } else {
-      Navigator.push(context, MaterialPageRoute(
+      await Navigator.push(context, MaterialPageRoute(
           builder: (_) => VideoPlayerScreen(title: title, url: link)));
     }
   }
