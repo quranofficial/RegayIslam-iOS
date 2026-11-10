@@ -404,7 +404,8 @@ route(/^#\/qari$/,async(m,v)=>{
   setTitle('دەنگی قورئان');
   v.innerHTML='<div class="spinner" style="margin-top:40px"></div>';
   let data=[];try{data=await J(RAWD+'dangakan.json',{ttl:24*3600e3})}catch(e){}
-  window._qaris=data.filter(q=>q.url);
+  // mirror the app: ONLY doxx=true reciters (audio + timings ready)
+  window._qaris=data.filter(q=>q.url&&String(q.doxx||'').toLowerCase()==='true');
   v.innerHTML=`<div class="appbar2"><span class="msr">graphic_eq</span><h1>دەنگی قورئان (${ku(window._qaris.length)} قارئ)</h1></div>
     <div class="vgrid" style="grid-template-columns:repeat(auto-fill,minmax(100px,1fr))">
     ${window._qaris.map((q,i)=>`<button class="qari" onclick="qariSurahs(${i})">

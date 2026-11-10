@@ -74,7 +74,7 @@ route(/^#\/video\/([^/]+)\/([^/]+)$/,async(m,v)=>{
     <div class="pctrls">
       <button class="btn ${liked?'':'gold'}" id="likeBtn" onclick="vidLike('${esc(tag)}','${key}',${x.like||0})">
         <span class="msr">favorite</span>${ku((x.like||0)+(liked?1:0))}</button>
-      <button class="btn" onclick="vidComments('${esc(tag)}','${key}','${esc(x.name||'')}')">
+      <button class="btn" onclick="vidComments('${esc(tag)}','${key}','${esc(x.name||'')}','${esc(String(x.date||key))}')">
         <span class="msr">chat_bubble</span>سەرنجەکان ${ku(x.comment||0)}</button>
       <button class="btn ghost" onclick="shareText('${esc(x.name||'')}\n${esc(x.url||'')}\n\n#ڕێگای_ئیسلام')"><span class="msr">share</span></button>
     </div>
@@ -107,23 +107,35 @@ async function vidLike(tag,key,cur){
     }
   }catch(e){toast('نەکرا — دووبارە هەوڵبدەرەوە');}
 }
-async function vidComments(tag,key,name){
+// comments live in CommentVideo/<video.date> (the bucket the original app
+// and admin use) — the push-key bucket is read too so nothing is lost,
+// and every NEW comment is written to the canonical bucket.
+function vidBucket(tag,key){return key;}
+async function vidComments(tag,key,name,vid){
+  vid=vid||key;
   openSheet(`<h3><span class="msr">chat_bubble</span>سەرنجەکان — ${esc(name)}</h3><div id="cmList"><div class="spinner"></div></div>
     <div style="display:flex;gap:8px;margin-top:12px">
       <input id="cmTxt" placeholder="سەرنجەکەت بنووسە...">
-      <button class="btn" onclick="cmSend('${esc(tag)}','${key}')"><span class="msr">send</span></button>
+      <button class="btn" onclick="cmSend('${esc(tag)}','${key}','${esc(String(vid))}')"><span class="msr">send</span></button>
     </div>`);
   try{
-    const d=await db.get(`CommentVideo/${key}`);
-    let arr=[];const u=unwrap(d);
-    if(u&&typeof u==='object')arr=Object.values(u);
-    arr.sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
+    const [a,b]=await Promise.all([
+      db.get(`CommentVideo/${vid}`).catch(()=>null),
+      vid!==key?db.get(`CommentVideo/${key}`).catch(()=>null):Promise.resolve(null)]);
+    const u=unwrap(a)||{};const u2=unwrap(b)||{};
+    let arr=[...(u&&typeof u==='object'?Object.values(u):[]),
+             ...(u2&&typeof u2==='object'?Object.values(u2):[])];
+    const seen=new Set();
+    arr=arr.filter(c=>{if(!c)return false;const k=String(c.comment_key||c.date||JSON.stringify(c).slice(0,80));
+      if(seen.has(k))return false;seen.add(k);return true;});
+    arr.sort((x,y)=>String(x.date||'').localeCompare(String(y.date||'')));
     $('#cmList').innerHTML=arr.length?arr.map(c=>`<div class="cm">
       <span class="who">${esc(c.userrr||'بەکارهێنەر')}</span><span class="when">${esc(String(c.date||'').slice(0,10))}</span>
       <p>${esc(c.commenttt||'')}</p></div>`).join(''):'<div class="empty">هێشتا سەرنجێک نییە — یەکەم کەس بە!</div>';
   }catch(e){$('#cmList').innerHTML='<div class="empty">سەرنجەکان بارنەبوون</div>';}
 }
-async function cmSend(tag,key){
+async function cmSend(tag,key,vid){
+  vid=vid||key;
   const t=($('#cmTxt').value||'').trim();if(!t)return;
   let name=P.get('myname','');
   if(!name){name=prompt('ناوت چییە؟');if(!name)return;P.set('myname',name);}
@@ -131,9 +143,9 @@ async function cmSend(tag,key){
   try{
     const d=new Date();
     const date=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
-    const res=await db.push('CommentVideo/'+key,{userrr:name,commenttt:t,date:date,uid:UID,verify:'web',video_id:key});
-    if(res&&res.name)await db.patch(`CommentVideo/${key}/${res.name}`,{comment_key:res.name}).catch(()=>{});
-    toast('سەرنجەکەت نێردرا ✅');vidComments(tag,key,name);
+    const res=await db.push('CommentVideo/'+vid,{userrr:name,commenttt:t,date:date,uid:UID,verify:'web',video_id:vid});
+    if(res&&res.name)await db.patch(`CommentVideo/${vid}/${res.name}`,{comment_key:res.name}).catch(()=>{});
+    toast('سەرنجەکەت نێردرا ✅');vidComments(tag,key,name,vid);
   }catch(e){toast('نەنێردرا — دووبارە هەوڵبدەرەوە');btn.disabled=false;}
 }
 
