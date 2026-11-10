@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'dart:async';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import '../../core/prefs.dart';
@@ -45,18 +46,46 @@ class _AyahRangeScreenState extends State<AyahRangeScreen> {
   Map<String, int> _timings = {};
   int _timingsBase = -1; // surah id the timings belong to
 
+  // --- Playback robustness (the stop-after-2-3-ayahs bug): streams die
+  // mid-surah and the per-ayah chain used to end silently. Every position
+  // advance is tracked; a watchdog + post-stop check auto-continue the
+  // recitation from the last position via the downloaded local file.
+  bool _perAyahMode = false; // reciter without a timings db → per-ayah files
+  int _lastPosMs = 0;
+  int _lastDurMs = 0;
+  DateTime _lastAdvance = DateTime.now();
+  bool _recovering = false;
+  bool _postChecking = false;
+  int _recoverTries = 0;
+  Timer? _stall;
+
   @override
   void initState() {
     super.initState();
     AudioSetup.prepare(_player); // item 2: steady full volume everywhere
     _load();
     _player.onPlayerStateChanged.listen((s) {
-      if (mounted) setState(() => _playing = s == PlayerState.playing);
+      if (!mounted) return;
+      setState(() => _playing = s == PlayerState.playing);
+      if ((s == PlayerState.completed || s == PlayerState.stopped) &&
+          !_perAyahMode && !_recovering) {
+        _postStopCheck(); // natural end vs premature death
+      }
+    });
+    _player.onDurationChanged.listen((d) {
+      if (d > Duration.zero) _lastDurMs = d.inMilliseconds;
+    });
+    _player.onPositionChanged.listen((p) {
+      if (p.inMilliseconds > _lastPosMs) {
+        _lastPosMs = p.inMilliseconds;
+        _lastAdvance = DateTime.now();
+      }
     });
     _player.onPlayerComplete.listen((_) {
       if (!mounted) return;
       _playNext();
     });
+    _stall = Timer.periodic(const Duration(seconds: 4), (_) => _watchdogTick());
   }
 
   Future<void> _load() async {
@@ -119,20 +148,6 @@ class _AyahRangeScreenState extends State<AyahRangeScreen> {
     return 'https://cdn.islamic.network/quran/audio/128/ar.alafasy/$g.mp3';
   }
 
-  Future<File?> _localSurah() async {
-    try {
-      final dir = await getApplicationDocumentsDirectory();
-      final reciter = '${_reciter?['id'] ?? _reciter?['name_ar'] ?? 'reciter'}'
-          .replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
-      final surah = ((_surah?['soraid'] ?? 1) as num).toInt()
-          .toString().padLeft(3, '0');
-      final f = File('${dir.path}/quran_audio/${reciter}_$surah.mp3');
-      return f.existsSync() && f.lengthSync() > 0 ? f : null;
-    } catch (_) {
-      return null;
-    }
-  }
-
   /// Start reciting at [_from]; stop after [_to] completes. Uses the
   /// reciter timings db to seek, falling back to per-ayah CDN files.
   Future<void> _start() async {
@@ -146,28 +161,50 @@ class _AyahRangeScreenState extends State<AyahRangeScreen> {
             '${_reciter?['id'] ?? AppPrefs.I.qariId}');
         _timingsBase = sid;
       }
-      await _player.stop();
-      final local = await _localSurah();
-      if (local != null) {
-        await _player.play(DeviceFileSource(local.path));
-      } else {
-        try {
-          await _player.play(UrlSource(Downloader.httpsify(_surahUrl())));
-        } catch (_) {
-          final file = await Downloader.download(
-              Downloader.httpsify(_surahUrl()),
-              'quran_audio/${Downloader.safeName('${_reciter?['id'] ?? 'r'}')}_'
-              '${sid.toString().padLeft(3, '0')}.mp3');
-          await _player.play(DeviceFileSource(file.path));
-        }
-      }
+      _recoverTries = 0;
+      _lastPosMs = 0;
       final startMs = _timings['$sid:$_from'];
-      if (startMs != null && startMs > 0) {
+      if (startMs == null || startMs <= 0) {
+        // Reciters without a timings db: recite ayah by ayah from the
+        // per-ayah CDN — and CONTINUE through the whole range (the old
+        // code played one ayah and went silent).
+        _perAyahMode = true;
+        if (mounted) setState(() => _currentAyah = _from);
+        await _playAyahFile(_from);
+        return;
+      }
+      _perAyahMode = false;
+      // Stream first for an instant start — but wait for the source to
+      // be ready BEFORE seeking (seeking a buffering stream used to kill
+      // playback after a couple of ayahs).
+      bool started = false;
+      try {
+        await _player.stop();
+        await _player.play(UrlSource(Downloader.httpsify(_surahUrl())));
+        var dur = 0;
+        for (var i = 0; i < 16 && dur <= 0; i++) {
+          await Future.delayed(const Duration(milliseconds: 500));
+          try { dur = (await _player.getDuration())?.inMilliseconds ?? 0; } catch (_) { dur = 0; }
+        }
         await _player.seek(Duration(milliseconds: startMs));
-      } else if (_timings.isEmpty) {
-        // Reciters without a timings db: recite the first ayah from the
-        // per-ayah CDN so the feature still works end to end.
-        await _player.play(UrlSource(await _ayahUrl(_from)));
+        started = true;
+        _lastPosMs = startMs;
+        _lastDurMs = dur;
+        _lastAdvance = DateTime.now();
+      } catch (_) {
+        started = false;
+      }
+      if (!started) {
+        // local file never stalls mid-stream — bullet-proof path
+        final file = await Downloader.download(
+            Downloader.httpsify(_surahUrl()),
+            'quran_audio/${Downloader.safeName('${_reciter?['id'] ?? 'r'}')}_'
+            '${sid.toString().padLeft(3, '0')}.mp3');
+        await _player.stop();
+        await _player.play(DeviceFileSource(file.path));
+        await _player.seek(Duration(milliseconds: startMs));
+        _lastPosMs = startMs;
+        _lastAdvance = DateTime.now();
       }
       _currentAyah = _from;
       if (mounted) setState(() {});
@@ -179,20 +216,128 @@ class _AyahRangeScreenState extends State<AyahRangeScreen> {
     }
   }
 
+  /// One per-ayah file (per-ayah mode) — cached locally when possible.
+  Future<void> _playAyahFile(int ayah) async {
+    try {
+      await _player.stop();
+      if (mounted) setState(() => _currentAyah = ayah);
+      final sid = ((_surah?['soraid'] ?? 1) as num).toInt();
+      final g = await Db.I.globalAyah(sid, ayah);
+      final dir = await getApplicationDocumentsDirectory();
+      final f = File('${dir.path}/quran_audio/ayah_$g.mp3');
+      final url = Downloader.httpsify(await _ayahUrl(ayah));
+      if (f.existsSync() && f.lengthSync() > 0) {
+        await _player.play(DeviceFileSource(f.path));
+      } else {
+        try {
+          await _player.play(UrlSource(url));
+        } catch (_) {
+          final got = await Downloader.download(
+              url, 'quran_audio/ayah_$g.mp3',
+              timeout: const Duration(minutes: 3));
+          await _player.play(DeviceFileSource(got.path));
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('کێشە لە پەخشکردنی دەنگی ئەم ئایەتە')));
+      }
+    }
+  }
+
   Future<void> _playNext() async {
     final next = (_currentAyah ?? _from) + 1;
     if (next > _to || next > _ayaCount) {
       await _player.stop();
+      _lastPosMs = 0;
       if (mounted) setState(() => _currentAyah = null);
       return;
     }
-    // Surah audio keeps playing across ayah boundaries; when we switched to
-    // per-ayah fallback this hook starts the next file.
+    if (_perAyahMode) {
+      // Per-ayah fallback: actually START the next file — the old hook
+      // only moved the highlight and went silent.
+      await _playAyahFile(next);
+      return;
+    }
+    // Surah audio keeps playing across ayah boundaries.
     if (mounted) setState(() => _currentAyah = next);
+  }
+
+  // ---------- Playback recovery ----------
+
+  /// Watchdog: a frozen position for 10s while "playing" = stalled stream
+  /// → auto-continue from the last position.
+  Future<void> _watchdogTick() async {
+    if (!mounted || _recovering || _postChecking) return;
+    if (_perAyahMode) return;
+    if (!_playing) return;
+    final idle = DateTime.now().difference(_lastAdvance).inMilliseconds;
+    if (idle < 10000) return;
+    await _recoverSurah();
+  }
+
+  /// stopped/completed fired — surah finished naturally, or died early?
+  Future<void> _postStopCheck() async {
+    if (_postChecking || !mounted || _perAyahMode) return;
+    if (_lastPosMs < 3000 || _currentAyah == null) return;
+    _postChecking = true;
+    try {
+      await Future.delayed(const Duration(milliseconds: 1800));
+      if (!mounted || _recovering || _perAyahMode) return;
+      if (_playing) return; // resumed in the meantime
+      final dur = _lastDurMs;
+      if (dur > 0 && _lastPosMs >= dur - 4000) {
+        // natural end — the range is done
+        if (mounted) setState(() => _currentAyah = null);
+        _lastPosMs = 0;
+        return;
+      }
+      await _recoverSurah();
+    } finally {
+      _postChecking = false;
+    }
+  }
+
+  /// Resume the surah audio from the last position: plain resume first,
+  /// then the fully downloaded local file (never dies mid-stream).
+  Future<void> _recoverSurah() async {
+    if (_recovering || !mounted) return;
+    final resumeAt = _lastPosMs;
+    if (resumeAt < 3000) return;
+    _recovering = true;
+    try {
+      if (_recoverTries >= 3) {
+        if (mounted) setState(() => _currentAyah = null);
+        return;
+      }
+      _recoverTries++;
+      try { await _player.resume(); } catch (_) {}
+      await Future.delayed(const Duration(milliseconds: 2500));
+      if (!mounted || _playing) return; // it recovered
+      try {
+        final file = await Downloader.download(
+            Downloader.httpsify(_surahUrl()),
+            'quran_audio/${Downloader.safeName('${_reciter?['id'] ?? 'r'}')}_'
+            '${((_surah?['soraid'] ?? 1) as num).toInt().toString().padLeft(3, '0')}.mp3',
+            timeout: const Duration(minutes: 5));
+        await _player.stop();
+        await _player.play(DeviceFileSource(file.path));
+        await _player.seek(Duration(milliseconds: resumeAt));
+        _lastPosMs = resumeAt;
+        _lastAdvance = DateTime.now();
+        if (mounted) setState(() {});
+      } catch (_) {
+        if (mounted) setState(() => _currentAyah = null);
+      }
+    } finally {
+      _recovering = false;
+    }
   }
 
   @override
   void dispose() {
+    _stall?.cancel();
     _player.dispose();
     _scroll.dispose();
     super.dispose();
@@ -359,6 +504,24 @@ class _AyahRangeScreenState extends State<AyahRangeScreen> {
             _stepper(dark, txt, card, _to,
                 min: _from, max: _ayaCount,
                 onChanged: (v) => setState(() => _to = v)),
+            const SizedBox(width: 10),
+            // One tap = recite to the END of the surah (no more manually
+            // stepping the range up while the audio keeps stopping at the
+            // range edge).
+            ActionChip(
+              visualDensity: VisualDensity.compact,
+              backgroundColor: _to >= _ayaCount
+                  ? (dark ? AppColors.gold.withOpacity(.25) : AppColors.primaryDark.withOpacity(.12))
+                  : card,
+              side: BorderSide(
+                  color: dark ? Colors.white24 : Colors.black12),
+              label: Text('بۆ کۆتایی',
+                  style: TextStyle(fontSize: 11.5,
+                      color: _to >= _ayaCount
+                          ? (dark ? AppColors.gold : AppColors.primaryDark)
+                          : txt)),
+              onPressed: () => setState(() => _to = _ayaCount),
+            ),
           ]),
         ]),
       );

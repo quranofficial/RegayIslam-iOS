@@ -83,6 +83,20 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
   /// the wrong verse on long surahs).
   final Map<int, GlobalKey> _ayahKeys = {};
 
+  // --- Playback robustness (keshay peshraw / the stop-after-2-3-ayahs bug):
+  // network streams stall or die mid-surah (often around 30-40% of a long
+  // surah) and the old code never recovered — pressing play did nothing.
+  // Now: every position advance is tracked, a watchdog + a post-stop check
+  // detect premature death and the playback auto-continues from the last
+  // position using the fully-downloaded local file.
+  int _lastPosMs = 0; // last observed playback position
+  int _lastDurMs = 0; // last known duration of the active source
+  DateTime _lastAdvance = DateTime.now(); // when position last moved
+  bool _recovering = false; // auto-continue in progress
+  bool _postChecking = false; // single-flight for the stop check
+  int _recoverTries = 0; // cap auto-recovery attempts per session
+  Timer? _stall; // watchdog tick
+
   @override
   void initState() {
     super.initState();
@@ -91,10 +105,22 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
     _load();
     _scroll.addListener(_onScroll);
     _player.onPlayerStateChanged.listen((s) {
-      if (mounted) setState(() => _state = s);
+      if (!mounted) return;
+      setState(() => _state = s);
+      if ((s == PlayerState.completed || s == PlayerState.stopped) &&
+          !_ayahByAyah && _currentUrl != null && !_recovering) {
+        _postStopCheck(); // natural end of the surah, or a premature death?
+      }
+    });
+    _player.onDurationChanged.listen((d) {
+      if (d > Duration.zero) _lastDurMs = d.inMilliseconds;
     });
     _player.onPositionChanged.listen((p) {
       if (!_ayahByAyah) _highlightByTime(p);
+      if (p.inMilliseconds > _lastPosMs) {
+        _lastPosMs = p.inMilliseconds;
+        _lastAdvance = DateTime.now();
+      }
     });
     _player.onPlayerComplete.listen((_) {
       if (!mounted) return;
@@ -105,8 +131,9 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
           return;
         }
       }
-      setState(() { _state = PlayerState.stopped; _playingAyah = null; });
+      _postStopCheck();
     });
+    _stall = Timer.periodic(const Duration(seconds: 4), (_) => _watchdogTick());
   }
 
   Future<void> _load() async {
@@ -208,7 +235,17 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
       final f = File('${dir.path}/quran_audio/'
           '${Downloader.safeName(AppPrefs.I.qariId)}_'
           '${widget.surahId.toString().padLeft(3, '0')}.mp3');
-      return f.existsSync() && f.lengthSync() > 0 ? f : null;
+      if (f.existsSync() && f.lengthSync() > 0) {
+        // A partial download (app killed mid-fetch) plays a few seconds and
+        // dies at the same spot forever — drop files that are impossibly
+        // small for a real surah so they get re-downloaded.
+        if (f.lengthSync() < 150000) {
+          try { f.deleteSync(); } catch (_) {}
+          return null;
+        }
+        return f;
+      }
+      return null;
     } catch (_) {
       return null;
     }
@@ -236,6 +273,8 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
       } else if (_currentUrl == url && _state == PlayerState.paused) {
         await _player.resume();
       } else {
+        _recoverTries = 0;
+        _lastPosMs = 0;
         final cached = await _cachedAudio();
         if (cached != null) {
           await _player.play(DeviceFileSource(cached.path));
@@ -244,10 +283,8 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
             await _player.play(UrlSource(url));
           } catch (_) {
             // streaming refused — download then play, like the original
-            final file = await Downloader.download(url,
-                'quran_audio/${Downloader.safeName(AppPrefs.I.qariId)}_'
-                '${widget.surahId.toString().padLeft(3, '0')}.mp3');
-            await _player.play(DeviceFileSource(file.path));
+            if (await _playSurahLocal(notify: true)) return;
+            rethrow; // surface the network snackbar below
           }
         }
         setState(() => _currentUrl = url);
@@ -260,6 +297,123 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
     }
   }
 
+  // ---------- Playback recovery (keshay peshraw) ----------
+
+  /// Watchdog: while the surah audio is "playing", the position must keep
+  /// advancing. A frozen position for 10s = stalled stream → auto-continue
+  /// from the last position via the downloaded local file.
+  Future<void> _watchdogTick() async {
+    if (!mounted || _recovering || _postChecking) return;
+    if (_ayahByAyah || _currentUrl == null) return;
+    if (_state != PlayerState.playing) return;
+    final idle = DateTime.now().difference(_lastAdvance).inMilliseconds;
+    if (idle < 10000) return;
+    await _recoverSurah();
+  }
+
+  /// The player reported stopped/completed (or froze) — was that the
+  /// natural end of the surah audio, or a premature death that must be
+  /// resumed so recitation keeps going through ALL the ayahs?
+  Future<void> _postStopCheck() async {
+    if (_postChecking || !mounted) return;
+    if (_ayahByAyah || _currentUrl == null || _lastPosMs < 3000) return;
+    _postChecking = true;
+    try {
+      await Future.delayed(const Duration(milliseconds: 1800));
+      if (!mounted || _recovering || _currentUrl == null) return;
+      if (_state == PlayerState.playing || _state == PlayerState.paused) {
+        return; // resumed in the meantime
+      }
+      final dur = _lastDurMs;
+      if (dur > 0 && _lastPosMs >= dur - 4000) {
+        // natural end of the surah audio — clean up for a fresh next play
+        setState(() {
+          _state = PlayerState.stopped;
+          _playingAyah = null;
+          _currentUrl = null;
+          _lastPosMs = 0;
+        });
+        return;
+      }
+      await _recoverSurah();
+    } finally {
+      _postChecking = false;
+    }
+  }
+
+  /// Premature stop — resume recitation from the last position: first try
+  /// a plain resume (transient stall), then fall back to the fully
+  /// downloaded local file which never dies mid-stream.
+  Future<void> _recoverSurah() async {
+    if (_recovering || !mounted) return;
+    final resumeAt = _lastPosMs;
+    if (resumeAt < 3000) return;
+    _recovering = true;
+    try {
+      if (_recoverTries >= 3) {
+        if (mounted) {
+          setState(() => _state = PlayerState.stopped);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('پەخشکردن وەستا — دوگمەی لێدە بدە بۆ بەردەوامبوون')));
+        }
+        return;
+      }
+      _recoverTries++;
+      try {
+        await _player.resume();
+      } catch (_) {}
+      await Future.delayed(const Duration(milliseconds: 2500));
+      if (!mounted || _state == PlayerState.playing) return; // it recovered
+      final ok = await _playSurahLocal(resumeMs: resumeAt);
+      if (!ok && mounted) setState(() => _state = PlayerState.stopped);
+    } finally {
+      _recovering = false;
+    }
+  }
+
+  /// Bullet-proof surah playback from the LOCAL cached file — the file is
+  /// downloaded in full first (missing parts can never stall mid-play)
+  /// and seeking is instant and reliable. Returns true when playback is
+  /// actually running.
+  Future<bool> _playSurahLocal(
+      {int resumeMs = 0, int startMs = 0, bool notify = false}) async {
+    final link = _ayat.isEmpty ? '' : '${_ayat.first['link'] ?? ''}';
+    if (link.isEmpty) return false;
+    final url = Downloader.httpsify(_mp3Url(link));
+    try {
+      File? f = await _cachedAudio();
+      if (f == null) {
+        if (notify && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('دەنگ داگیر دەکرێت — چەند چرکەیەک...'),
+              duration: Duration(seconds: 2)));
+        }
+        f = await Downloader.download(
+            url,
+            'quran_audio/${Downloader.safeName(AppPrefs.I.qariId)}_'
+            '${widget.surahId.toString().padLeft(3, '0')}.mp3',
+            timeout: const Duration(minutes: 5));
+      }
+      await _player.stop();
+      await _player.play(DeviceFileSource(f.path));
+      final at = resumeMs > 0 ? resumeMs : startMs;
+      if (at > 0) await _player.seek(Duration(milliseconds: at));
+      if (!mounted) return true;
+      setState(() {
+        _currentUrl = url;
+        _state = PlayerState.playing;
+      });
+      _lastPosMs = at;
+      _lastDurMs = 0;
+      _lastAdvance = DateTime.now();
+      _recoverTries = 0;
+      _scrollToAyah(_playingAyah ?? 1);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Item 10: recite from this ayah to the end of the surah.
   /// Preferred: the SELECTED reciter's own surah audio seeked through its
   /// timings db (highlights follow position). Fallback: per-ayah files.
@@ -267,36 +421,39 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
     final startMs = _timings['${widget.surahId}:$ayah'];
     if (startMs != null && startMs > 0) {
       setState(() { _ayahByAyah = false; _playingAyah = ayah; });
-      final ok = await _playSurahFrom(startMs);
+      // Stream first (instant start); if the stream/seek dies the watchdog
+      // and post-stop check auto-continue from the last position.
+      final ok = await _playSurahStreamed(startMs);
       if (ok) return;
+      final local = await _playSurahLocal(startMs: startMs, notify: true);
+      if (local) return;
     }
     setState(() { _ayahByAyah = true; _playingAyah = ayah; });
     await _playAyahFile(ayah);
   }
 
-  /// Play the selected reciter's surah audio and seek to [startMs].
-  Future<bool> _playSurahFrom(int startMs) async {
+  /// Play the selected reciter's surah audio and seek to [startMs]. Waits
+  /// for the stream metadata before seeking — seeking a still-buffering
+  /// network source used to kill playback after 2-3 ayahs.
+  Future<bool> _playSurahStreamed(int startMs) async {
     final link = _ayat.isEmpty ? '' : '${_ayat.first['link'] ?? ''}';
     if (link.isEmpty) return false;
     final url = Downloader.httpsify(_mp3Url(link));
     try {
       await _player.stop();
-      final cached = await _cachedAudio();
-      if (cached != null) {
-        await _player.play(DeviceFileSource(cached.path));
-      } else {
-        try {
-          await _player.play(UrlSource(url));
-        } catch (_) {
-          final file = await Downloader.download(url,
-              'quran_audio/${Downloader.safeName(AppPrefs.I.qariId)}_'
-              '${widget.surahId.toString().padLeft(3, '0')}.mp3',
-              timeout: const Duration(minutes: 3));
-          await _player.play(DeviceFileSource(file.path));
-        }
+      await _player.play(UrlSource(url));
+      // wait until the source is really ready (duration known) — up to 8s
+      var dur = 0;
+      for (var i = 0; i < 16 && dur <= 0; i++) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        try { dur = (await _player.getDuration())?.inMilliseconds ?? 0; } catch (_) { dur = 0; }
       }
       await _player.seek(Duration(milliseconds: startMs));
-      if (mounted) setState(() => _currentUrl = url);
+      if (!mounted) return true;
+      setState(() => _currentUrl = url);
+      _lastPosMs = startMs;
+      _lastDurMs = dur;
+      _lastAdvance = DateTime.now();
       _scrollToAyah(_playingAyah ?? 1);
       return true;
     } catch (_) {
@@ -370,6 +527,7 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
 
   @override
   void dispose() {
+    _stall?.cancel();
     _ringTimer?.cancel();
     // Item 3: the reading position is saved on leaving the reader too.
     AppPrefs.I.saveReadingPosition(widget.surahId, _lastVisibleAyah);
@@ -640,6 +798,13 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                             } else {
                               _player.resume();
                             }
+                          } else if (_currentUrl != null &&
+                              _state == PlayerState.stopped &&
+                              _lastPosMs > 3000 &&
+                              !_ayahByAyah) {
+                            // the audio died mid-surah earlier — continue
+                            // from where it stopped, NOT from the start
+                            _playSurahLocal(resumeMs: _lastPosMs);
                           } else {
                             _playSurah();
                           }
