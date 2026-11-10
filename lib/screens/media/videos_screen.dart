@@ -435,250 +435,18 @@ class _VideosScreenState extends State<VideosScreen> {
                                   ]),
                                 ),
                               ])
-                            : ListView.builder(
+                            : GridView.builder(
                                 padding:
-                                    const EdgeInsets.symmetric(horizontal: 12),
+                                    const EdgeInsets.fromLTRB(12, 4, 12, 16),
+                                gridDelegate:
+                                    const SliverGridDelegateWithMaxCrossAxisExtent(
+                                        maxCrossAxisExtent: 260,
+                                        mainAxisSpacing: 10,
+                                        crossAxisSpacing: 10,
+                                        childAspectRatio: 0.78),
                                 itemCount: _filtered.length,
-                                itemBuilder: (context, i) {
-                                  final v = _filtered[i];
-                                  final title = '${v['name'] ?? 'ڤیدیۆ'}';
-                                  final id = '${v['id'] ?? ''}';
-                                  final likes =
-                                      int.tryParse('${v['like']}') ?? 0;
-                                  final comments =
-                                      int.tryParse('${v['comment']}') ?? 0;
-                                  final liked = AppPrefs.I.isVideoLiked(id);
-                                  final time = '${v['timevideo'] ?? ''}';
-                                  final tagName = _tagName[
-                                          '${v['folder'] ?? ''}'] ??
-                                      (_selectedTag == null
-                                          ? ''
-                                          : '${_selectedTag!['name'] ?? ''}');
-                                  return Card(
-                                    color: dark
-                                        ? AppColors.nightCard
-                                        : Colors.white,
-                                    margin:
-                                        const EdgeInsets.only(bottom: 10),
-                                    elevation: dark ? 0 : 1,
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(14)),
-                                    child: InkWell(
-                                      borderRadius: BorderRadius.circular(14),
-                                      onTap: () => _open(v),
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(10),
-                                        child: Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              // Thumbnail block with a play
-                                              // overlay + duration chip.
-                                              Stack(children: [
-                                                Container(
-                                                  width: 92,
-                                                  height: 66,
-                                                  decoration: BoxDecoration(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              12),
-                                                      gradient:
-                                                          LinearGradient(
-                                                        begin: Alignment
-                                                            .topLeft,
-                                                        end: Alignment
-                                                            .bottomRight,
-                                                        colors: [
-                                                          AppColors
-                                                              .primaryDark,
-                                                          AppColors
-                                                              .primaryDark
-                                                              .withOpacity(
-                                                                  .55),
-                                                        ],
-                                                      )),
-                                                  child: const Icon(
-                                                      Icons
-                                                          .play_arrow_rounded,
-                                                      size: 36,
-                                                      color: Colors.white),
-                                                ),
-                                                if (time.isNotEmpty)
-                                                  Positioned(
-                                                    bottom: 4,
-                                                    left: 4,
-                                                    child: Container(
-                                                      padding: const EdgeInsets
-                                                          .symmetric(
-                                                          horizontal: 5,
-                                                          vertical: 1),
-                                                      decoration: BoxDecoration(
-                                                          color: Colors.black
-                                                              .withOpacity(
-                                                                  .65),
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(
-                                                                      6)),
-                                                      child: Text(time,
-                                                          style: const TextStyle(
-                                                              color: Colors
-                                                                  .white,
-                                                              fontSize: 9,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold)),
-                                                    ),
-                                                  ),
-                                              ]),
-                                              const SizedBox(width: 10),
-                                              Expanded(
-                                                child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      Text(title,
-                                                          maxLines: 2,
-                                                          overflow: TextOverflow
-                                                              .ellipsis,
-                                                          style: TextStyle(
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold,
-                                                              fontSize: 13.5,
-                                                              height: 1.3,
-                                                              color: txt)),
-                                                      if (tagName.isNotEmpty) ...[
-                                                        const SizedBox(
-                                                            height: 6),
-                                                        Container(
-                                                          padding:
-                                                              const EdgeInsets
-                                                                  .symmetric(
-                                                                  horizontal:
-                                                                      8,
-                                                                  vertical: 2),
-                                                          decoration: BoxDecoration(
-                                                              color: accent
-                                                                  .withOpacity(
-                                                                      .12),
-                                                              borderRadius:
-                                                                  BorderRadius
-                                                                      .circular(
-                                                                          20)),
-                                                          child: Text(
-                                                              tagName,
-                                                              style: TextStyle(
-                                                                  fontSize:
-                                                                      10.5,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold,
-                                                                  color:
-                                                                      accent)),
-                                                        ),
-                                                      ],
-                                                      const SizedBox(
-                                                          height: 6),
-                                                      Row(children: [
-                                                        InkWell(
-                                                          onTap: () =>
-                                                              _like(v),
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(
-                                                                      6),
-                                                          child: Padding(
-                                                            padding:
-                                                                const EdgeInsets
-                                                                    .symmetric(
-                                                                    horizontal:
-                                                                        2,
-                                                                    vertical:
-                                                                        3),
-                                                            child: Row(
-                                                                children: [
-                                                              Icon(
-                                                                  liked
-                                                                      ? Icons
-                                                                          .favorite_rounded
-                                                                      : Icons
-                                                                          .favorite_border_rounded,
-                                                                  size: 15,
-                                                                  color: liked
-                                                                      ? const Color(
-                                                                          0xFFE91E63)
-                                                                      : accent),
-                                                              Text(' $likes',
-                                                                  style: TextStyle(
-                                                                      fontSize:
-                                                                          11.5,
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .bold,
-                                                                      color: liked
-                                                                          ? const Color(0xFFE91E63)
-                                                                          : txt.withOpacity(.6))),
-                                                            ]),
-                                                          ),
-                                                        ),
-                                                        const SizedBox(
-                                                            width: 12),
-                                                        InkWell(
-                                                          onTap: () =>
-                                                              _comments(v),
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(
-                                                                      6),
-                                                          child: Padding(
-                                                            padding:
-                                                                const EdgeInsets
-                                                                    .symmetric(
-                                                                    horizontal:
-                                                                        2,
-                                                                    vertical:
-                                                                        3),
-                                                            child: Row(
-                                                                children: [
-                                                              Icon(
-                                                                  Icons
-                                                                      .comment_rounded,
-                                                                  size: 15,
-                                                                  color:
-                                                                      accent),
-                                                              Text(
-                                                                  ' $comments',
-                                                                  style: TextStyle(
-                                                                      fontSize:
-                                                                          11.5,
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .bold,
-                                                                      color: txt
-                                                                          .withOpacity(.6))),
-                                                            ]),
-                                                          ),
-                                                        ),
-                                                        const Spacer(),
-                                                        FavoriteButton(
-                                                            id:
-                                                                'video::${v['id'] ?? title}',
-                                                            title: title,
-                                                            content:
-                                                                _link(v),
-                                                            route:
-                                                                'video::${v['id'] ?? title}'),
-                                                      ]),
-                                                    ]),
-                                              ),
-                                            ]),
-                                      ),
-                                    ),
-                                  );
-                                },
+                                itemBuilder: (context, i) =>
+                                    _videoCard(_filtered[i], dark, txt, accent),
                               ),
                       ),
                     ),
@@ -686,6 +454,166 @@ class _VideosScreenState extends State<VideosScreen> {
       ),
     );
   }
+
+  /// item 7 — the NEW video card: a 2-column grid of poster-style cards
+  /// (thumbnail block with a big play bubble, duration chip, tag pill and a
+  /// like/comment footer) replacing the old cramped list rows.
+  Widget _videoCard(Map<String, dynamic> v, bool dark, Color txt,
+      Color accent) {
+    final title = '${v['name'] ?? v['title'] ?? 'ڤیدیۆ'}';
+    final id = '${v['id'] ?? ''}';
+    final likes = int.tryParse('${v['like']}') ?? 0;
+    final comments = int.tryParse('${v['comment']}') ?? 0;
+    final liked = AppPrefs.I.isVideoLiked(id);
+    final time = '${v['timevideo'] ?? ''}';
+    final tagName = _tagName['${v['folder'] ?? ''}'] ??
+        (_selectedTag == null ? '' : '${_selectedTag!['name'] ?? ''}');
+    return Container(
+      decoration: BoxDecoration(
+          color: dark ? AppColors.nightCard : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+              color: dark ? Colors.white10 : Colors.black.withOpacity(.06))),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => _open(v),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // poster block
+          Expanded(
+            child: Stack(fit: StackFit.expand, children: [
+              Container(
+                decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(16)),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.primaryDark,
+                        AppColors.primaryDark.withOpacity(.45),
+                        (dark ? AppColors.gold : AppColors.primaryDark)
+                            .withOpacity(.75),
+                      ],
+                    )),
+              ),
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(.14),
+                      shape: BoxShape.circle),
+                  child: const Icon(Icons.play_arrow_rounded,
+                      size: 40, color: Colors.white),
+                ),
+              ),
+              if (time.isNotEmpty)
+                Positioned(
+                  bottom: 8,
+                  left: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(.65),
+                        borderRadius: BorderRadius.circular(7)),
+                    child: Text(time,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              if (tagName.isNotEmpty)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(.45),
+                        borderRadius: BorderRadius.circular(20)),
+                    child: Text(tagName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                ),
+            ]),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min, children: [
+              Text(title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12.5,
+                      height: 1.35,
+                      color: txt)),
+              const SizedBox(height: 6),
+              Row(children: [
+                InkWell(
+                  onTap: () => _like(v),
+                  borderRadius: BorderRadius.circular(6),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 2, vertical: 2),
+                    child: Row(children: [
+                      Icon(
+                          liked
+                              ? Icons.favorite_rounded
+                              : Icons.favorite_border_rounded,
+                          size: 15,
+                          color: liked
+                              ? const Color(0xFFE91E63)
+                              : accent),
+                      Text(' $likes',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: liked
+                                  ? const Color(0xFFE91E63)
+                                  : txt.withOpacity(.6))),
+                    ]),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                InkWell(
+                  onTap: () => _comments(v),
+                  borderRadius: BorderRadius.circular(6),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 2, vertical: 2),
+                    child: Row(children: [
+                      Icon(Icons.comment_rounded, size: 15, color: accent),
+                      Text(' $comments',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: txt.withOpacity(.6))),
+                    ]),
+                  ),
+                ),
+                const Spacer(),
+                FavoriteButton(
+                    id: 'video::${v['id'] ?? title}',
+                    title: title,
+                    content: _link(v),
+                    route: 'video::${v['id'] ?? title}'),
+              ]),
+            ]),
+          ),
+        ]),
+      ),
+    );
+  }
+
 }
 
 /// Original: the comment dialog over "CommentVideo" — {userrr, commenttt,

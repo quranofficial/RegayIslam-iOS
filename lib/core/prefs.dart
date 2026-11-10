@@ -315,6 +315,23 @@ class AppPrefs {
   double get videoSpeed => _p.getDouble('videoSpeed') ?? 1.0;
   set videoSpeed(double v) => _p.setDouble('videoSpeed', v);
 
+  // --- item 8: video picture settings — fit/zoom mode (0 = contain,
+  //     1 = cover/zoom, 2 = fill/stretch), brightness and contrast
+  //     (0..1, 0.5 = neutral) and the loop toggle. All remembered.
+  int get videoFit => _p.getInt('videoFit') ?? 0;
+  set videoFit(int v) => _p.setInt('videoFit', v.clamp(0, 2));
+  double get videoBrightness => _p.getDouble('videoBrightness') ?? 0.5;
+  set videoBrightness(double v) => _p.setDouble('videoBrightness', v.clamp(0.0, 1.0));
+  double get videoContrast => _p.getDouble('videoContrast') ?? 0.5;
+  set videoContrast(double v) => _p.setDouble('videoContrast', v.clamp(0.0, 1.0));
+  bool get videoLoop => _p.getBool('videoLoop') ?? false;
+  set videoLoop(bool v) => _p.setBool('videoLoop', v);
+
+  // --- item 9: the in-app bang watcher dedup guard — which prayer of which
+  //     day already rang in the app this session/persistently.
+  String get bangFired => _p.getString('bangFired') ?? '';
+  set bangFired(String v) => _p.setString('bangFired', v);
+
   // --- item 4: continue to the next surah automatically (دەنگی قورئان) ---
   bool get autoNextSurah => _p.getBool('autoNextSurah') ?? true;
   set autoNextSurah(bool v) => _p.setBool('autoNextSurah', v);

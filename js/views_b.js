@@ -69,6 +69,9 @@ route(/^#\/video\/([^/]+)\/([^/]+)$/,async(m,v)=>{
       <button class="btn sm ghost" onclick="pvSeek(-10)"><span class="msr">replay_10</span>١٠ چرکە</button>
       <button class="btn sm ghost" onclick="pvSeek(10)"><span class="msr">forward_10</span>١٠ چرکە</button>
       <button class="btn sm ghost" onclick="pvSpeed(this)"><span class="msr">speed</span><b id="pvSpd">١.٠</b></button>
+      <button class="btn sm ghost" onclick="pvZoom(this)"><span class="msr">zoom_in</span><b id="pvZoom">ئاسایی</b></button>
+      <button class="btn sm ghost" onclick="pvBright(this)"><span class="msr">brightness_6</span>ڕووناکی</button>
+      <button class="btn sm ghost" onclick="pvLoop(this)"><span class="msr">repeat</span>دووبارە</button>
       <a class="btn sm ghost" href="${esc(x.url)}" target="_blank" rel="noopener"><span class="msr">download</span>داگرتن</a>
     </div>`}
     <div class="pctrls">
@@ -91,6 +94,28 @@ function pvSpeed(btn){
   let i=SPD.indexOf(el.playbackRate);if(i<0)i=2;
   i=(i+1)%SPD.length;el.playbackRate=SPD[i];
   $('#pvSpd').textContent=ku(String(SPD[i]).replace('.','.'));$('#pvSpd').textContent=String(SPD[i]).replace('0.','.')==='1'?'١.٠':ku(String(SPD[i]));
+}
+/* item 8 — video picture settings on the web: zoom/fit (contain/cover),
+   brightness cycle (like the app's slider steps) and looping. */
+function pvZoom(btn){
+  const el=$('#pv');if(!el)return;
+  const on=el.style.objectFit==='cover';
+  el.style.objectFit=on?'contain':'cover';
+  $('#pvZoom').textContent=on?'ئاسایی':'زووم';
+  P.set('pvzoom',on?0:1);
+}
+function pvBright(btn){
+  const el=$('#pv');if(!el)return;
+  const steps=['none','brightness(1.25)','brightness(0.8)','contrast(1.3)','brightness(1.25) contrast(1.2)'];
+  const i=(steps.indexOf(el.dataset.f||'none')+1)%steps.length;
+  el.dataset.f=steps[i];
+  el.style.filter=steps[i]==='none'?'':steps[i];
+}
+function pvLoop(btn){
+  const el=$('#pv');if(!el)return;
+  el.loop=!el.loop;
+  btn.classList.toggle('gold',el.loop);
+  toast(el.loop?'دووبارەکردنەوە چالاکە':'دووبارەکردنەوە داخرا');
 }
 async function vidLike(tag,key,cur){
   const id=tag+'/'+key;

@@ -60,6 +60,7 @@ class AudioPlayerBar extends StatefulWidget {
     this.onPlayPause,
     this.playing,
     this.accent = AppColors.primaryDark,
+    this.onSeeked,
   });
   final AudioPlayer player;
   final String? title;
@@ -69,6 +70,12 @@ class AudioPlayerBar extends StatefulWidget {
   final bool? playing;
   final Color accent;
 
+  /// Fired right after the user drops the thumb — the Quran reader uses it
+  /// to snap the ayah highlight + list scroll to the seeked position
+  /// INSTANTLY (item: "la naway awastet beka setSelection"), instead of
+  /// waiting for the next position tick.
+  final ValueChanged<Duration>? onSeeked;
+
   @override
   State<AudioPlayerBar> createState() => _AudioPlayerBarState();
 }
@@ -77,12 +84,14 @@ class _AudioPlayerBarState extends State<AudioPlayerBar> {
   Duration _pos = Duration.zero;
   Duration _dur = Duration.zero;
   PlayerState _state = PlayerState.stopped;
+  bool _dragging = false;
+  bool _wasPlayingBeforeDrag = false;
 
   @override
   void initState() {
     super.initState();
     widget.player.onPositionChanged.listen((d) {
-      if (mounted) setState(() => _pos = d);
+      if (mounted && !_dragging) setState(() => _pos = d);
     });
     widget.player.onDurationChanged.listen((d) {
       if (mounted) setState(() => _dur = d);
@@ -144,17 +153,28 @@ class _AudioPlayerBarState extends State<AudioPlayerBar> {
                         activeColor: widget.accent,
                         inactiveColor:
                             dark ? Colors.white12 : Colors.black12,
-                        onChanged: (v) async {
+                        onChangeStart: (_) {
+                          _dragging = true;
+                          _wasPlayingBeforeDrag =
+                              widget.player.state == PlayerState.playing;
+                        },
+                        onChangeEnd: (v) async {
+                          _dragging = false;
                           final d = Duration(milliseconds: v.round());
-                          setState(() => _pos = d);
                           try {
                             await widget.player.seek(d);
-                            if (_state == PlayerState.paused ||
-                                _state == PlayerState.stopped) {
+                            // Only resume when the user was listening —
+                            // seeking a PAUSED player used to start it
+                            // playing out of nowhere.
+                            if (_wasPlayingBeforeDrag) {
                               await widget.player.resume();
                             }
                           } catch (_) {}
+                          widget.onSeeked?.call(d);
                         },
+                        onChanged: (v) => setState(() {
+                          _pos = Duration(milliseconds: v.round());
+                        }),
                       ),
                     ),
                     Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -184,6 +204,94 @@ double bottomInset(BuildContext context, {double extra = 12}) {
       ? mq.viewPadding.bottom
       : mq.padding.bottom;
   return bottom + extra;
+}
+
+/// The shared REPEAT picker (item 1+6 — the repeat used to be a bare
+/// toast-like strip that did nothing visible). Returns the picked count:
+/// 0 = بێسنوور (infinite), 1/3/5/10/20/50 …, null = cancelled.
+///
+/// Used by the Quran reader (repeat button ON every ayah row) and by the
+/// mushaf recite bar, so both places look and behave the same.
+Future<int?> showRepeatCountSheet(
+  BuildContext context, {
+  required bool dark,
+  String? title,
+  String? subtitle,
+}) {
+  const counts = [1, 3, 5, 10, 20, 50, 0];
+  final card = dark ? AppColors.nightCard : Colors.white;
+  final txt = dark ? Colors.white : Colors.black;
+  final accent = dark ? AppColors.gold : AppColors.primaryDark;
+  return showModalBottomSheet<int>(
+    context: context,
+    backgroundColor: card,
+    shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+    builder: (c) => Directionality(
+      textDirection: TextDirection.rtl,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
+          child: Column(mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
+              Icon(Icons.repeat_rounded, size: 20, color: accent),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(title ?? 'دووبارەکردنەوەی ئایەت',
+                    style: TextStyle(fontWeight: FontWeight.bold,
+                        fontSize: 15.5, color: txt)),
+              ),
+            ]),
+            if (subtitle != null && subtitle.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(subtitle,
+                  style: TextStyle(fontSize: 12, color: txt.withOpacity(.6))),
+            ],
+            const SizedBox(height: 14),
+            Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: [
+                  for (final n in counts)
+                    InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () => Navigator.pop(c, n),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                            color: accent.withOpacity(.08),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: accent.withOpacity(.35))),
+                        child: Text(
+                            n == 0 ? '∞ بێسنوور' : '${_kuDigits(n)} جار',
+                            style: TextStyle(fontSize: 13.5,
+                                fontWeight: FontWeight.w700,
+                                color: accent)),
+                      ),
+                    ),
+                ]),
+            const SizedBox(height: 12),
+            Text('دوگمەی وەستان هەموو کاتێک لە باری لێداندایە',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 10.5,
+                    color: txt.withOpacity(.45))),
+          ]),
+        ),
+      ),
+    ),
+  );
+}
+
+String _kuDigits(int n) {
+  const d = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  return n
+      .toString()
+      .split('')
+      .map((c) => d[int.tryParse(c) ?? 0])
+      .join();
 }
 
 /// One shared audio configuration so every sound in the app plays at a

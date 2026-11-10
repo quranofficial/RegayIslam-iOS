@@ -147,6 +147,21 @@ class PrayerNotifications {
     }
   }
 
+  /// Public accessor for BangWatcher (item 9): the downloaded adhan voice
+  /// when present, so the in-app foreground bang uses the SAME voice the
+  /// notifications use.
+  static File? downloadedVoiceFile() => _downloadedVoiceFile();
+
+  /// item 9: cancel TODAY's scheduled notification for prayer [index]
+  /// (0..4 = bayani, niwaro, asr, eywara, esha) the moment the in-app
+  /// watcher rings, so the adhan never plays TWICE at the same moment.
+  /// scheduleAll() uses id = dayOffset*5 + index + 1, so today is index+1.
+  Future<void> cancelTodayBang(int index) async {
+    try {
+      await _plugin.cancel(index + 1);
+    } catch (_) {}
+  }
+
   static Directory? _docsDir;
 
   /// Cache the documents dir at startup so scheduled notifications can find

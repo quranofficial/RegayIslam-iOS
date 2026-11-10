@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -59,15 +58,12 @@ class _NameScreenState extends State<NameScreen> {
   int? _openId;
   int? _speakingId;
   bool _playAll = false;
+  int _playAllIdx = 0;
   bool _loading = true;
   final FlutterTts _tts = FlutterTts();
   bool _ttsReady = false;
   final AudioPlayer _ayahPlayer = AudioPlayer();
   int? _ayahPlayingId;
-  // item 2.4: the bundled full recitation of all 99 names
-  final AudioPlayer _allPlayer = AudioPlayer();
-  StreamSubscription<Duration>? _allSub;
-  int _allDurMs = 0;
   final Map<int, GlobalKey> _cardKeys = {};
 
   @override
@@ -75,7 +71,6 @@ class _NameScreenState extends State<NameScreen> {
     super.initState();
     _initTts();
     AudioSetup.prepare(_ayahPlayer);
-    AudioSetup.prepare(_allPlayer);
     _load();
   }
 
@@ -186,56 +181,61 @@ class _NameScreenState extends State<NameScreen> {
     }
   }
 
-  /// Item 2.4: play ALL names with the project's OWN bundled recitation
-  /// (assets/sounds/sound.mp3 — fully offline). The highlight follows the
-  /// audio by even division (the file recites the names in order).
+  /// item 3+4 — PLAY ALL, fixed: the old version played ONE continuous
+  /// sound.mp3 and "highlighted" by dividing its duration by 99, which
+  /// drifted more and more (the file recites continuously with intro/pacing
+  /// that has no detectable gaps — verified by audio analysis). Now every
+  /// name is its OWN audio unit: TTS speaks name #N while the card of name
+  /// #N lights up and scrolls into view — the highlight is EXACT for all
+  /// 99 names, on every device, fully offline, and each name also keeps
+  /// its own per-name voice on the row's speaker button.
   Future<void> _togglePlayAll() async {
     if (_playAll) {
       _playAll = false;
-      await _allPlayer.stop();
-      await _tts.stop();
-      _allSub?.cancel();
+      try { await _tts.stop(); } catch (_) {}
       if (mounted) setState(() => _speakingId = null);
       return;
     }
     if (_rows.isEmpty) return;
-    _playAll = true;
-    if (mounted) setState(() {});
-    try {
-      await _allPlayer.play(AssetSource('sounds/sound.mp3'));
-    } catch (_) {
-      _playAll = false;
-      if (mounted) setState(() => _speakingId = null);
+    if (!_ttsReady) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('دەنگی ئەم مۆبایلە بەردەست نییە'),
+            duration: Duration(milliseconds: 900)));
+      }
       return;
     }
-    _allSub?.cancel();
-    _allSub = _allPlayer.onDurationChanged.listen((d) {
-      if (d > Duration.zero) _allDurMs = d.inMilliseconds;
-    });
-    final posSub = _allPlayer.onPositionChanged.listen((p) {
-      if (!mounted || !_playAll || _allDurMs <= 0) return;
-      final idx = ((p.inMilliseconds / _allDurMs) * _rows.length)
-          .floor()
-          .clamp(0, _rows.length - 1);
-      final r = _rows[idx];
-      if (r.id != _speakingId) {
-        setState(() => _speakingId = r.id);
-        final ctx = _cardKeys[r.id]?.currentContext;
-        if (ctx != null) {
-          Scrollable.ensureVisible(ctx,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-              alignment: 0.1);
-        }
+    _playAll = true;
+    if (mounted) setState(() {});
+    for (var i = 0; i < _rows.length; i++) {
+      if (!_playAll || !mounted) return;
+      final r = _rows[i];
+      _playAllIdx = i;
+      // the CURRENT name lights up + scrolls to the middle of the list
+      setState(() => _speakingId = r.id);
+      final ctx = _cardKeys[r.id]?.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(ctx,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+            alignment: 0.28);
       }
-    });
-    _allPlayer.onPlayerComplete.first.then((_) {
-      if (!mounted) return;
-      _allSub?.cancel();
-      posSub.cancel();
-      _playAll = false;
-      if (mounted) setState(() => _speakingId = null);
-    });
+      try {
+        await _tts.stop();
+        await _tts.speak(_spoken(r));
+      } catch (_) {
+        // TTS hiccup on one name must not kill the whole run
+      }
+      if (!_playAll) return;
+    }
+    // finished all 99
+    _playAll = false;
+    if (mounted) {
+      setState(() => _speakingId = null);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('هەموو ناوەکان لێدران ✅'),
+          duration: Duration(milliseconds: 1200)));
+    }
   }
 
   void _filter(String q) {
@@ -319,8 +319,6 @@ class _NameScreenState extends State<NameScreen> {
   void dispose() {
     _playAll = false;
     try { _tts.stop(); } catch (_) {}
-    _allSub?.cancel();
-    _allPlayer.dispose();
     _ayahPlayer.dispose();
     super.dispose();
   }
@@ -388,6 +386,77 @@ class _NameScreenState extends State<NameScreen> {
                       return _nameCard(r, open, speaking, dark, txt, key);
                     },
                   ),
+          ),
+          // item 3: the NOW-PLAYING strip — while the names are being
+          // recited the current name (from name.db) is shown BIG here
+          // together with its position, so "لەگەڵ دەنگەکە ناوەکان دەردەکەون".
+          if (_playAll && _rows.isNotEmpty) _nowPlayingStrip(dark, txt),
+        ]),
+      ),
+    );
+  }
+
+  Widget _nowPlayingStrip(bool dark, Color txt) {
+    final r = _rows[_playAllIdx.clamp(0, _rows.length - 1)];
+    final accent = dark ? AppColors.gold : AppColors.primaryDark;
+    return Container(
+      decoration: BoxDecoration(
+        color: dark ? AppColors.nightCard : Colors.white,
+        border: Border(
+            top: BorderSide(
+                color: accent.withOpacity(.35), width: 1)),
+      ),
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+      child: SafeArea(
+        top: false,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Row(children: [
+            Icon(Icons.graphic_eq_rounded, size: 20, color: accent),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                Directionality(
+                  textDirection: TextDirection.rtl,
+                  child: Text(
+                      (r.tashkeel.trim().isNotEmpty &&
+                              r.tashkeel.trim().split(' ').length <= 3)
+                          ? r.tashkeel.trim()
+                          : r.arabic,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontFamily: 'Quran',
+                          fontSize: 21,
+                          color: accent,
+                          height: 1.25)),
+                ),
+                Text('ناوی ${toArabicDigits(_playAllIdx + 1)} '
+                    'لە ${toArabicDigits(_rows.length)}',
+                    style: TextStyle(fontSize: 10.5,
+                        color: txt.withOpacity(.6))),
+              ]),
+            ),
+            InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: _togglePlayAll,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: accent.withOpacity(.12)),
+                child: const Icon(Icons.stop_circle_rounded, size: 26),
+              ),
+            ),
+          ]),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+                value: (_playAllIdx + 1) / _rows.length,
+                minHeight: 3,
+                color: accent,
+                backgroundColor: txt.withOpacity(.08)),
           ),
         ]),
       ),

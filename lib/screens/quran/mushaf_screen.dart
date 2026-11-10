@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
-import '../../core/ui.dart' show AudioSetup, bottomInset, copyPage, sharePage, suraLabel;
+import '../../core/ui.dart' show AudioSetup, bottomInset, copyPage, sharePage, showRepeatCountSheet, suraLabel;
 import '../../data/db.dart';
 import '../../data/downloader.dart';
 import '../../data/favorites.dart';
@@ -90,6 +90,11 @@ class _MushafScreenState extends State<MushafScreen> {
   int _repeatLeft = 1;
   bool _reseeking = false;
   bool _flipping = false; // auto page-flip in progress
+
+  // item 10: bulk download of the 604 mushaf pages for offline use.
+  bool _dlPages = false;
+  int _dlDone = 0;
+  bool _dlCancel = false;
 
   @override
   void initState() {
@@ -292,6 +297,161 @@ class _MushafScreenState extends State<MushafScreen> {
     if (v != null) _goTo(v.clamp(1, _totalPages));
   }
 
+  // ---------------------------------------------------------------------
+  // item 10: داگرتنی لاپەڕەکانی مەشەف بۆ ئۆفلاین — the whole 604-page
+  // mushaf (~75 MB) downloaded into the same cache dir the viewer already
+  // reads, with progress + cancel. Pages already on disk are skipped, so
+  // an interrupted run resumes where it stopped.
+  // ---------------------------------------------------------------------
+
+  Future<int> _cachedPageCountAsync() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final d = Directory('${dir.path}/mushaf');
+      if (!d.existsSync()) return 0;
+      return d
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.lengthSync() > 1000)
+          .length;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  /// The download sheet: shows how many pages are already offline, a start
+  /// button, live progress (n/604 + bar) and a cancel that stops safely.
+  Future<void> _downloadPagesDialog() async {
+    final dark = !AppPrefs.I.day;
+    final txt = dark ? Colors.white : Colors.black;
+    final accent = dark ? AppColors.gold : AppColors.primaryDark;
+    var have = await _cachedPageCountAsync();
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (d) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: StatefulBuilder(
+          builder: (d, setD) => AlertDialog(
+            title: Row(children: [
+              Icon(Icons.download_for_offline_rounded, size: 22, color: accent),
+              const SizedBox(width: 8),
+              Expanded(
+                  child: Text('داگرتنی لاپەڕەکانی مەشەف',
+                      style: TextStyle(fontSize: 16, color: txt))),
+            ]),
+            content: Column(mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(
+                  _dlPages
+                      ? 'دەداگیرێت… ${toArabicDigits(_dlDone)} لە ${toArabicDigits(_totalPages)}'
+                      : 'لاپەڕە داگیراوەکان: ${toArabicDigits(have)} لە '
+                          '${toArabicDigits(_totalPages)}\n'
+                          'پاش داگرتن مەشەف بێ ئینتەرنێت کاردەکات.',
+                  style: TextStyle(fontSize: 13, height: 1.8, color: txt)),
+              const SizedBox(height: 12),
+              if (_dlPages) ...[
+                LinearProgressIndicator(
+                    value: _totalPages > 0 ? _dlDone / _totalPages : 0,
+                    color: accent,
+                    backgroundColor: txt.withOpacity(.1)),
+                const SizedBox(height: 8),
+                Text('${((_dlDone / _totalPages) * 100).toStringAsFixed(0)}%',
+                    style: TextStyle(fontSize: 11.5,
+                        fontWeight: FontWeight.bold, color: accent)),
+              ] else
+                Text('~٧٥ مێگابایت — پەیوەندی WiFi پێشنیار کراوە',
+                    style: TextStyle(
+                        fontSize: 11.5, color: txt.withOpacity(.6))),
+            ]),
+            actions: [
+              if (!_dlPages)
+                TextButton(
+                    onPressed: () => Navigator.pop(d),
+                    child: const Text('لابردن')),
+              if (_dlPages)
+                TextButton(
+                    onPressed: () => _dlCancel = true,
+                    child: const Text('وەستان')),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: accent,
+                    foregroundColor: dark ? Colors.black : Colors.white),
+                onPressed: _dlPages
+                    ? null
+                    : () async {
+                        setD(() => _dlPages = true);
+                        _dlCancel = false;
+                        _dlDone = have;
+                        final failed = await _downloadAllPages(
+                            onProgress: (done) {
+                          _dlDone = done;
+                          setD(() {});
+                        }, shouldStop: () => _dlCancel);
+                        _dlPages = false;
+                        if (!d.mounted) return;
+                        Navigator.pop(d);
+                        have = await _cachedPageCountAsync();
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text(_dlCancel
+                                ? 'داگرتن وەستێنرا — ${toArabicDigits(have)} لاپەڕە داگیراوە'
+                                : failed > 0
+                                    ? 'تەواو — ${toArabicDigits(have)} داگیراو، '
+                                        '${toArabicDigits(failed)} نەهاتن — دووبارە هەوڵبدەرەوە'
+                                    : 'تەواو بوو ✅ ${toArabicDigits(have)} '
+                                        'لاپەڕە بەردەستن بۆ ئۆفلاین')));
+                      },
+                icon: const Icon(Icons.download_rounded, size: 18),
+                label: Text(have >= _totalPages
+                    ? 'پشکنینەوە'
+                    : 'داگرتنی هەموو لاپەڕەکان'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Downloads every missing page (4 in parallel, already-downloaded pages
+  /// skipped). Returns the number of pages that could not be fetched.
+  Future<int> _downloadAllPages(
+      {void Function(int done)? onProgress,
+      bool Function()? shouldStop}) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final cache = Directory('${dir.path}/mushaf');
+    if (!cache.existsSync()) cache.createSync(recursive: true);
+    final missing = <int>[];
+    for (var p = 1; p <= _totalPages; p++) {
+      final f = File('${cache.path}/${p.toString().padLeft(3, '0')}.png');
+      if (!f.existsSync() || f.lengthSync() < 1000) missing.add(p);
+    }
+    var done = _totalPages - missing.length;
+    var failed = 0;
+    var cursor = 0;
+    Future<void> worker() async {
+      while (true) {
+        if (shouldStop?.call() ?? false) return;
+        final i = cursor++;
+        if (i >= missing.length) return;
+        final p = missing[i];
+        try {
+          await Downloader.download('$_baseUrl/${p.toString().padLeft(3, '0')}.png',
+              'mushaf/${p.toString().padLeft(3, '0')}.png',
+              timeout: const Duration(seconds: 60));
+        } catch (_) {
+          failed++;
+        }
+        done++;
+        onProgress?.call(done);
+      }
+    }
+
+    await Future.wait([for (var i = 0; i < 4; i++) worker()]);
+    return failed;
+  }
+
   // ---------------------------------------------------------------------------
   // item 22: tap → ayah hit-testing on the real glyph boxes
   // ---------------------------------------------------------------------------
@@ -425,6 +585,27 @@ class _MushafScreenState extends State<MushafScreen> {
           ]),
         ),
       );
+
+  /// item 1+6: the mushaf recite bar repeat — same count sheet as the
+  /// reader's ayah rows. 0 = بێسنوور (infinite).
+  Future<void> _pickRepeatCount() async {
+    final dark = !AppPrefs.I.day;
+    final n = await showRepeatCountSheet(context,
+        dark: dark,
+        title: 'دووبارەکردنەوەی هەر ئایەتێک',
+        subtitle: 'هەر ئایەتێک ئەم ژمارەیە دووبارە دەکرێتەوە پێش چوون بۆ داهاتوو');
+    if (n == null || !mounted) return;
+    setState(() {
+      _repeatLeft = n == 0 ? (1 << 30) : n;
+      if (n >= 1) AppPrefs.I.ayahRepeat = n;
+    });
+  }
+
+  String _repeatBadge() {
+    if (_repeatLeft >= (1 << 29)) return '∞';
+    if (_repeatLeft > 1) return '${toArabicDigits(_repeatLeft)}×';
+    return '';
+  }
 
   /// Recite from the tapped verse: prefer the selected reciter's own surah
   /// audio seeked through its timings db (the highlight follows position);
@@ -979,6 +1160,12 @@ class _MushafScreenState extends State<MushafScreen> {
               onPressed: _askPage,
               icon: const Icon(Icons.pin_drop_rounded,
                   color: Colors.white)),
+          // item 10: bulk download of the mushaf pages for offline use.
+          IconButton(
+              tooltip: 'داگرتنی لاپەڕەکان بۆ ئۆفلاین',
+              onPressed: _downloadPagesDialog,
+              icon: const Icon(Icons.download_for_offline_rounded,
+                  color: Colors.white)),
           IconButton(
               tooltip: 'هاوبەشی',
               onPressed: () => sharePage(
@@ -991,6 +1178,7 @@ class _MushafScreenState extends State<MushafScreen> {
 
   Widget _reciteBar(bool dark, Color txt) {
     final playing = _state == PlayerState.playing;
+    final badge = _repeatBadge();
     return Container(
       color: dark ? AppColors.nightCard : Colors.white,
       padding: EdgeInsets.fromLTRB(8, 4, 8, bottomInset(context, extra: 2)),
@@ -1010,6 +1198,42 @@ class _MushafScreenState extends State<MushafScreen> {
                 ? Icons.pause_circle_rounded
                 : Icons.play_circle_rounded,
                 size: 34, color: dark ? AppColors.gold : AppColors.primaryDark)),
+          // item 1+6: repeat control on the recite bar — the count is
+          // picked from the same sheet as the reader, live badge included.
+          Tooltip(
+            message: 'دووبارەکردنەوەی هەر ئایەتێک',
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: _pickRepeatCount,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                    color: badge.isEmpty
+                        ? Colors.transparent
+                        : AppColors.gold.withOpacity(.18),
+                    borderRadius: BorderRadius.circular(10),
+                    border: badge.isEmpty
+                        ? null
+                        : Border.all(color: AppColors.gold, width: 1.1)),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.repeat_one_rounded,
+                      size: 18,
+                      color: dark ? AppColors.gold : AppColors.primaryDark),
+                  if (badge.isNotEmpty) ...[
+                    const SizedBox(width: 4),
+                    Text(badge,
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: dark
+                                ? AppColors.gold
+                                : AppColors.primaryDark)),
+                  ],
+                ]),
+              ),
+            ),
+          ),
           Expanded(
             child: Text(
                 '${_ayahByAyah ? 'ئایەت بە ئایەت' : 'لێدان لەم ئایەتەوە'} — '
@@ -1023,7 +1247,12 @@ class _MushafScreenState extends State<MushafScreen> {
             tooltip: 'وەستاندنی لێدان',
             onPressed: () async {
               await _player.stop();
-              if (mounted) setState(() => _selAyah = null);
+              if (mounted) {
+                setState(() {
+                  _selAyah = null;
+                  _repeatLeft = AppPrefs.I.ayahRepeat;
+                });
+              }
             },
             icon: Icon(Icons.stop_circle_rounded,
                 size: 28, color: txt.withOpacity(.6))),

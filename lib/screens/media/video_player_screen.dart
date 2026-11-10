@@ -61,9 +61,15 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   bool _downloading = false;
   double _dlProgress = 0;
 
+  // item 8: picture settings (all remembered in prefs)
+  int _fit = 0; // 0 contain, 1 cover/zoom, 2 fill/stretch
+  double _brightness = .5;
+  double _contrast = .5;
+  bool _loop = false;
+
   bool get _hasVideo => (widget.videoKey ?? '').isNotEmpty;
 
-  static const _speeds = [0.25, 0.50, 1.0, 1.25, 1.50, 2.0];
+  static const _speeds = [0.25, 0.50, 0.75, 1.0, 1.25, 1.50, 2.0];
 
   @override
   void initState() {
@@ -71,6 +77,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     _likes = widget.initialLike ?? 0;
     _commentsCount = widget.initialComment ?? 0;
     _speed = AppPrefs.I.videoSpeed;
+    _fit = AppPrefs.I.videoFit;
+    _brightness = AppPrefs.I.videoBrightness;
+    _contrast = AppPrefs.I.videoContrast;
+    _loop = AppPrefs.I.videoLoop;
     _init();
   }
 
@@ -83,6 +93,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     try {
       await c.initialize();
       if (!mounted) return;
+      try { await c.setLooping(_loop); } catch (_) {}
       await c.play();
       try {
         await c.setPlaybackSpeed(_speed);
@@ -135,6 +146,158 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       await _controller?.setPlaybackSpeed(v);
     } catch (_) {}
     _armHide();
+  }
+
+  // ---------- item 8: video SETTINGS (speed + picture + zoom) ----------
+
+  /// The combined ColorFilter matrix: contrast scale around mid-grey +
+  /// brightness offset. 0.5/0.5 = untouched video.
+  ColorFilter get _pictureFilter {
+    final s = 0.5 + _contrast; // 0.5..1.5
+    final offB = (_brightness - 0.5) * 160; // -80..+80
+    final offC = 128 * (1 - s);
+    final o = offB + offC;
+    return ColorFilter.matrix([
+      s, 0, 0, 0, o, //
+      0, s, 0, 0, o, //
+      0, 0, s, 0, o, //
+      0, 0, 0, 1, 0,
+    ]);
+  }
+
+  void _setFit(int v) {
+    setState(() => _fit = v);
+    AppPrefs.I.videoFit = v;
+  }
+
+  void _setBrightness(double v) {
+    setState(() => _brightness = v);
+    AppPrefs.I.videoBrightness = v;
+  }
+
+  void _setContrast(double v) {
+    setState(() => _contrast = v);
+    AppPrefs.I.videoContrast = v;
+  }
+
+  Future<void> _setLoop(bool v) async {
+    setState(() => _loop = v);
+    AppPrefs.I.videoLoop = v;
+    try { await _controller?.setLooping(v); } catch (_) {}
+  }
+
+  /// The settings sheet: خێرایی + وێنە + زووم/پڕکردنەوە + دووبارە.
+  Future<void> _openSettings() async {
+    final dark = !AppPrefs.I.day;
+    final txt = dark ? Colors.white : Colors.black;
+    final accent = dark ? AppColors.gold : AppColors.primaryDark;
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: dark ? AppColors.nightCard : Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (c) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: SafeArea(
+          child: StatefulBuilder(
+            builder: (c, setS) => Padding(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+              child: Column(mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Icon(Icons.tune_rounded, size: 20, color: accent),
+                  const SizedBox(width: 8),
+                  Text('ڕێکخستنی ڤیدیۆ',
+                      style: TextStyle(fontWeight: FontWeight.bold,
+                          fontSize: 15.5, color: txt)),
+                ]),
+                const SizedBox(height: 14),
+                _lbl('خێرایی لێدان', txt),
+                const SizedBox(height: 6),
+                Wrap(spacing: 7, runSpacing: 7, children: [
+                  for (final s in _speeds)
+                    _chip('${s.toStringAsFixed(2)}x',
+                        selected: _speed == s,
+                        accent: accent,
+                        txt: txt,
+                        onTap: () {
+                          _setSpeed(s);
+                          setS(() {});
+                        }),
+                ]),
+                const SizedBox(height: 14),
+                _lbl('قەبارەی وێنە (زووم)', txt),
+                const SizedBox(height: 6),
+                Wrap(spacing: 7, children: [
+                  _chip('ئاسایی',
+                      selected: _fit == 0,
+                      accent: accent, txt: txt,
+                      onTap: () { _setFit(0); setS(() {}); }),
+                  _chip('زووم (پڕکردنەوە)',
+                      selected: _fit == 1,
+                      accent: accent, txt: txt,
+                      onTap: () { _setFit(1); setS(() {}); }),
+                  _chip('کێشان (فول)',
+                      selected: _fit == 2,
+                      accent: accent, txt: txt,
+                      onTap: () { _setFit(2); setS(() {}); }),
+                ]),
+                const SizedBox(height: 14),
+                _lbl('ڕووناکی', txt),
+                Slider(
+                    value: _brightness,
+                    activeColor: accent,
+                    divisions: 10,
+                    label: '${(_brightness * 100).round()}',
+                    onChanged: (v) { _setBrightness(v); setS(() {}); }),
+                _lbl('کۆنتراست', txt),
+                Slider(
+                    value: _contrast,
+                    activeColor: accent,
+                    divisions: 10,
+                    label: '${(_contrast * 100).round()}',
+                    onChanged: (v) { _setContrast(v); setS(() {}); }),
+                const SizedBox(height: 4),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  activeColor: accent,
+                  title: Text('دووبارەکردنەوەی بەردەوام (loop)',
+                      style: TextStyle(fontSize: 13.5, color: txt)),
+                  value: _loop,
+                  onChanged: (v) { _setLoop(v); setS(() {}); },
+                ),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _lbl(String s, Color txt) => Text(s,
+      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700,
+          color: txt.withOpacity(.7)));
+
+  Widget _chip(String label,
+      {required bool selected, required Color accent, required Color txt,
+      required VoidCallback onTap}) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+        decoration: BoxDecoration(
+            color: selected ? accent : txt.withOpacity(.06),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+                color: selected ? accent : accent.withOpacity(.3))),
+        child: Text(label,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
+                color: selected ? Colors.white : txt)),
+      ),
+    );
   }
 
   /// Item 10: download the video and save it to the phone gallery.
@@ -311,7 +474,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                   fontWeight: FontWeight.bold)),
           iconTheme: const IconThemeData(color: Colors.white),
           actions: [
-            // Item 10: speed selector 0.25 → 2.0
+            // Item 8: full settings sheet — speed, zoom/fit, brightness,
+            // contrast, loop (all remembered).
+            IconButton(
+              tooltip: 'ڕێکخستنی ڤیدیۆ',
+              onPressed: _openSettings,
+              icon: const Icon(Icons.tune_rounded, color: Colors.white),
+            ),
+            // Item 10: speed selector 0.25 → 2.0 (quick access)
             PopupMenuButton<double>(
               tooltip: 'خێرایی لێدان',
               icon: Text('${_speed.toStringAsFixed(2)}x',
@@ -353,16 +523,64 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                       ? const Center(child: CircularProgressIndicator())
                       : GestureDetector(
                           onTap: _toggle,
-                          child: Center(
-                            child: AspectRatio(
-                              aspectRatio: value!.aspectRatio == 0
-                                  ? 16 / 9
-                                  : value.aspectRatio,
-                              child: Stack(alignment: Alignment.bottomCenter, children: [
-                                VideoPlayer(_controller!),
-                                if (_controls) ..._controlsWidget(value),
-                              ]),
-                            ),
+                          child: Container(
+                            color: Colors.black,
+                            alignment: Alignment.center,
+                            child: Stack(alignment: Alignment.center, children: [
+                              // item 8: fit/zoom mode + brightness/contrast
+                              // applied to the rendered video surface.
+                              ColorFiltered(
+                                colorFilter: _pictureFilter,
+                                child: SizedBox.expand(
+                                  child: FittedBox(
+                                    fit: _fit == 0
+                                        ? BoxFit.contain
+                                        : _fit == 1
+                                            ? BoxFit.cover
+                                            : BoxFit.fill,
+                                    child: SizedBox(
+                                      width: value!.size.width == 0
+                                          ? 1280
+                                          : value.size.width,
+                                      height: value.size.height == 0
+                                          ? 720
+                                          : value.size.height,
+                                      child: VideoPlayer(_controller!),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              // buffering spinner (center of the video)
+                              if (value.isBuffering)
+                                const Center(
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2)),
+                              // big center play button while paused
+                              if (!value.isPlaying &&
+                                  !value.isBuffering)
+                                GestureDetector(
+                                  onTap: () {
+                                    _controller!.play();
+                                    _armHide();
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(.45),
+                                        shape: BoxShape.circle),
+                                    child: const Icon(
+                                        Icons.play_arrow_rounded,
+                                        size: 46, color: Colors.white),
+                                  ),
+                                ),
+                              if (_controls)
+                                Positioned(
+                                  left: 0, right: 0, bottom: 0,
+                                  child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: _controlsWidget(value)),
+                                ),
+                            ]),
                           ),
                         ),
                 ),
@@ -435,8 +653,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             ),
         ]),
       ),
-      if (value.isBuffering)
-        const Center(child: CircularProgressIndicator(strokeWidth: 2)),
     ];
   }
 }

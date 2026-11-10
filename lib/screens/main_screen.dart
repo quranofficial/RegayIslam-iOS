@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
 import '../core/prefs.dart';
+import '../data/bang_watcher.dart';
 import '../data/home_widgets.dart';
 import '../data/prayer_notifications.dart';
 import '../main.dart' show kThemeEpoch, LastRoute;
@@ -40,6 +41,10 @@ class _MainScreenState extends State<MainScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // item 9: the in-app bang watcher — while the app is OPEN the adhan is
+    // guaranteed to ring at prayer time via the audio player + an
+    // activity-style dialog (the scheduled notifications cover closed-app).
+    BangWatcher.I.start();
     final t = widget.initialTab;
     _position = (t >= 0 && t < _tabs.length) ? t : 0;
     _pager = PageController(initialPage: _position);
@@ -51,6 +56,7 @@ class _MainScreenState extends State<MainScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    BangWatcher.I.stop();
     _pager.dispose();
     super.dispose();
   }

@@ -227,6 +227,7 @@ async function viewRead(m,v){
       <div style="display:flex;gap:8px;justify-content:center;margin-top:10px">
         <button class="btn sm gold" onclick="nav('#/mushaf/${meta.page}')"><span class="msr">auto_stories</span>موشەف</button>
         <button class="btn sm" onclick="playSura(${s},this)"><span class="msr">graphic_eq</span>دەنگی سوورەت</button>
+        <button class="btn sm gold" onclick="repCycle(this)" title="دووبارەکردنەوەی هەر ئایەتێک"><span class="msr">repeat_one</span>دووبارە: <b id="repN">${ku(P.get('ayahrep',3))}</b></button>
       </div>
     </div>
     <div class="reader-bar">
@@ -244,6 +245,7 @@ async function viewRead(m,v){
             <span class="ref">ئایەتی ${ku(a.n)}</span>
             <span class="sp"></span>
             <button class="abtn" onclick="playAyah(${g},this)" title="دەنگ"><span class="msr">play_circle</span></button>
+            <button class="abtn" onclick="playAyahRep(${g},${a.n})" title="دووبارەکردنەوەی ئایەتەکە"><span class="msr">repeat_one</span></button>
             ${FAV.heart('ayah',s+':'+a.n,meta.name+' ئایەتی '+a.n,{s:s,n:a.n})}
             <button class="abtn" onclick="shareAyah(${s},${a.n})"><span class="msr">share</span></button>
           </div>
@@ -270,6 +272,22 @@ function playAyah(g,btn){
   AU.init();
   if(AU.cur===CDN_AYAH+g+'.mp3'&&!AU.el.paused){AU.pause();return;}
   AU.play(CDN_AYAH+g+'.mp3').catch(audioError);
+}
+function repCycle(btn){
+  const c=[1,3,5,10];let i=c.indexOf(P.get('ayahrep',3));i=(i+1)%c.length;
+  P.set('ayahrep',c[i]);const el=$('#repN');if(el)el.textContent=ku(c[i]);
+  toast('هەر ئایەتێک '+ku(c[i])+' جار دووبارە دەکرێتەوە');
+}
+let _repRun=false;
+async function playAyahRep(g,n){
+  if(_repRun)return;_repRun=true;
+  const c=P.get('ayahrep',3);const row=$('#ay'+n);
+  for(let k=0;k<c;k++){
+    if(row)row.classList.add('hl');
+    try{await AU.play(CDN_AYAH+g+'.mp3');}catch(e){break;}
+  }
+  if(row)row.classList.remove('hl');
+  _repRun=false;
 }
 function playSura(s,btn){
   // sequential per-ayah playback of the whole surah
@@ -360,7 +378,8 @@ route(/^#\/names$/,async(m,v)=>{
   setTitle('ناوەکانی خودای گەورە');
   v.innerHTML='<div class="spinner" style="margin-top:40px"></div>';
   let data=[];try{data=await namesData()}catch(e){}
-  v.innerHTML=`<div class="appbar2"><span class="msr">badge</span><h1>ناوەکانی خودای گەورە (${ku(data.length)})</h1></div>
+  v.innerHTML=`<div class="appbar2"><span class="msr">badge</span><h1>ناوەکانی خودای گەورە (${ku(data.length)})</h1>
+    <button class="btn sm gold" onclick="namesPlayAll(this)"><span class="msr">graphic_eq</span>لێدانی هەموو ناوەکان</button></div>
     <div class="card" style="padding:12px"><input id="nq" placeholder="گەڕان..." oninput="renderNames()"></div>
     <div class="list" id="namesBox"></div>
     <p style="font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.9">کرتە لەسەر ناوێک بکە بۆ بینینی واتاکان بە سۆرانی و بادینی و شوێنی ناوەکە لە قورئان.</p>`;
@@ -369,13 +388,59 @@ route(/^#\/names$/,async(m,v)=>{
 function renderNames(){
   const q=($('#nq')?$('#nq').value:'').trim();
   const list=window._names.filter(n=>!q||(n.arabic||'').includes(q)||(n.tashkeel||'').includes(q)||(n.sorani||'').includes(q)||(n.badini||'').includes(q));
-  $('#namesBox').innerHTML=list.map(n=>`
-    <div class="name" onclick="nameSheet(${n.id||0},this)">
+  $('#namesBox').innerHTML=list.map((n,i)=>`
+    <div class="name ${_nspk.i===i?'speaking':''}" data-i="${i}" onclick="nameSheet(${n.id||0},this)">
       <div style="font-family:'Quran',serif;font-size:25px;color:var(--accent);min-width:110px">${esc(n.arabic)}</div>
       <div><div style="font-size:12.5px;font-weight:600">${esc(n.sorani)}</div>
       <div style="font-size:11px;color:var(--gold);font-weight:700;margin-top:3px">📍 ${esc(n.ref||'')}</div></div>
+      <button class="abtn" onclick="event.stopPropagation();nameSpeak(${i})" title="دەنگی ناوەکە"><span class="msr">volume_up</span></button>
     </div>`).join('')||'<div class="empty">هیچ نەدۆزرایەوە</div>';
   window._namesFiltered=list;
+}
+/* item 3+4 — per-name + play-all voice: each name is spoken as its OWN
+   audio unit, and the row of the CURRENT name lights up and scrolls into
+   view — the highlight is exact for all 99 names (same design as the app). */
+let _nspk={i:-1,play:false};
+function nameVoice(word){
+  if(!('speechSynthesis' in window))return false;
+  try{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(word);
+    u.lang='ar';u.rate=0.85;
+    speechSynthesis.speak(u);
+    return true;
+  }catch(e){return false;}
+}
+function nmark(i){
+  document.querySelectorAll('#namesBox .name.speaking').forEach(e=>e.classList.remove('speaking'));
+  const rows=document.querySelectorAll('#namesBox .name');
+  if(i>=0&&rows[i]){rows[i].classList.add('speaking');rows[i].scrollIntoView({block:'center',behavior:'smooth'});}
+}
+function nameSpeak(i){
+  const n=(window._namesFiltered&&window._namesFiltered[i])||window._names[i];if(!n)return;
+  const word=(n.tashkeel&&n.tashkeel.trim().split(' ').length<=3)?n.tashkeel.trim():n.arabic;
+  if(!nameVoice(word)){toast('دەنگی ئەم وێبگەڕە بەردەست نییە');return;}
+  _nspk.i=i;nmark(i);
+}
+function namesPlayAll(btn){
+  const lbl=()=>btn?btn.innerHTML='<span class="msr">graphic_eq</span>لێدانی هەموو ناوەکان':0;
+  if(_nspk.play){_nspk.play=false;try{speechSynthesis.cancel()}catch(e){};nmark(-1);lbl();return;}
+  const list=(window._namesFiltered&&window._namesFiltered.length?window._namesFiltered:window._names)||[];
+  if(!list.length)return;
+  if(!('speechSynthesis' in window)){toast('دەنگی ئەم وێبگەڕە بەردەست نییە');return;}
+  _nspk={i:-1,play:true};
+  if(btn)btn.innerHTML='<span class="msr">stop_circle</span>وەستان';
+  const step=(k)=>{
+    if(!_nspk.play||k>=list.length){_nspk.play=false;nmark(-1);lbl();return;}
+    const n=list[k];
+    const word=(n.tashkeel&&n.tashkeel.trim().split(' ').length<=3)?n.tashkeel.trim():n.arabic;
+    _nspk.i=k;nmark(k);
+    const u=new SpeechSynthesisUtterance(word);u.lang='ar';u.rate=0.85;
+    u.onend=()=>setTimeout(()=>step(k+1),250);
+    u.onerror=()=>setTimeout(()=>step(k+1),250);
+    try{speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){setTimeout(()=>step(k+1),100);}
+  };
+  step(0);
 }
 function nameSheet(idx){
   const n=window._namesFiltered[idx]||window._names[idx];

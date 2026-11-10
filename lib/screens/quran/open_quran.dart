@@ -100,6 +100,15 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
   int _repeatLeft = 1;
   bool _reseeking = false;
 
+  // item 1+6: the ROW repeat mode — a button on every ayah row repeats
+  // THAT ayah N times (or ∞) and then stops. _repeatTotal: 0 = off,
+  // -1 = بێسنوور, N = that many plays. _repeatDone drives the live
+  // "دووبارە ٢/٥" badge on the verse row so the feature is VISIBLE.
+  int _repeatTotal = 0;
+  int _repeatDone = 0;
+
+  bool get _rowRepeatActive => _repeatTotal != 0 && _ayahByAyah;
+
   @override
   void initState() {
     super.initState();
@@ -128,6 +137,19 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
     _player.onPlayerComplete.listen((_) {
       if (!mounted) return;
       if (_ayahByAyah && _playingAyah != null) {
+        // item 1+6: ROW repeat — the verse from the row button replays N
+        // times (or forever) and then STOPS, with a live badge on the row.
+        if (_rowRepeatActive) {
+          if (_repeatTotal == -1 || _repeatDone < _repeatTotal) {
+            _repeatDone++;
+            if (mounted) setState(() {});
+            _playAyahFile(_playingAyah!);
+            return;
+          }
+          // all repeats finished — stop and clear the badge
+          _stopRowRepeat(done: true);
+          return;
+        }
         // item 12: repeat the SAME ayah 1/3/5/10 times first
         if (_repeatLeft > 1) {
           _repeatLeft--;
@@ -421,6 +443,50 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
     }
   }
 
+  // ---------- item 1+6: ROW repeat (button on the ayah row) ----------
+
+  /// Opens the shared count sheet from the ayah row button and starts
+  /// repeating exactly that verse.
+  Future<void> _repeatThisAyah(int ayah) async {
+    final dark = !AppPrefs.I.day;
+    final n = await showRepeatCountSheet(context,
+        dark: dark,
+        title: 'دووبارەکردنەوەی ئایەتی ${toArabicDigits(ayah)}',
+        subtitle: 'ئایەتەکە بە دەنگی ${AppPrefs.I.qariName} '
+            'دووبارە دەکرێتەوە و دواتر وەستێنراو دەبێت');
+    if (n == null || !mounted) return;
+    _startRowRepeat(ayah, n);
+  }
+
+  void _startRowRepeat(int ayah, int n) {
+    _recoverTries = 0;
+    setState(() {
+      _ayahByAyah = true;
+      _playingAyah = ayah;
+      _repeatTotal = n == 0 ? -1 : n;
+      _repeatDone = 1;
+      _repeatLeft = n == 0 ? (1 << 30) : n;
+    });
+    _playAyahFile(ayah);
+  }
+
+  /// Stop the row repeat — also used by the strip's stop button.
+  Future<void> _stopRowRepeat({bool done = false}) async {
+    _repeatTotal = 0;
+    _repeatDone = 0;
+    await _player.stop();
+    if (!mounted) return;
+    setState(() {
+      _state = PlayerState.stopped;
+      if (done) _playingAyah = null;
+    });
+    if (done) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('دووبارەکردنەوە تەواو بوو ✅'),
+          duration: Duration(milliseconds: 1200)));
+    }
+  }
+
   /// Item 10: recite from this ayah to the end of the surah.
   /// Preferred: the SELECTED reciter's own surah audio seeked through its
   /// timings db (highlights follow position). Fallback: per-ayah files.
@@ -558,16 +624,17 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
     super.dispose();
   }
 
-  /// Auto-scroll the ayah list to the currently recited ayah — now exact,
-  /// via the row's GlobalKey (item 10: clicking a number used to land on
-  /// the wrong verse because the position was estimated).
+  /// Auto-scroll the ayah list to the currently recited ayah — exact, via
+  /// the row's GlobalKey, and CENTERED (item: "la naway awastet beka
+  /// setSelection" — the highlighted verse lands in the middle of the
+  /// screen, not at the very top edge).
   void _scrollToAyah(int ayahNum) {
     final ctx = _ayahKeys[ayahNum]?.currentContext;
     if (ctx != null) {
       Scrollable.ensureVisible(ctx,
-          duration: const Duration(milliseconds: 350),
+          duration: const Duration(milliseconds: 320),
           curve: Curves.easeOut,
-          alignment: 0.08);
+          alignment: 0.32);
       return;
     }
     if (!_scroll.hasClients) return;
@@ -578,8 +645,128 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
     final target = (itemIndex * itemExtent).clamp(
         0.0, _scroll.position.maxScrollExtent);
     _scroll.animateTo(target,
-        duration: const Duration(milliseconds: 350),
+        duration: const Duration(milliseconds: 320),
         curve: Curves.easeOut);
+  }
+
+  /// item 2 — setSelection to the MIDDLE on seek: the moment the user
+  /// drops the seekbar thumb, the highlight + the list jump to the ayah
+  /// under that position RIGHT AWAY (no waiting for the next position
+  /// tick), and the verse is centered in the viewport.
+  void _snapHighlightToSeek(Duration at) {
+    if (_timings.isEmpty || _ayat.isEmpty || _rowRepeatActive) return;
+    final ms = at.inMilliseconds;
+    int? cur;
+    for (final a in _ayat) {
+      final key = '${widget.surahId}:${a['ayah']}';
+      final t = _timings[key];
+      if (t != null && t <= ms) cur = (a['ayah'] as num).toInt();
+    }
+    if (cur == null || cur == _playingAyah) return;
+    setState(() => _playingAyah = cur);
+    _scrollToAyah(cur);
+  }
+
+  /// item 1+6 — the redesigned repeat strip: live status + a real stop
+  /// button while a row repeat runs, and the whole-recitation repeat count
+  /// (هر ئایەتێک N جار) as pretty segmented pills when idle.
+  Widget _repeatStrip(bool dark, Color card, Color txt) {
+    final accent = dark ? AppColors.gold : AppColors.primaryDark;
+    if (_rowRepeatActive) {
+      final target = _repeatTotal == -1 ? '∞' : '${toArabicDigits(_repeatTotal)} جار';
+      return Container(
+        margin: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+            color: AppColors.gold.withOpacity(.14),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.gold.withOpacity(.55))),
+        child: Row(children: [
+          Icon(Icons.repeat_one_rounded, size: 18, color: AppColors.gold),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+                'دووبارەکردنەوەی ئایەتی '
+                '${toArabicDigits(_playingAyah ?? 0)} — $target • جاری '
+                '${toArabicDigits(_repeatDone)}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.gold)),
+          ),
+          InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () => _stopRowRepeat(),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                  color: AppColors.gold,
+                  borderRadius: BorderRadius.circular(10)),
+              child: const Text('وەستان',
+                  style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87)),
+            ),
+          ),
+        ]),
+      );
+    }
+    return Container(
+      color: dark ? AppColors.nightBg.withOpacity(.5) : const Color(0xFFF4F5F7),
+      padding: const EdgeInsets.fromLTRB(10, 5, 10, 5),
+      child: Row(children: [
+        Icon(Icons.repeat_rounded, size: 16, color: accent),
+        const SizedBox(width: 7),
+        Text('دووبارەی هەر ئایەتێک:',
+            style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: txt.withOpacity(.75))),
+        const SizedBox(width: 6),
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(children: [
+              for (final n in const [1, 3, 5, 10])
+                GestureDetector(
+                  onTap: () => setState(() {
+                    AppPrefs.I.ayahRepeat = n;
+                    _repeatLeft = n;
+                  }),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 11, vertical: 4),
+                    decoration: BoxDecoration(
+                        color: AppPrefs.I.ayahRepeat == n
+                            ? accent
+                            : (dark
+                                ? Colors.white.withOpacity(.06)
+                                : Colors.black.withOpacity(.04)),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color: AppPrefs.I.ayahRepeat == n
+                                ? accent
+                                : accent.withOpacity(.25))),
+                    child: Text(n == 1 ? 'یەک جار' : '$n جار',
+                        style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppPrefs.I.ayahRepeat == n
+                                ? (dark ? Colors.black : Colors.white)
+                                : txt.withOpacity(.8))),
+                  ),
+                ),
+            ]),
+          ),
+        ),
+      ]),
+    );
   }
 
   void _copyAyah(String ayah, String tafsir) async {
@@ -702,6 +889,8 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                       final tafsir = '${a[_tafsir] ?? ''}';
                       final highlighted = _playingAyah == ayahNum;
                       final ringed = _ringedAyah == ayahNum;
+                      final rowRepeatHere = _rowRepeatActive &&
+                          _playingAyah == ayahNum;
                       return GestureDetector(
                         key: _ayahKeys.putIfAbsent(ayahNum, () => GlobalKey()),
                         onTap: () => _copyAyah(ayahText, tafsir),
@@ -761,6 +950,61 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                                   ),
                                 ),
                               ),
+                              // item 1+6: the REPEAT button ON the verse row
+                              // — the old repeat was an invisible strip; now
+                              // every ayah carries its own repeat control
+                              // with a live "دووبارە ٢/٥" badge while active.
+                              Tooltip(
+                                message: 'دووبارەکردنەوەی ئایەتەکە',
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(10),
+                                  onTap: () => _repeatThisAyah(ayahNum),
+                                  child: Container(
+                                    margin: const EdgeInsets.only(right: 5),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 7, vertical: 2),
+                                    decoration: BoxDecoration(
+                                        color: (rowRepeatHere || _rowRepeatActive)
+                                            ? AppColors.gold.withOpacity(.22)
+                                            : (dark
+                                                ? AppColors.gold.withOpacity(.08)
+                                                : AppColors.primaryDark.withOpacity(.05)),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: rowRepeatHere
+                                            ? Border.all(
+                                                color: AppColors.gold,
+                                                width: 1.2)
+                                            : null),
+                                    child: Icon(Icons.repeat_one_rounded,
+                                        size: 15,
+                                        color: (rowRepeatHere || _rowRepeatActive)
+                                            ? AppColors.gold
+                                            : (dark
+                                                ? AppColors.gold.withOpacity(.75)
+                                                : AppColors.primaryDark.withOpacity(.65))),
+                                  ),
+                                ),
+                              ),
+                              if (rowRepeatHere) ...[
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 7, vertical: 2),
+                                  decoration: BoxDecoration(
+                                      color: AppColors.gold,
+                                      borderRadius: BorderRadius.circular(10)),
+                                  child: Text(
+                                      _repeatTotal == -1
+                                          ? '∞ دووبارە'
+                                          : 'دووبارە '
+                                              '${toArabicDigits(_repeatDone)}/'
+                                              '${toArabicDigits(_repeatTotal)}',
+                                      style: const TextStyle(
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black87)),
+                                ),
+                              ],
                               if (AppPrefs.I.showQuranAyahNumbers) const Spacer(),
                               FavoriteButton(
                                 id: 'quran::${widget.surahId}::$ayahNum',
@@ -796,49 +1040,29 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                     },
                   ),
                 ),
-                // item 12: repeat selector — each ayah repeats 1/3/5/10x
-                Container(
-                  color: dark ? AppColors.nightBg.withOpacity(.5) : const Color(0xFFF4F5F7),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  child: Row(children: [
-                    Icon(Icons.repeat_rounded, size: 16,
-                        color: dark ? AppColors.gold : AppColors.primaryDark),
-                    const SizedBox(width: 8),
-                    Text('دووبارەکردنەوەی هەر ئایەتێک:',
-                        style: TextStyle(fontSize: 11.5, color: txt.withOpacity(.75))),
-                    const SizedBox(width: 8),
-                    for (final n in const [1, 3, 5, 10])
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 3),
-                        child: ChoiceChip(
-                          visualDensity: VisualDensity.compact,
-                          label: Text('${n == 1 ? "یەک جار" : "$n جار"}',
-                              style: TextStyle(fontSize: 10.5,
-                                  color: AppPrefs.I.ayahRepeat == n
-                                      ? Colors.white : txt)),
-                          selected: AppPrefs.I.ayahRepeat == n,
-                          selectedColor: dark ? AppColors.gold : AppColors.primaryDark,
-                          backgroundColor: card,
-                          onSelected: (_) => setState(() {
-                            AppPrefs.I.ayahRepeat = n;
-                            _repeatLeft = n;
-                          }),
-                        ),
-                      ),
-                  ]),
-                ),
+                // item 1+6: the redesigned repeat strip — a real control
+                // with live status and a working stop, not a bare toast.
+                _repeatStrip(dark, card, txt),
                 AudioPlayerBar(
                   player: _player,
                   dark: dark,
                   card: card,
-                  title: _ayahByAyah
+                  onSeeked: _snapHighlightToSeek,
+                  title: _rowRepeatActive
+                      ? 'دووبارەکردنەوەی ئایەت — ${AppPrefs.I.qariName}'
+                      : _ayahByAyah
                       ? 'ئایەت بە ئایەت — ${AppPrefs.I.qariName}'
                       : 'دەنگی سوورەت — ${AppPrefs.I.qariName}',
                   onPlayPause: _ayahByAyah
                       ? () async {
                           await _player.stop();
                           if (mounted) {
-                            setState(() { _ayahByAyah = false; _playingAyah = null; });
+                            setState(() {
+                              _ayahByAyah = false;
+                              _playingAyah = null;
+                              _repeatTotal = 0;
+                              _repeatDone = 0;
+                            });
                           }
                         }
                       : () {

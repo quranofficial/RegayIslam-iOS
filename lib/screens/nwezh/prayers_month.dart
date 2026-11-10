@@ -9,7 +9,6 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/constants.dart';
 import '../../core/kurdish_date.dart';
 import '../../core/prefs.dart';
-import '../../core/ui.dart' show kAppUrl;
 import '../../data/db.dart';
 import '../quran/open_quran.dart' show toArabicDigits;
 
@@ -247,27 +246,31 @@ class _PrayersMonthScreenState extends State<PrayersMonthScreen> {
 
   // ------------------------------------------------------- printable sheet
 
-  /// Dark header band of the printed sheet — city, Kurdish month + year and
-  /// the Hijri range of the month.
+  /// Dark header band of the printed sheet — city, Kurdish month + year,
+  /// then BOTH the Hijri and Gregorian ranges of the month (moved here from
+  /// the per-row date cells to keep the sheet A4-compact).
   Widget _sheetHeader(int year) {
     final first = DateTime(year, _month, 1);
     final last = DateTime(year, _month + 1, 0);
     return Container(
       width: double.infinity,
       color: AppColors.primaryDark,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
       child: Column(children: [
         const Text('کاتەکانی نوێژ',
-            style: TextStyle(fontFamily: 'Rabar', fontSize: 21,
+            style: TextStyle(fontFamily: 'Rabar', fontSize: 20,
                 fontWeight: FontWeight.w800, color: Colors.white, height: 1.2)),
         const SizedBox(height: 4),
         Text('${AppPrefs.I.cityName} — ${_months[_month - 1]} ${_dg('$year')}',
             style: const TextStyle(fontFamily: 'Rabar', fontSize: 13,
                 fontWeight: FontWeight.w700, color: Colors.white)),
         const SizedBox(height: 3),
-        Text('${hijriKu(first)} — ${hijriKu(last)}',
-            style: TextStyle(fontSize: 10.5,
-                color: Colors.white.withValues(alpha: .72))),
+        Text('هیجری: ${hijriKu(first)} — ${hijriKu(last)}',
+            style: TextStyle(fontSize: 10,
+                color: Colors.white.withValues(alpha: .78))),
+        Text('زایینی: ${gregorianKu(first)} — ${gregorianKu(last)}',
+            style: TextStyle(fontSize: 10,
+                color: Colors.white.withValues(alpha: .78))),
       ]),
     );
   }
@@ -299,7 +302,7 @@ class _PrayersMonthScreenState extends State<PrayersMonthScreen> {
   Widget _headCell(String label) {
     return Container(
       color: AppColors.primaryDark,
-      padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
+      padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
       alignment: Alignment.center,
       child: Text(label,
           style: const TextStyle(fontFamily: 'Rabar', fontSize: 11.5,
@@ -321,8 +324,11 @@ class _PrayersMonthScreenState extends State<PrayersMonthScreen> {
     ]);
   }
 
-  /// Three-line date cell: bold day number, weekday, Hijri, then the normal
-  /// (Gregorian) date — all three formats ride together (item 16).
+  /// item 5 REDESIGN: the sheet used to be extremely long — every row
+  /// carried a 4-line date cell (day + weekday + Hijri + Gregorian). Now
+  /// each row is ONE bold date line + ONE small weekday line, and both the
+  /// Hijri and Gregorian ranges of the month ride in the header band —
+  /// the whole sheet lands at roughly A4 proportions.
   Widget _dayCell(Object? v, DateTime? d, bool friday) {
     if (d == null) {
       return Text(_fmt(v), style: const TextStyle(fontSize: 11, color: _ink));
@@ -330,15 +336,11 @@ class _PrayersMonthScreenState extends State<PrayersMonthScreen> {
     final dayColor = friday ? _fridayInk : _ink;
     return Column(mainAxisSize: MainAxisSize.min, children: [
       Text('${_dg('${d.day}')}/${_dg('${d.month}')}',
-          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800,
-              color: dayColor, height: 1.1)),
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800,
+              color: dayColor, height: 1.15)),
       Text(weekdayKu(d),
-          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700,
-              color: dayColor, height: 1.25)),
-      _fit(Text(hijriKu(d), style: const TextStyle(fontSize: 8.5,
-          color: _inkSoft, height: 1.2))),
-      _fit(Text(gregorianKu(d), style: TextStyle(fontSize: 8.5,
-          color: _inkSoft.withValues(alpha: .75), height: 1.2))),
+          style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700,
+              color: dayColor.withOpacity(.85), height: 1.2)),
     ]);
   }
 
@@ -352,7 +354,7 @@ class _PrayersMonthScreenState extends State<PrayersMonthScreen> {
       bool firstTime = false}) {
     const BorderSide sep = BorderSide(width: 1.3, color: _sep);
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 5),
+      padding: const EdgeInsets.symmetric(vertical: 2.5, horizontal: 5),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: bg,
@@ -364,17 +366,14 @@ class _PrayersMonthScreenState extends State<PrayersMonthScreen> {
     );
   }
 
-  /// Keeps the long Hijri/Gregorian lines inside the narrow date column.
-  Widget _fit(Text t) => FittedBox(fit: BoxFit.scaleDown, child: t);
-
   Widget _sheetFooter() {
     return Container(
       width: double.infinity,
       color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 9),
       child: Column(children: [
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Container(width: 11, height: 11,
+          Container(width: 10, height: 10,
               decoration: BoxDecoration(
                   color: AppColors.gold.withValues(alpha: .12),
                   border: Border.all(color: AppColors.gold, width: .8))),
@@ -382,15 +381,12 @@ class _PrayersMonthScreenState extends State<PrayersMonthScreen> {
           const Text('ڕۆژی هەینی',
               style: TextStyle(fontSize: 9.5, color: _inkSoft)),
         ]),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Container(height: 1, color: _grid),
-        const SizedBox(height: 7),
-        const Text('ڕێگای ئیسلام',
-            style: TextStyle(fontFamily: 'Rabar', fontSize: 11.5,
+        const SizedBox(height: 5),
+        const Text('ڕێگای ئیسلام — linkakam.com/Regayislam',
+            style: TextStyle(fontFamily: 'Rabar', fontSize: 10.5,
                 fontWeight: FontWeight.w800, color: Color(0xFF333333))),
-        Text(kAppUrl.replaceFirst('https://', ''),
-            style: TextStyle(fontSize: 9.5,
-                color: _inkSoft.withValues(alpha: .8))),
       ]),
     );
   }
