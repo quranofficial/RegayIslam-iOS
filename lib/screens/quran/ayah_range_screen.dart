@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'dart:io';
-import 'dart:convert';
 import 'package:path_provider/path_provider.dart';
 import '../../core/prefs.dart';
 import '../../core/ui.dart';
 import '../../data/db.dart';
 import '../../data/downloader.dart';
+import '../../data/reciters.dart';
 import 'mushaf_screen.dart';
 import 'open_quran.dart' show toArabicDigits;
 
@@ -61,13 +61,20 @@ class _AyahRangeScreenState extends State<AyahRangeScreen> {
 
   Future<void> _load() async {
     try {
-      final raw = await rootAssetJson('assets/data/dangakan.json');
+      // Only doxx=true reciters (audio + timings db assets/db/<id>.db ready).
+      final reciters = await Reciters.supportedList();
       final surahs = await Db.I.surahs();
       if (!mounted) return;
       setState(() {
-        _reciters = raw;
+        _reciters = reciters;
         _surahs = surahs;
-        if (_reciters.isNotEmpty) _reciter = _reciters.first;
+        if (_reciters.isNotEmpty) {
+          // Start with the reciter the whole app already uses, when present.
+          final saved = AppPrefs.I.qariId;
+          _reciter = reciters.firstWhere(
+              (r) => '${r['id']}' == saved,
+              orElse: () => reciters.first);
+        }
         if (_surahs.isNotEmpty) _surah = _surahs.first;
         _loading = false;
       });
@@ -77,12 +84,6 @@ class _AyahRangeScreenState extends State<AyahRangeScreen> {
         setState(() { _loading = false; _error = 'هەڵە لە خوێندنەوەی داتا'; });
       }
     }
-  }
-
-  Future<List<Map<String, dynamic>>> rootAssetJson(String path) async {
-    final raw = await DefaultAssetBundle.of(context).loadString(path);
-    final list = jsonDecode(raw) as List;
-    return list.map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
   Future<void> _loadAyat() async {

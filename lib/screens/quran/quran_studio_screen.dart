@@ -1,4 +1,4 @@
-import 'dart:convert';
+import '../../data/reciters.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -90,27 +90,22 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
     final surahs = await Db.I.surahs();
     List<Map<String, dynamic>> reciters = [];
     try {
-      final raw = await DefaultAssetBundle.of(context)
-          .loadString('assets/data/dangakan.json');
-      reciters = (jsonDecodeList(raw)).cast<Map<String, dynamic>>();
+      // Only doxx=true reciters (audio + timings db assets/db/<id>.db ready).
+      reciters = await Reciters.supportedList();
     } catch (_) {}
     if (!mounted) return;
     setState(() {
       _surahs = surahs;
       _reciters = reciters;
       _surah = surahs.isNotEmpty ? surahs.first : null;
-      _reciter = reciters.isNotEmpty ? reciters.first : null;
+      // Start with the reciter the whole app already uses, when present.
+      Map<String, dynamic>? saved;
+      for (final r in reciters) {
+        if ('${r['id']}' == AppPrefs.I.qariId) { saved = r; break; }
+      }
+      _reciter = saved ?? (reciters.isNotEmpty ? reciters.first : null);
     });
     await _loadAyat();
-  }
-
-  static List<Map<String, dynamic>> jsonDecodeList(String raw) {
-    try {
-      final l = const JsonDecoder().convert(raw) as List;
-      return l.map((e) => Map<String, dynamic>.from(e)).toList();
-    } catch (_) {
-      return [];
-    }
   }
 
   Future<void> _loadAyat() async {

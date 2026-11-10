@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -10,6 +9,7 @@ import '../../core/ui.dart';
 import '../../data/db.dart';
 import '../../data/downloader.dart';
 import '../../data/favorites.dart';
+import '../../data/reciters.dart';
 
 /// Original: QariakanActivity — reciters list from dangakan.json; selecting a
 /// reciter plays surah audio (dangakan "url" base + surah number mp3).
@@ -73,21 +73,19 @@ class _QariakanScreenState extends State<QariakanScreen> {
 
   Future<void> _load() async {
     try {
-      final raw = await rootAssetString('assets/data/dangakan.json');
-      final list = jsonDecode(raw) as List;
+      // Reciters come ONLY from dangakan.json — and only the entries marked
+      // doxx=true (audio + ayah timings db assets/db/<id>.db ready) are shown.
+      _reciters = await Reciters.supportedList();
       final surahs = await Db.I.surahs();
+      if (!mounted) return;
       setState(() {
-        _reciters = list.map((e) => Map<String, dynamic>.from(e)).toList();
         _surahs = surahs;
         _loading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() { _loading = false; _error = 'هەڵە لە خوێندنەوەی لیست'; });
     }
-  }
-
-  Future<String> rootAssetString(String path) async {
-    return DefaultAssetBundle.of(context).loadString(path);
   }
 
   String _url(Map<String, dynamic> r) {
@@ -354,10 +352,10 @@ class _QariakanScreenState extends State<QariakanScreen> {
                           leading: _reciterAvatar(r, dark),
                           title: Text('${r['name_ar'] ?? ''}',
                               style: TextStyle(fontWeight: FontWeight.bold, color: txt)),
-                          subtitle: r['doxx'] == 'true'
-                              ? const Text('داگرتن بەردەستە',
-                                  style: TextStyle(fontSize: 11))
-                              : const SizedBox(),
+                          // doxx=true only — audio + ayah timings are ready
+                          // (assets/db/<id>.db), so download is always possible.
+                          subtitle: const Text('دەنگ و ئایەت بەردەستە — داگرتن بۆ ئۆفلاین',
+                              style: TextStyle(fontSize: 11)),
                           trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                             FavoriteButton(id: 'reciter::${r['id']}',
                               title: '${r['name_ar'] ?? 'قاری'}',
