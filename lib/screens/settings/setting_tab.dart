@@ -10,6 +10,7 @@ import '../band/band_screen.dart';
 import '../misc/webview_screen.dart';
 import 'adhan_offset_screen.dart';
 import '../home/home_reorder_screen.dart';
+import '../data/favorites.dart' show FavoritesScreen;
 import 'adhan_voice_screen.dart';
 import '../admin/admin_screen.dart';
 
@@ -83,6 +84,21 @@ class _SettingTabState extends State<SettingTab> {
               style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         ),
         body: ListView(padding: const EdgeInsets.all(12), children: [
+          // Item 5 (feedback): دڵخوازەکان is no longer one of the top home
+          // sections — it lives here in ڕێکخستن, one tap away. The heart
+          // buttons on every card/screen still save favorites.
+          Card(color: dark ? AppColors.nightCard : Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              child: ListTile(
+                  leading: Icon(Icons.bookmarks_rounded,
+                      color: dark ? AppColors.gold : AppColors.primaryDark),
+                  title: Text('دڵخوازەکان', style: TextStyle(color: txt)),
+                  subtitle: Text('هەموو ئەو شتانەی دڵخوازت بوون',
+                      style: TextStyle(fontSize: 11,
+                          color: txt.withOpacity(.55))),
+                  trailing: const Icon(Icons.chevron_left),
+                  onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const FavoritesScreen())))),
           _section('دۆخی ڕەنگ', dark, txt),
           Card(color: dark ? AppColors.nightCard : Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),

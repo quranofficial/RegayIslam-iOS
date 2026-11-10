@@ -57,18 +57,35 @@ class HomeWidgets {
     } catch (_) {}
   }
 
-  /// Item 5: the Quran widget must always carry one ayah of the day —
-  /// pushed once per calendar day at splash, using the exact same
-  /// deterministic pick the home banner uses so both stay in sync.
+  /// Item 5: the Quran widget always carries one ayah of the day — the
+  /// EXACT same ayah the home banner shows.
+  ///
+  /// BUG FIX (Item 1): the widget used its own seed (Random(day)) while the
+  /// home banner used Random(day*31+month), so the widget and the card
+  /// showed two DIFFERENT ayahs — it looked like the daily ayah "changed
+  /// twice". Now both read the persisted banner sura/index (the same state
+  /// the refresh button writes), so everywhere there is exactly ONE ayah.
   static Future<void> pushDailyAyah() async {
     try {
       final now = DateTime.now();
       final dayKey = '${now.year}-${now.month}-${now.day}';
-      if (AppPrefs.I.widgetAyahDay == dayKey) return;
-      final sura = Random(now.day).nextInt(114) + 1;
+      if (AppPrefs.I.widgetAyahDay == dayKey && AppPrefs.I.ayahDay == dayKey) {
+        return;
+      }
+      int sura = AppPrefs.I.ayahBannerSura;
+      if (AppPrefs.I.ayahDay != dayKey || sura <= 0) {
+        final r = Random(now.day * 31 + now.month);
+        sura = r.nextInt(114) + 1;
+        final pool = await Db.I.ayat(sura, AppPrefs.I.tafsir);
+        if (pool.isEmpty) return;
+        AppPrefs.I.ayahDay = dayKey;
+        AppPrefs.I.ayahBannerSura = sura;
+        AppPrefs.I.ayahBannerSeed = r.nextInt(pool.length);
+      }
       final pool = await Db.I.ayat(sura, AppPrefs.I.tafsir);
       if (pool.isEmpty) return;
-      final idx = Random(now.day).nextInt(pool.length);
+      final idx =
+          AppPrefs.I.ayahBannerSeed.clamp(0, pool.length - 1).toInt();
       final row = pool[idx];
       await updateAyah(
         text: '${row['text'] ?? ''}',

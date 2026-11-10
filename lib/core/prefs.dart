@@ -162,6 +162,14 @@ class AppPrefs {
   int get ayahBannerSeed => _p.getInt('ayahBannerSeed') ?? -1;
   set ayahBannerSeed(int v) => _p.setInt('ayahBannerSeed', v);
 
+  // --- daily-ayah banner: the surah the current ayah came from. The old
+  //     code recomputed the surah deterministically every rebuild, so a
+  //     saved seed mapped into a DIFFERENT surah's pool and the card showed
+  //     a second ayah (the "refresh once, changes twice" bug). Persisting
+  //     the sura makes the card show exactly ONE ayah until refreshed.
+  int get ayahBannerSura => _p.getInt('ayahBannerSura') ?? 0;
+  set ayahBannerSura(int v) => _p.setInt('ayahBannerSura', v);
+
   // --- library books json (MainActivity pref "onlybookme": the fetched
   //     ktebakan.json, kept offline) ---
   String get libraryJson => _p.getString('onlybookme') ?? '';

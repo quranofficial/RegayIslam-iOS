@@ -51,6 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _timesError = false;
   Map<String, dynamic>? _ramadanDay;
   List<Map<String, dynamic>> _live = [];
+  String _liveNames = '';
   Map<String, Object?>? _bannerAyah;
   int _bannerSuraId = 0;
 
@@ -75,9 +76,16 @@ class _HomeScreenState extends State<HomeScreen> {
       // Item 2: the "پەخشی ڕاستەوخۆ" banner must count the REAL channels of
       // the "Live" node (مەککە + مەدینە = 2 کەناڵ) — it used the old
       // "livemuslim" node and showed "1" while the live page has 2.
+      // Feedback item 2: the banner now shows BOTH channel NAMES — two
+      // channels, two texts (مەککەی پیرۆز • مەدینەی پیرۆز).
       var l = await Rtdb.I.liveChannels();
       if (l.isEmpty) l = await Rtdb.I.liveMuslim();
-      if (mounted) setState(() => _live = l);
+      final names = l
+          .map((s) => '${s['name'] ?? s['title'] ?? ''}'.trim())
+          .where((n) => n.isNotEmpty)
+          .take(3)
+          .join('  •  ');
+      if (mounted) setState(() { _live = l; _liveNames = names; });
     } catch (_) {}
     _loadBannerAyah();
   }
@@ -86,34 +94,91 @@ class _HomeScreenState extends State<HomeScreen> {
   /// and the ayah number ride together as one unit, and a new day brings a
   /// new ayah. Tapping the card opens the Quran AT that ayah (not at the
   /// top of the surah, and not a separate ayahs list).
+  ///
+  /// BUG FIX (Item 1): the surah AND index of the current ayah are both
+  /// persisted. Before, the surah was recomputed deterministically on every
+  /// rebuild while only the index was saved, so the same index pointed into
+  /// a different surah's pool and the card changed a second time — the
+  /// "one refresh, two ayahs" bug. Now the card holds ONE stable ayah: it
+  /// changes only at a new day or when the user presses the refresh button
+  /// (which itself changes it exactly ONCE per tap).
   Future<void> _loadBannerAyah() async {
     try {
       final now = DateTime.now();
       final dayKey = '${now.year}-${now.month}-${now.day}';
-      final seed = AppPrefs.I.ayahBannerSeed;
-      final sameDay = AppPrefs.I.ayahDay == dayKey && seed >= 0;
+      final sameDay = AppPrefs.I.ayahDay == dayKey &&
+          AppPrefs.I.ayahBannerSura > 0 &&
+          AppPrefs.I.ayahBannerSeed >= 0;
       int sura;
       int idx;
+      List<Map<String, Object?>> pool;
       if (sameDay) {
-        sura = Random(now.day * 31 + now.month).nextInt(114) + 1;
-        final pool = await Db.I.ayat(sura, AppPrefs.I.tafsir);
+        sura = AppPrefs.I.ayahBannerSura;
+        pool = await Db.I.ayat(sura, AppPrefs.I.tafsir);
         if (pool.isEmpty || !mounted) return;
-        idx = seed < pool.length ? seed : 0;
-        setState(() { _bannerAyah = pool[idx]; _bannerSuraId = sura; });
+        idx = AppPrefs.I.ayahBannerSeed.clamp(0, pool.length - 1).toInt();
       } else {
-        sura = Random(now.day * 31 + now.month).nextInt(114) + 1;
-        final pool = await Db.I.ayat(sura, AppPrefs.I.tafsir);
+        final r = Random(now.day * 31 + now.month);
+        sura = r.nextInt(114) + 1;
+        pool = await Db.I.ayat(sura, AppPrefs.I.tafsir);
         if (pool.isEmpty || !mounted) return;
-        idx = Random(now.day * 31 + now.month).nextInt(pool.length);
-        setState(() { _bannerAyah = pool[idx]; _bannerSuraId = sura; });
+        idx = r.nextInt(pool.length);
         AppPrefs.I.ayahDay = dayKey;
+        AppPrefs.I.ayahBannerSura = sura;
         AppPrefs.I.ayahBannerSeed = idx;
       }
+      if (!mounted) return;
+      setState(() { _bannerAyah = pool[idx]; _bannerSuraId = sura; });
       HomeWidgets.updateAyah(
-        text: '${_bannerAyah!['text'] ?? ''}',
+        text: '${pool[idx]['text'] ?? ''}',
         reference:
-            '${_bannerAyah!['sura_name_ar'] ?? ''} — ئایەتی ${_bannerAyah!['ayah'] ?? ''}');
+            '${suraLabel('${pool[idx]['sura_name_ar'] ?? ''}')} — ئایەتی ${toArabicDigits((pool[idx]['ayah'] as num?)?.toInt() ?? 0)}');
     } catch (_) {}
+  }
+
+  /// Item 1: a real REFRESH for the daily ayah — one tap generates ONE new
+  /// ayah (random surah + ayah, never the one on screen) and persists it
+  /// immediately, so no later rebuild can swap it again. A busy flag makes
+  /// double taps impossible and the widget is updated with the same ayah.
+  bool _ayahRefreshing = false;
+  Future<void> _refreshAyah() async {
+    if (_ayahRefreshing) return;
+    _ayahRefreshing = true;
+    try {
+      final r = Random();
+      Map<String, Object?> row = {};
+      int sura = 0;
+      int savedIdx = 0;
+      for (var attempt = 0; attempt < 10; attempt++) {
+        sura = r.nextInt(114) + 1;
+        final pool = await Db.I.ayat(sura, AppPrefs.I.tafsir);
+        if (pool.isEmpty) continue;
+        final idx = r.nextInt(pool.length);
+        final cand = pool[idx];
+        // Never "refresh" into the same ayah that is already on screen.
+        final same = _bannerSuraId == sura &&
+            (cand['ayah'] as num?)?.toInt() ==
+                (_bannerAyah?['ayah'] as num?)?.toInt();
+        if (same && attempt < 9) continue;
+        row = cand;
+        savedIdx = idx;
+        break;
+      }
+      if (row.isEmpty || !mounted) return;
+      setState(() { _bannerAyah = row; _bannerSuraId = sura; });
+      final now = DateTime.now();
+      AppPrefs.I.ayahDay = '${now.year}-${now.month}-${now.day}';
+      AppPrefs.I.ayahBannerSura = sura;
+      // The seed is the INDEX inside this surah's pool (same convention as
+      // _loadBannerAyah) — saving anything else would swap the ayah again.
+      AppPrefs.I.ayahBannerSeed = savedIdx;
+      HomeWidgets.updateAyah(
+        text: '${row['text'] ?? ''}',
+        reference:
+            '${suraLabel('${row['sura_name_ar'] ?? ''}')} — ئایەتی ${toArabicDigits((row['ayah'] as num?)?.toInt() ?? 0)}');
+    } catch (_) {} finally {
+      _ayahRefreshing = false;
+    }
   }
 
   /// Item 2: clicking the daily ayah opens the Quran at that EXACT ayah.
@@ -166,7 +231,11 @@ class _HomeScreenState extends State<HomeScreen> {
           _banner(
               icon: Icons.wifi_tethering_rounded,
               title: 'پەخشی ڕاستەوخۆ',
-              sub: _live.isEmpty ? 'Live' : '${_live.length} کەناڵ بەردەستە',
+              sub: _liveNames.isNotEmpty
+                  ? _liveNames
+                  : (_live.isEmpty
+                      ? 'Live'
+                      : '${_live.length} کەناڵ بەردەستە'),
               color: const Color(0xFFD32F2F),
               favId: 'section::پەخشی ڕاستەوخۆ',
               onTap: () => Navigator.push(context,
@@ -270,7 +339,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: const Icon(Icons.add_circle_outline_rounded,
                         color: Colors.white70, size: 19)),
                 const SizedBox(width: 4),
-                // Item 2: click opens the Quran at this exact ayah.
+                // Item 1: real refresh — ONE tap brings exactly ONE new ayah.
+                IconButton(visualDensity: VisualDensity.compact,
+                    tooltip: 'ئایەتێکی نوێ',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed:
+                        _ayahRefreshing ? null : _refreshAyah,
+                    icon: Icon(
+                        _ayahRefreshing
+                            ? Icons.hourglass_top_rounded
+                            : Icons.refresh_rounded,
+                        color: Colors.white70, size: 19)),
+                const SizedBox(width: 2),
                 const Icon(Icons.touch_app_rounded,
                     color: Colors.white54, size: 16),
               ]),
@@ -342,14 +423,17 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(children: [
                 Icon(icon, color: Colors.white, size: 28),
                 const SizedBox(width: 12),
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                // Expanded: a long two-channel subtitle can never overflow.
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(title,
                       style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16, fontWeight: FontWeight.bold)),
-                  Text(sub, style: TextStyle(color: Colors.white.withOpacity(.8), fontSize: 12)),
-                ]),
-                const Spacer(),
+                  Text(sub,
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: Colors.white.withOpacity(.8), fontSize: 12)),
+                ])),
+                const SizedBox(width: 4),
                 if (favId != null)
                   FavoriteButton(
                       id: favId,
@@ -516,9 +600,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _grid(bool dark, Color card, Color txt) {
     final names = AppPrefs.I.homeNames; // item 8: renamed sections
+    // Item 5 (feedback): دڵخوازەکان was removed from the top sections — it
+    // lives in ڕێکخستن now. The section keeps its favorites shortcut on
+    // every card/screen through the heart buttons.
     final items = _ordered(<_G>[
-      _G('دڵخوازەکان', Icons.bookmarks_rounded,
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesScreen()))),
       _G('ئیدیتی قورئان', Icons.edit_note_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuranStudioScreen()))),
       _G('نوێژکردن', Icons.mosque_rounded,
@@ -531,7 +616,7 @@ class _HomeScreenState extends State<HomeScreen> {
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuestionScreen()))),
       _G('ڤیدیۆی ئاینی', Icons.ondemand_video_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VideosScreen()))),
-      _G('تاوانەگەورەکان', Icons.warning_amber_rounded,
+      _G('تاوەنە گەورەکان', Icons.warning_amber_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TawanakanmScreen()))),
       _G('کتێبخانە', Icons.local_library_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KtebScreen()))),
@@ -638,9 +723,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// Item 8: user-arranged section order (persisted; unknown items keep
-  /// their default position at the end).
+  /// their default position at the end). Legacy labels from older builds
+  /// ('تاوانەکانم', 'تاوانەگەورەکان') are migrated to the final
+  /// 'تاوەنە گەورەکان' spelling so a saved order keeps working.
   List<_G> _ordered(List<_G> all, bool dark, Color card, Color txt) {
-    final order = AppPrefs.I.homeOrder;
+    const migrated = 'تاوەنە گەورەکان';
+    final order = AppPrefs.I.homeOrder
+        .map((l) => (l == 'تاوانەکانم' || l == 'تاوانەگەورەکان')
+            ? migrated
+            : l)
+        .toList();
     if (order.isEmpty) return all;
     final byLabel = {for (final g in all) g.label: g};
     final out = <_G>[];

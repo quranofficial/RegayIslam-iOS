@@ -86,7 +86,7 @@ const Map<String, List<String>> kJsonCards = {
   'assets/data/dajal.json': ['چیرۆکی دەجال', 'چیرۆکی دەجال'],
   'assets/data/hawal.json': ['هاوەڵانی پێغەمبەر ﷺ', 'هاوەڵانی پێغەمبەر ﷺ'],
   'assets/data/zanyaryquran.json': ['زانیاری قورئان', 'زانیاری قورئان'],
-  'assets/data/tawanakan.json': ['تاوانەگەورەکان', 'تاوانەگەورەکان'],
+  'assets/data/tawanakan.json': ['تاوەنە گەورەکان', 'تاوەنە گەورەکان'],
   'assets/data/rawbochwn.json': ['ڕاو بۆچونەکان', 'ڕاو بۆچونەکان'],
   'assets/data/dozax.json': ['دۆزەخ', 'بابەتی دۆزەخ'],
   'assets/data/hajw.json': ['حەج و عومرە', 'بابەتی حەج'],

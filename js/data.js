@@ -75,7 +75,7 @@ const ARTICLES=[
   {f:'dajal.json',t:'چیرۆکی دەجال'},
   {f:'hawal.json',t:'هاوەڵانی پێغەمبەر ﷺ'},
   {f:'zanyaryquran.json',t:'زانیاری قورئان'},
-  {f:'tawanakan.json',t:'تاوانەگەورەکان'},
+  {f:'tawanakan.json',t:'تاوەنە گەورەکان'},
   {f:'rawbochwn.json',t:'ڕاو بۆچونەکان'},
   {f:'dozax.json',t:'دۆزەخ'},
   {f:'hajw.json',t:'حەج و عومرە'},

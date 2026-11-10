@@ -50,7 +50,7 @@
         android:gravity="center"
         android:text="رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ"
         android:textColor="#FFFFFF"
-        android:textSize="14sp"
+        android:textSize="16sp"
         android:lineSpacingMultiplier="1.8" />
 
     <!-- Footer: gold rule + reference -->
@@ -66,6 +66,6 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:textColor="#CCFFD54F"
-        android:textSize="11sp"
+        android:textSize="12sp"
         android:textStyle="bold" />
 </LinearLayout>

@@ -10,7 +10,7 @@ const GRID=[
  {t:'ئایەتی کورسی',i:'menu_book',r:'#/kursi'},
  {t:'پرسیار و وەڵام',i:'quiz',r:'#/quiz'},
  {t:'ڤیدیۆی ئاینی',i:'ondemand_video',r:'#/videos'},
- {t:'تاوانەگەورەکان',i:'warning_amber',r:'#/article/tawanakan.json'},
+ {t:'تاوەنە گەورەکان',i:'warning_amber',r:'#/article/tawanakan.json'},
  {t:'کتێبخانە',i:'local_library',r:'#/books'},
  {t:'ڕوقیەی شەرعی',i:'healing',r:'#/ruqya'},
  {t:'زیکرەکان',i:'self_improvement',r:'#/article/zikrakan.json'},

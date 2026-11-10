@@ -230,6 +230,8 @@ Widget? sectionScreenOf(String label) {
     case 'ڤیدیۆی ئاینی':
       return const VideosScreen();
     case 'تاوەنە گەورەکان':
+    case 'تاوانەگەورەکان': // legacy spelling kept for old favorites
+    case 'تاوانەکانم': // legacy spelling kept for old favorites
       return const TawanakanmScreen();
     case 'کتێبخانە':
       return const KtebScreen();

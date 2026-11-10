@@ -23,15 +23,17 @@ class _HomeReorderScreenState extends State<HomeReorderScreen> {
 
   Future<void> _load() async {
     // Default order mirrors HomeScreen._grid; persisted order wins.
+    // Item 5 (feedback): دڵخوازەکان is no longer a home section (it moved
+    // to ڕێکخستن). Item 8: the sins section is 'تاوەنە گەورەکان' — the old
+    // 'تاوانەکانم' entry is gone for good.
     final defaults = const <_Item>[
-      _Item('دڵخوازەکان', Icons.bookmarks_rounded),
       _Item('ئیدیتی قورئان', Icons.edit_note_rounded),
       _Item('نوێژکردن', Icons.mosque_rounded),
       _Item('ناوەکانی خودای گەورە', Icons.badge_rounded),
       _Item('ئایەتی کورسی', Icons.menu_book_rounded),
       _Item('پرسیار و وەڵام', Icons.quiz_rounded),
       _Item('ڤیدیۆی ئاینی', Icons.ondemand_video_rounded),
-      _Item('تاوانەکانم', Icons.warning_amber_rounded),
+      _Item('تاوەنە گەورەکان', Icons.warning_amber_rounded),
       _Item('کتێبخانە', Icons.local_library_rounded),
       _Item('ڕوقیەی شەرعی', Icons.healing_rounded),
       _Item('زیکرەکان', Icons.self_improvement_rounded),
@@ -50,7 +52,6 @@ class _HomeReorderScreenState extends State<HomeReorderScreen> {
       _Item('هاوەڵانی پێغەمبەر ﷺ', Icons.people_rounded),
       _Item('سونەت', Icons.star_rounded),
       _Item('زانیاری قورئان', Icons.info_rounded),
-      _Item('تاوانەگەورەکان', Icons.gavel_rounded),
       _Item('ڕاو بۆچونەکان', Icons.forum_rounded),
       _Item('وتە و ئامۆژگاری', Icons.record_voice_over_rounded),
       _Item('حەڕام کراوەکان', Icons.block_rounded),
@@ -66,7 +67,12 @@ class _HomeReorderScreenState extends State<HomeReorderScreen> {
       _Item('دروستکردنی ڤیدیۆ و وێنە', Icons.movie_creation_rounded),
       _Item('ڕێکخستنی بەشەکان', Icons.swap_vert_rounded),
     ];
-    final order = AppPrefs.I.homeOrder;
+    final order = AppPrefs.I.homeOrder
+        .map((l) => (l == 'تاوانەکانم' || l == 'تاوانەگەورەکان')
+            ? 'تاوەنە گەورەکان'
+            : l)
+        .where((l) => l != 'دڵخوازەکان')
+        .toList();
     final byLabel = {for (final i in defaults) i.label: i};
     final out = <_Item>[];
     for (final l in order) {
