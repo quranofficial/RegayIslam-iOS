@@ -16,7 +16,6 @@ import '../articles/json_article_screen.dart';
 import '../misc/zikr_detail_screen.dart';
 import '../media/live_screen.dart';
 import '../media/videos_screen.dart';
-import '../quran/ayat_screen.dart';
 import '../quran/ayatul_kursi_screen.dart';
 import '../quran/name_screen.dart';
 import '../quran/open_quran.dart' show OpenQuranScreen, toArabicDigits;

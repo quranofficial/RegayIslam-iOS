@@ -10,7 +10,7 @@ import '../band/band_screen.dart';
 import '../misc/webview_screen.dart';
 import 'adhan_offset_screen.dart';
 import '../home/home_reorder_screen.dart';
-import '../data/favorites.dart' show FavoritesScreen;
+import '../../data/favorites.dart' show FavoritesScreen;
 import 'adhan_voice_screen.dart';
 import '../admin/admin_screen.dart';
 
