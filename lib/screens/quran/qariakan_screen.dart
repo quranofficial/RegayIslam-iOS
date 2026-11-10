@@ -21,6 +21,8 @@ class QariakanScreen extends StatefulWidget {
 
 class _QariakanScreenState extends State<QariakanScreen> {
   List<Map<String, dynamic>> _reciters = [];
+  List<Map<String, dynamic>> _filtered = [];
+  final TextEditingController _search = TextEditingController();
   List<Map<String, Object?>> _surahs = [];
   Map<String, Object?>? _surah;
   int? _selected = int.tryParse(AppPrefs.I.qariId);
@@ -76,6 +78,7 @@ class _QariakanScreenState extends State<QariakanScreen> {
       // Reciters come ONLY from dangakan.json — and only the entries marked
       // doxx=true (audio + ayah timings db assets/db/<id>.db ready) are shown.
       _reciters = await Reciters.supportedList();
+      _filtered = _reciters;
       final surahs = await Db.I.surahs();
       if (!mounted) return;
       setState(() {
@@ -86,6 +89,19 @@ class _QariakanScreenState extends State<QariakanScreen> {
       if (!mounted) return;
       setState(() { _loading = false; _error = 'هەڵە لە خوێندنەوەی لیست'; });
     }
+  }
+
+  void _filterReciters(String q) {
+    q = q.trim().toLowerCase();
+    setState(() {
+      _filtered = q.isEmpty
+          ? _reciters
+          : _reciters.where((r) {
+              final name = '${r['name_ar'] ?? ''}'.toLowerCase();
+              final id = '${r['id'] ?? ''}';
+              return name.contains(q) || id == q;
+            }).toList();
+    });
   }
 
   String _url(Map<String, dynamic> r) {
@@ -338,10 +354,40 @@ class _QariakanScreenState extends State<QariakanScreen> {
             : _error != null
                 ? Center(child: Text(_error!, style: TextStyle(color: txt)))
                 : Column(children: [
+                // item 2.10: live search over the 65 reciters + count badge
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                  child: TextField(
+                    controller: _search,
+                    onChanged: _filterReciters,
+                    decoration: InputDecoration(
+                      hintText: 'گەڕان بۆ قاری...',
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      isDense: true,
+                      filled: true,
+                      fillColor: dark ? AppColors.nightCard : Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: Row(children: [
+                    Icon(Icons.mic_rounded, size: 15,
+                        color: dark ? AppColors.gold : AppColors.primaryDark),
+                    const SizedBox(width: 6),
+                    Text('${_filtered.length} قاری — دەنگ و ئایەت بەردەستە',
+                        style: TextStyle(fontSize: 11.5,
+                            color: txt.withOpacity(.6))),
+                  ]),
+                ),
                 Expanded(child: ListView(padding: const EdgeInsets.all(12), children: [
                     _surahPicker(dark, txt),
                     const SizedBox(height: 10),
-                    for (final r in _reciters)
+                    for (final r in _filtered)
                       Card(
                         color: dark ? AppColors.nightCard : Colors.white,
                         margin: const EdgeInsets.only(bottom: 8),

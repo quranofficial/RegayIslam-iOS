@@ -13,7 +13,6 @@ import '../screens/quran/open_quran.dart';
 import '../screens/quran/qariakan_screen.dart';
 import '../screens/quran/ayat_screen.dart';
 import '../screens/quran/ayatul_kursi_screen.dart';
-import '../screens/quran/ayah_range_screen.dart';
 import '../screens/quran/quran_search_screen.dart';
 import '../screens/quran/name_screen.dart';
 import '../screens/quran/quran_studio_screen.dart';
@@ -291,8 +290,6 @@ Widget? sectionScreenOf(String label) {
       return const DasalatakanScreen();
     case 'کاتەکانی مانگ':
       return const PrayersMonthScreen();
-    case 'خوێندنی ئایەتەکان':
-      return const AyahRangeScreen();
     case 'ڕێکخستنی بەشەکان':
       return const HomeReorderScreen();
     case 'کاتەکانی بانگ':

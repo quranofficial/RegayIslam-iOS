@@ -120,6 +120,20 @@ class _SettingTabState extends State<SettingTab> {
                         style: TextStyle(color: txt.withOpacity(.55))),
                     value: p.useKurdishDigits,
                     onChanged: (v) => setState(() => p.useKurdishDigits = v)),
+                const Divider(height: 1),
+                // Item 5-d: "continue where I left off" — the next app start
+                // reopens the last screen (zikr detail / bottom tab).
+                SwitchListTile(
+                    secondary: const Icon(Icons.restart_alt_rounded,
+                        color: AppColors.primaryDark),
+                    title: Text('کردنەوە لە دوایین شوێن',
+                        style: TextStyle(color: txt)),
+                    subtitle: Text(
+                        'کاتی کردنەوەی ئەپ، دەگەڕێتەوە بۆ دوایین بەش کە تێیدا بوویت',
+                        style: TextStyle(color: txt.withOpacity(.55))),
+                    value: p.resumeWhereLeftOff,
+                    onChanged: (v) =>
+                        setState(() => p.resumeWhereLeftOff = v)),
               ])),
           _section('قورئان و فۆنت', dark, txt),
           Card(color: dark ? AppColors.nightCard : Colors.white,

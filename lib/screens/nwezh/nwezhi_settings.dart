@@ -16,6 +16,8 @@ class NwezhiSettingsScreen extends StatefulWidget {
 class _NwezhiSettingsScreenState extends State<NwezhiSettingsScreen> {
   Map<String, String>? _today;
   List<Map<String, Object?>> _cities = [];
+  bool _exactAllowed = true;
+  bool _askedExactOnce = false;
 
   @override
   void initState() {
@@ -26,27 +28,77 @@ class _NwezhiSettingsScreenState extends State<NwezhiSettingsScreen> {
   Future<void> _load() async {
     final t = await Db.I.prayerTimes(AppPrefs.I.cityId, DateTime.now());
     final c = await Db.I.cities();
+    final exact = await PrayerNotifications.I.canScheduleExact();
     if (!mounted) return;
-    setState(() { _today = t; _cities = c; });
+    setState(() { _today = t; _cities = c; _exactAllowed = exact; });
+    _guideExactAlarmIfNeeded();
+  }
+
+  /// Item 2: if the exact-alarm permission is missing the adhan can be
+  /// dropped/delayed by the system — NEVER fail silently, guide the user.
+  void _guideExactAlarmIfNeeded() {
+    if (_exactAllowed || _askedExactOnce) return;
+    if (!PrayerNotifications.isAndroidDevice) return;
+    _askedExactOnce = true;
+    showDialog(
+      context: context,
+      builder: (c) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('ئاگادارکردنەوەی بانگ کارا نییە',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryDark)),
+          content: const Text(
+              'ڕێگەی Exact Alarm نەدرا — بڕۆ ناو ڕێکخستنەکانی مۆبایل و بەخشبێ بە "ئاگادارکردنەوە و وردی زانیاری" بۆ ئەپەکە، تا بانگی نوێژ لە کاتی خۆیدا بە دەنگ بگرێت 🔔',
+              style: TextStyle(fontSize: 13.5, height: 1.8)),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(c),
+                child: const Text('دواتر',
+                    style: TextStyle(color: AppColors.primaryDark))),
+            ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryDark,
+                    foregroundColor: Colors.white),
+                onPressed: () {
+                  Navigator.pop(c);
+                  _enableExactAlarms();
+                },
+                child: const Text('کردنەوەی ڕێکخستنی مۆبایل')),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _save() async {
-    await PrayerNotifications.I.scheduleAll();
+    final n = await PrayerNotifications.I.scheduleAll();
     await HomeWidgets.updatePrayer();
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ئاگادارکردنەوەکان نوێکرانەوە ✅')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(n > 0
+            ? 'بانگ بۆ ٧ ڕۆژ خشتەکرا ($n ئاگادارکردنەوە) ✅'
+            : 'ئاگادارکردنەوەکان نوێکرانەوە')));
+    if (!await PrayerNotifications.I.canScheduleExact()) {
+      if (!mounted) return;
+      setState(() => _exactAllowed = false);
+      _guideExactAlarmIfNeeded();
+    } else if (mounted) {
+      setState(() => _exactAllowed = true);
+    }
   }
 
   Future<void> _enableExactAlarms() async {
     final allowed = await PrayerNotifications.I.requestExactAlarmPermission();
     if (!mounted) return;
+    setState(() => _exactAllowed = allowed);
     await PrayerNotifications.I.scheduleAll();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(allowed
         ? 'ئاگادارکردنەوەی کاتی ورد چالاک کرا ✅'
-        : 'مۆڵەتی کاتی ورد نەدرا؛ ئاگادارکردنەوەکان بە شێوەی ئاسایی دادەنرێن'),
+        : 'ڕێگەی Exact Alarm نەدرا — بڕۆ ناو ڕێکخستنەکانی مۆبایل و بەخشبێ بە "ئاگادارکردنەوە و وردی زانیاری"'),
     ));
   }
 
@@ -61,6 +113,23 @@ class _NwezhiSettingsScreenState extends State<NwezhiSettingsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('نۆتیفیکێشن سەرکەوتوو نەبوو')));
+    }
+  }
+
+  /// Item 6: "تاقیکردنەوەی بانگ" — rings in 5 seconds through the REAL
+  /// alarm pipeline (AlarmManager + exact clock), so the user verifies the
+  /// بانگ chain end-to-end, not only the immediate-show path.
+  Future<void> _testBangIn5s() async {
+    try {
+      await PrayerNotifications.I.scheduleTestBang();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'بانگی تاقیکردنەوە لە ٥ چرکەی تر دەگات — بۆ دەرچوون بکە و چاوەڕوان بە 🔔')));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('خشتەکردنی بانگی تاقیکردنەوە سەرکەوتوو نەبوو')));
     }
   }
 
@@ -79,6 +148,33 @@ class _NwezhiSettingsScreenState extends State<NwezhiSettingsScreen> {
               style: TextStyle(color: Colors.white, fontSize: 17)),
         ),
         body: ListView(padding: const EdgeInsets.all(12), children: [
+          if (!_exactAllowed) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                  color: const Color(0x1FF44336),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0x66F44336))),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                const Text('ئاگادارکردنەوەی بانگ کارا نییە',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFF44336))),
+                const SizedBox(height: 4),
+                const Text(
+                    'ڕێگەی Exact Alarm نەدرا — بڕۆ ناو ڕێکخستنەکانی مۆبایل',
+                    style: TextStyle(fontSize: 12.5, height: 1.6)),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _enableExactAlarms,
+                  icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                  label: const Text('کردنەوەی ڕێکخستنی مۆبایل'),
+                ),
+              ]),
+            ),
+            const SizedBox(height: 14),
+          ],
           Text('شار',
               style: TextStyle(fontWeight: FontWeight.bold, color: txt)),
           const SizedBox(height: 8),
@@ -149,12 +245,19 @@ class _NwezhiSettingsScreenState extends State<NwezhiSettingsScreen> {
                 color: AppColors.primaryDark),
             title: Text('دەنگی بانگبێژ', style: TextStyle(fontSize: 14, color: txt)),
             subtitle: Text('دەنگی هەڵبژێردراو : ${p.adhanVoiceName}',
-                style: TextStyle(fontSize: 11, color: txt.withOpacity(.55))),
+                style: TextStyle(
+                    fontSize: 11, color: txt.withValues(alpha: .55))),
             trailing: const Icon(Icons.chevron_left),
             onTap: () => Navigator.push(context, MaterialPageRoute(
                 builder: (_) => const AdhanVoiceScreen()))
                 .then((_) => setState(() {})),
           ),
+          OutlinedButton.icon(
+            onPressed: _testBangIn5s,
+            icon: const Icon(Icons.alarm_add_rounded),
+            label: const Text('تاقیکردنەوەی بانگ (لە ٥ چرکە)'),
+          ),
+          const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: _testAdhan,
             icon: const Icon(Icons.volume_up_rounded),
@@ -187,7 +290,7 @@ class _NwezhiSettingsScreenState extends State<NwezhiSettingsScreen> {
           Color txt, bool dark) =>
       SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          activeColor: AppColors.primaryDark,
+          activeThumbColor: AppColors.primaryDark,
           title: Text(title, style: TextStyle(fontSize: 14, color: txt)),
           value: value,
           onChanged: onChanged);

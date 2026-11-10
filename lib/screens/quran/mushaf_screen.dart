@@ -13,6 +13,7 @@ import '../../data/db.dart';
 import '../../data/downloader.dart';
 import '../../data/favorites.dart';
 import 'open_quran.dart' show OpenQuranScreen, toArabicDigits;
+import 'reciter_picker.dart';
 
 /// Item 10 + item 22 — the real Mushaf: all 604 pages of the Madani mushaf,
 /// one page per screen, swipable, with working tap-to-turn zones,
@@ -71,6 +72,25 @@ class _MushafScreenState extends State<MushafScreen> {
   bool _ayahByAyah = false;
   String? _reciterLabel;
 
+  // --- playback robustness (the mushaf recitation used to look "stuck" on
+  // one page: streams died mid-surah, the highlight vanished when the
+  // recitation crossed to the next page and nothing ever recovered).
+  // Now: readiness-wait before seek, watchdog + premature-stop recovery
+  // that downloads the file and continues, and AUTO PAGE-FLIP — when the
+  // recited verse lives on another page the mushaf turns itself there and
+  // the golden highlight keeps following.
+  int _lastPosMs = 0;
+  int _lastDurMs = 0;
+  DateTime _lastAdvance = DateTime.now();
+  bool _recovering = false;
+  bool _postChecking = false;
+  int _recoverTries = 0;
+  Timer? _stall;
+  // item 12: repeat each ayah 1/3/5/10 times before moving on
+  int _repeatLeft = 1;
+  bool _reseeking = false;
+  bool _flipping = false; // auto page-flip in progress
+
   @override
   void initState() {
     super.initState();
@@ -88,13 +108,33 @@ class _MushafScreenState extends State<MushafScreen> {
     _resolveStartPage();
     _loadPageInfo();
     _player.onPlayerStateChanged.listen((s) {
-      if (mounted) setState(() => _state = s);
+      if (!mounted) return;
+      setState(() => _state = s);
+      if ((s == PlayerState.completed || s == PlayerState.stopped) &&
+          !_ayahByAyah && !_recovering) {
+        _postStopCheck(); // natural end vs premature death
+      }
     });
-    _player.onPositionChanged.listen((p) => _followTimings(p));
+    _player.onDurationChanged.listen((d) {
+      if (d > Duration.zero) _lastDurMs = d.inMilliseconds;
+    });
+    _player.onPositionChanged.listen((p) {
+      if (p.inMilliseconds > _lastPosMs) {
+        _lastPosMs = p.inMilliseconds;
+        _lastAdvance = DateTime.now();
+      }
+      _followTimings(p);
+    });
     _player.onPlayerComplete.listen((_) {
       if (!mounted) return;
-      // per-ayah fallback: advance to the next verse of this surah
+      // per-ayah fallback: repeat, then advance to the next verse
       if (_ayahByAyah && _selAyah != null && _selSurah != null) {
+        if (_repeatLeft > 1) {
+          _repeatLeft--;
+          _playAyahFile(_selAyah!);
+          return;
+        }
+        _repeatLeft = AppPrefs.I.ayahRepeat;
         final next = _selAyah! + 1;
         final maxAyah = _surahAyat[_selSurah] ?? 0;
         if (maxAyah == 0 || next <= maxAyah) {
@@ -104,6 +144,7 @@ class _MushafScreenState extends State<MushafScreen> {
       }
       setState(() => _state = PlayerState.stopped);
     });
+    _stall = Timer.periodic(const Duration(seconds: 4), (_) => _watchdogTick());
   }
 
   /// When opened from a surah/ayah, jump to the page holding that ayah.
@@ -121,11 +162,18 @@ class _MushafScreenState extends State<MushafScreen> {
     } catch (_) {}
   }
 
-  Future<void> _loadPageInfo() async {
+  Future<void> _loadPageInfo({(int, int)? keep}) async {
     final s = await Db.I.pageSurahs(_page);
     final l = await Db.I.pageAyahLines(_page);
     if (!mounted) return;
-    setState(() { _pageSurahs = s; _pageLines = l; _selAyah = null; _selSurah = null; });
+    setState(() {
+      _pageSurahs = s;
+      _pageLines = l;
+      // keep = auto page-flip while reciting — the selection survives the
+      // page change so the golden highlight continues on the new page.
+      _selSurah = keep?.$1;
+      _selAyah = keep?.$2;
+    });
     _timings = await Db.I.timings(AppPrefs.I.qariId);
     _reciterLabel = AppPrefs.I.qariName;
   }
@@ -385,11 +433,76 @@ class _MushafScreenState extends State<MushafScreen> {
     final startMs = _timings['$surahId:$ayah'];
     if (startMs != null && startMs > 0) {
       setState(() { _ayahByAyah = false; _selAyah = ayah; _selSurah = surahId; });
-      final ok = await _playSurahFrom(surahId, startMs);
+      // stream first (instant) — the seek waits for the source to be ready;
+      // if that fails, the fully downloaded file is bullet-proof.
+      final ok = await _playSurahStreamed(surahId, startMs);
       if (ok) return;
+      final local = await _playSurahLocal(surahId, startMs, notify: true);
+      if (local) return;
     }
     setState(() { _ayahByAyah = true; _selAyah = ayah; _selSurah = surahId; });
+    _repeatLeft = AppPrefs.I.ayahRepeat;
     await _playAyahFile(ayah);
+  }
+
+  /// Streamed surah playback with a readiness wait before the seek —
+  /// seeking a still-buffering network source used to kill playback after
+  /// 2-3 ayahs.
+  Future<bool> _playSurahStreamed(int surahId, int startMs) async {
+    try {
+      await _player.stop();
+      await _player.play(UrlSource(Downloader.httpsify(_surahAudioUrl(surahId))));
+      var dur = 0;
+      for (var i = 0; i < 16 && dur <= 0; i++) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        try { dur = (await _player.getDuration())?.inMilliseconds ?? 0; }
+        catch (_) { dur = 0; }
+      }
+      await _player.seek(Duration(milliseconds: startMs));
+      if (!mounted) return true;
+      _lastPosMs = startMs;
+      _lastDurMs = dur;
+      _lastAdvance = DateTime.now();
+      _recoverTries = 0;
+      _repeatLeft = AppPrefs.I.ayahRepeat;
+      setState(() {});
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Bullet-proof local playback — download the full mp3 first, then play
+  /// and seek. Local files never stall mid-stream.
+  Future<bool> _playSurahLocal(int surahId, int startMs, {bool notify = false}) async {
+    try {
+      File? f = await _cachedSurahAudio(surahId);
+      if (f == null) {
+        if (notify && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('دەنگ داگیر دەکرێت — چەند چرکەیەک...'),
+              duration: Duration(seconds: 2)));
+        }
+        f = await Downloader.download(
+            Downloader.httpsify(_surahAudioUrl(surahId)),
+            'quran_audio/${Downloader.safeName(AppPrefs.I.qariId)}_'
+            '${surahId.toString().padLeft(3, '0')}.mp3',
+            timeout: const Duration(minutes: 5));
+      }
+      await _player.stop();
+      await _player.play(DeviceFileSource(f.path));
+      await _player.seek(Duration(milliseconds: startMs));
+      if (!mounted) return true;
+      _lastPosMs = startMs;
+      _lastDurMs = 0;
+      _lastAdvance = DateTime.now();
+      _recoverTries = 0;
+      _repeatLeft = AppPrefs.I.ayahRepeat;
+      setState(() {});
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   String _surahAudioUrl(int surahId) {
@@ -404,35 +517,17 @@ class _MushafScreenState extends State<MushafScreen> {
       final f = File('${dir.path}/quran_audio/'
           '${Downloader.safeName(AppPrefs.I.qariId)}_'
           '${surahId.toString().padLeft(3, '0')}.mp3');
-      return f.existsSync() && f.lengthSync() > 0 ? f : null;
+      if (f.existsSync() && f.lengthSync() > 0) {
+        // partial downloads die at the same spot forever — drop tiny files
+        if (f.lengthSync() < 150000) {
+          try { f.deleteSync(); } catch (_) {}
+          return null;
+        }
+        return f;
+      }
+      return null;
     } catch (_) {
       return null;
-    }
-  }
-
-  Future<bool> _playSurahFrom(int surahId, int startMs) async {
-    try {
-      await _player.stop();
-      final cached = await _cachedSurahAudio(surahId);
-      if (cached != null) {
-        await _player.play(DeviceFileSource(cached.path));
-      } else {
-        final url = Downloader.httpsify(_surahAudioUrl(surahId));
-        try {
-          await _player.play(UrlSource(url));
-        } catch (_) {
-          final file = await Downloader.download(url,
-              'quran_audio/${Downloader.safeName(AppPrefs.I.qariId)}_'
-              '${surahId.toString().padLeft(3, '0')}.mp3',
-              timeout: const Duration(minutes: 3));
-          await _player.play(DeviceFileSource(file.path));
-        }
-      }
-      await _player.seek(Duration(milliseconds: startMs));
-      if (mounted) setState(() {});
-      return true;
-    } catch (_) {
-      return false;
     }
   }
 
@@ -525,26 +620,126 @@ class _MushafScreenState extends State<MushafScreen> {
   }
 
   /// While the reciter's whole-surah audio plays, follow the position
-  /// through the timings and move the highlight box.
+  /// through the timings, move the highlight box and — the big fix —
+  /// AUTO-FLIP the mushaf page when the recitation crosses to a verse on
+  /// the next page (e.g. Al-Baqarah ayah 5 → 6 lives on page 3). The old
+  /// code only scanned the CURRENT page's lines, so the highlight went
+  /// blank and the page never turned.
   void _followTimings(Duration p) {
     if (_ayahByAyah || _timings.isEmpty || _selSurah == null) return;
     final ms = p.inMilliseconds;
+    final prefix = '$_selSurah:';
     int? cur;
-    for (final l in _pageLines) {
-      if ((l['surah_id'] as num).toInt() != _selSurah) continue;
-      final vid = (l['verse_id'] as num).toInt();
-      final t = _timings['${_selSurah}:$vid'];
-      if (t != null && t <= ms) {
-        if (cur == null || vid > cur) cur = vid;
+    for (final e in _timings.entries) {
+      if (!e.key.startsWith(prefix)) continue;
+      final vid = int.tryParse(e.key.substring(prefix.length));
+      if (vid != null && e.value <= ms && (cur == null || vid > cur)) {
+        cur = vid;
       }
     }
-    if (cur != null && cur != _selAyah && mounted) {
-      setState(() => _selAyah = cur);
+    if (cur == null || cur == _selAyah || !mounted) return;
+    // item 12: the finished ayah repeats 1/3/5/10 times — seek back to its
+    // own start instead of moving to the next verse.
+    if (_repeatLeft > 1 && !_reseeking && _selAyah != null) {
+      _repeatLeft--;
+      final again = _timings['$_selSurah:$_selAyah'] ?? 0;
+      if (again > 0) {
+        _reseeking = true;
+        _player.seek(Duration(milliseconds: again)).whenComplete(() {
+          _reseeking = false;
+        });
+        return;
+      }
+    }
+    _repeatLeft = AppPrefs.I.ayahRepeat;
+    setState(() => _selAyah = cur);
+    _ensureAyahVisible(_selSurah!, cur);
+  }
+
+  /// When the recited verse lives on another mushaf page, turn there and
+  /// keep the selection + golden highlight alive across the flip.
+  Future<void> _ensureAyahVisible(int surahId, int ayah) async {
+    if (_flipping) return;
+    try {
+      final p = await Db.I.ayahPage(surahId, ayah);
+      if (p == null || p < 1 || p > _totalPages || p == _page || !mounted) {
+        return;
+      }
+      _flipping = true;
+      try {
+        setState(() => _page = p);
+        _savePage(p);
+        await _pager.animateToPage(p - 1,
+            duration: const Duration(milliseconds: 240),
+            curve: Curves.easeOut);
+        await _loadPageInfo(keep: (surahId, ayah));
+        _cacheNeighbours(p);
+      } finally {
+        _flipping = false;
+      }
+    } catch (_) {}
+  }
+
+  // ---------- playback recovery ----------
+
+  /// Watchdog: frozen position 10s while "playing" = stalled stream.
+  Future<void> _watchdogTick() async {
+    if (!mounted || _recovering || _postChecking) return;
+    if (_ayahByAyah) return;
+    if (_state != PlayerState.playing) return;
+    final idle = DateTime.now().difference(_lastAdvance).inMilliseconds;
+    if (idle < 10000) return;
+    await _recoverSurah();
+  }
+
+  /// stopped/completed — surah finished naturally, or died early?
+  Future<void> _postStopCheck() async {
+    if (_postChecking || !mounted || _ayahByAyah) return;
+    if (_selSurah == null || _lastPosMs < 3000) return;
+    _postChecking = true;
+    try {
+      await Future.delayed(const Duration(milliseconds: 1800));
+      if (!mounted || _recovering) return;
+      if (_state == PlayerState.playing || _state == PlayerState.paused) return;
+      final dur = _lastDurMs;
+      if (dur > 0 && _lastPosMs >= dur - 4000) {
+        // natural end of the surah audio
+        setState(() => _state = PlayerState.stopped);
+        _lastPosMs = 0;
+        return;
+      }
+      await _recoverSurah();
+    } finally {
+      _postChecking = false;
+    }
+  }
+
+  /// Premature stop — resume from the last position via the local file.
+  Future<void> _recoverSurah() async {
+    if (_recovering || !mounted) return;
+    final resumeAt = _lastPosMs;
+    final sid = _selSurah;
+    if (resumeAt < 3000 || sid == null) return;
+    _recovering = true;
+    try {
+      if (_recoverTries >= 3) {
+        if (mounted) setState(() => _state = PlayerState.stopped);
+        return;
+      }
+      _recoverTries++;
+      try { await _player.resume(); } catch (_) {}
+      await Future.delayed(const Duration(milliseconds: 2500));
+      if (!mounted || _state == PlayerState.playing) return; // recovered
+      final ok = await _playSurahLocal(sid, resumeAt);
+      if (!ok && mounted) setState(() => _state = PlayerState.stopped);
+    } finally {
+      _recovering = false;
     }
   }
 
   @override
   void dispose() {
+    _stall?.cancel();
     _player.dispose();
     _transform.dispose();
     _pager.dispose();
@@ -668,8 +863,9 @@ class _MushafScreenState extends State<MushafScreen> {
               },
             ),
           ),
-          // recitation bar (item 22): appears while a verse is recited
-          if (_selAyah != null && _selSurah != null && !_fullscreen)
+          // recitation bar (item 22): appears while a verse is recited —
+          // also in fullscreen so play/pause stays reachable.
+          if (_selAyah != null && _selSurah != null)
             _reciteBar(dark, txt),
           // Page turn bar — big, always-visible buttons (item 10).
           if (_showChrome && !_fullscreen)
@@ -735,6 +931,34 @@ class _MushafScreenState extends State<MushafScreen> {
               style: const TextStyle(color: Colors.white70, fontSize: 11)),
         ]),
         actions: [
+          // item 2.3: the SAME reciter system as the Quran list — pick any
+          // dangakan doxx=true reciter right inside the mushaf.
+          IconButton(
+              tooltip: 'گۆڕینی قاری — ${AppPrefs.I.qariName}',
+              icon: const Icon(Icons.mic_rounded, color: Colors.white),
+              onPressed: () async {
+                final picked = await ReciterPickerSheet.show(context,
+                    currentId: AppPrefs.I.qariId, dark: !AppPrefs.I.day);
+                if (picked == null || !mounted) return;
+                AppPrefs.I.qariId = '${picked['id'] ?? ''}';
+                AppPrefs.I.qariName = '${picked['name_ar'] ?? 'قاری'}'.trim();
+                AppPrefs.I.qariUrl = '${picked['url'] ?? ''}'
+                    .replaceFirst(RegExp(r'^http://', caseSensitive: false),
+                        'https://');
+                await _player.stop();
+                setState(() {
+                  _state = PlayerState.stopped;
+                  _selAyah = _selSurah == null ? null : _selAyah;
+                  _reciterLabel = AppPrefs.I.qariName;
+                });
+                _timings = await Db.I.timings(AppPrefs.I.qariId);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(
+                          'قاری: ${picked['name_ar'] ?? ''} — دەنگ و ئایەت بەردەستە'),
+                      duration: const Duration(seconds: 2)));
+                }
+              }),
           IconButton(
               tooltip: _fullscreen ? 'دەرچوون لە فول سکرین' : 'فول سکرین',
               onPressed: () {

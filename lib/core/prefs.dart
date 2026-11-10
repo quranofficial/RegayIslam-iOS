@@ -300,6 +300,17 @@ class AppPrefs {
   int get quranBrowseMode => _p.getInt('quranBrowseMode') ?? 0;
   set quranBrowseMode(int v) => _p.setInt('quranBrowseMode', v);
 
+  // --- item 12: repeat each ayah 1 / 3 / 5 / 10 times during recitation ---
+  int get ayahRepeat => _p.getInt('ayahRepeat') ?? 1;
+  set ayahRepeat(int v) => _p.setInt('ayahRepeat', v < 1 ? 1 : v);
+
+  // --- item 8: "resume where I left off" — reopen the app on the last
+  // screen the user was on (zikr, books, quran...) instead of the top.
+  bool get resumeWhereLeftOff => _p.getBool('resumeWhereLeftOff') ?? true;
+  set resumeWhereLeftOff(bool v) => _p.setBool('resumeWhereLeftOff', v);
+  String get lastRoute => _p.getString('lastRoute') ?? '';
+  set lastRoute(String v) => _p.setString('lastRoute', v);
+
   // --- item 10: remembered video playback speed (0.25 .. 2.0) ---
   double get videoSpeed => _p.getDouble('videoSpeed') ?? 1.0;
   set videoSpeed(double v) => _p.setDouble('videoSpeed', v);

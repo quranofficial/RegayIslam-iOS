@@ -7,7 +7,7 @@ import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../core/ui.dart';
 import '../../data/db.dart';
-import '../../data/reciters.dart';
+import 'reciter_picker.dart';
 import '../../data/downloader.dart';
 import '../../data/favorites.dart';
 import 'mushaf_screen.dart';
@@ -96,6 +96,9 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
   bool _postChecking = false; // single-flight for the stop check
   int _recoverTries = 0; // cap auto-recovery attempts per session
   Timer? _stall; // watchdog tick
+  // item 12: repeat each ayah 1/3/5/10 times before moving on
+  int _repeatLeft = 1;
+  bool _reseeking = false;
 
   @override
   void initState() {
@@ -125,6 +128,13 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
     _player.onPlayerComplete.listen((_) {
       if (!mounted) return;
       if (_ayahByAyah && _playingAyah != null) {
+        // item 12: repeat the SAME ayah 1/3/5/10 times first
+        if (_repeatLeft > 1) {
+          _repeatLeft--;
+          _playAyahFile(_playingAyah!);
+          return;
+        }
+        _repeatLeft = AppPrefs.I.ayahRepeat;
         final next = _playingAyah! + 1;
         if (next <= widget.ayaCount) {
           _playAyahFile(next);
@@ -188,12 +198,8 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
   /// saved globally (mushaf + all other screens follow) and the ayah
   /// highlight timings are reloaded from that reciter's own db.
   Future<void> _pickReciter() async {
-    final picked = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => _ReciterPickerSheet(
-          currentId: AppPrefs.I.qariId, dark: !AppPrefs.I.day),
-    );
+    final picked = await ReciterPickerSheet.show(context,
+        currentId: AppPrefs.I.qariId, dark: !AppPrefs.I.day);
     if (picked == null || !mounted) return;
     // Save globally so the whole app (mushaf included) uses it — same
     // prefs QariakanScreen writes.
@@ -275,6 +281,7 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
       } else {
         _recoverTries = 0;
         _lastPosMs = 0;
+        _repeatLeft = AppPrefs.I.ayahRepeat;
         final cached = await _cachedAudio();
         if (cached != null) {
           await _player.play(DeviceFileSource(cached.path));
@@ -451,6 +458,7 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
       await _player.seek(Duration(milliseconds: startMs));
       if (!mounted) return true;
       setState(() => _currentUrl = url);
+      _repeatLeft = AppPrefs.I.ayahRepeat;
       _lastPosMs = startMs;
       _lastDurMs = dur;
       _lastAdvance = DateTime.now();
@@ -520,6 +528,20 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
       if (t != null && t <= ms) cur = (a['ayah'] as num).toInt();
     }
     if (cur != null && cur != _playingAyah) {
+      // item 12: the finished ayah repeats 1/3/5/10 times — seek back to
+      // its own start instead of moving to the next verse.
+      if (_repeatLeft > 1 && !_reseeking) {
+        _repeatLeft--;
+        final again = _timings['${widget.surahId}:$_playingAyah'] ?? 0;
+        if (again > 0) {
+          _reseeking = true;
+          _player.seek(Duration(milliseconds: again)).whenComplete(() {
+            _reseeking = false;
+          });
+          return;
+        }
+      }
+      _repeatLeft = AppPrefs.I.ayahRepeat;
       setState(() => _playingAyah = cur);
       _scrollToAyah(cur);
     }
@@ -774,6 +796,37 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                     },
                   ),
                 ),
+                // item 12: repeat selector — each ayah repeats 1/3/5/10x
+                Container(
+                  color: dark ? AppColors.nightBg.withOpacity(.5) : const Color(0xFFF4F5F7),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  child: Row(children: [
+                    Icon(Icons.repeat_rounded, size: 16,
+                        color: dark ? AppColors.gold : AppColors.primaryDark),
+                    const SizedBox(width: 8),
+                    Text('دووبارەکردنەوەی هەر ئایەتێک:',
+                        style: TextStyle(fontSize: 11.5, color: txt.withOpacity(.75))),
+                    const SizedBox(width: 8),
+                    for (final n in const [1, 3, 5, 10])
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 3),
+                        child: ChoiceChip(
+                          visualDensity: VisualDensity.compact,
+                          label: Text('${n == 1 ? "یەک جار" : "$n جار"}',
+                              style: TextStyle(fontSize: 10.5,
+                                  color: AppPrefs.I.ayahRepeat == n
+                                      ? Colors.white : txt)),
+                          selected: AppPrefs.I.ayahRepeat == n,
+                          selectedColor: dark ? AppColors.gold : AppColors.primaryDark,
+                          backgroundColor: card,
+                          onSelected: (_) => setState(() {
+                            AppPrefs.I.ayahRepeat = n;
+                            _repeatLeft = n;
+                          }),
+                        ),
+                      ),
+                  ]),
+                ),
                 AudioPlayerBar(
                   player: _player,
                   dark: dark,
@@ -821,173 +874,4 @@ String toArabicDigits(int n) {
   if (!AppPrefs.I.useKurdishDigits) return n.toString();
   const d = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
   return n.toString().split('').map((c) => d[int.parse(c)]).join();
-}
-
-/// Bottom-sheet picker for the Quran page: the dangakan doxx=true reciters
-/// with their bundled avatar, a live search filter and the current choice
-/// highlighted. Returning the map means "switch to this reciter".
-class _ReciterPickerSheet extends StatefulWidget {
-  const _ReciterPickerSheet({required this.currentId, required this.dark});
-  final String currentId;
-  final bool dark;
-
-  @override
-  State<_ReciterPickerSheet> createState() => _ReciterPickerSheetState();
-}
-
-class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
-  List<Map<String, dynamic>> _all = [];
-  List<Map<String, dynamic>> _shown = [];
-  bool _loading = true;
-  final TextEditingController _search = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      _all = await Reciters.supportedList();
-      _shown = _all;
-    } catch (_) {}
-    if (mounted) setState(() => _loading = false);
-  }
-
-  void _filter(String q) {
-    q = q.trim().toLowerCase();
-    setState(() {
-      _shown = q.isEmpty
-          ? _all
-          : _all.where((r) {
-              final name = '${r['name_ar'] ?? ''}'.toLowerCase();
-              final id = '${r['id'] ?? ''}';
-              return name.contains(q) || id == q;
-            }).toList();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = widget.dark;
-    final txt = dark ? Colors.white : Colors.black;
-    final current = _all.firstWhere(
-        (r) => '${r['id']}' == widget.currentId,
-        orElse: () => <String, dynamic>{});
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Container(
-        constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * .78),
-        decoration: BoxDecoration(
-            color: dark ? AppColors.nightCard : Colors.white,
-            borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(20))),
-        child: Column(children: [
-          const SizedBox(height: 10),
-          Container(width: 44, height: 4,
-              decoration: BoxDecoration(
-                  color: txt.withOpacity(.25),
-                  borderRadius: BorderRadius.circular(4))),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Row(children: [
-              Icon(Icons.mic_rounded, size: 20,
-                  color: dark ? AppColors.gold : AppColors.primaryDark),
-              const SizedBox(width: 8),
-              Expanded(child: Text('هەڵبژاردنی قاری',
-                  style: TextStyle(fontWeight: FontWeight.bold,
-                      fontSize: 16, color: txt))),
-              if (current.isNotEmpty)
-                Flexible(
-                  child: Text('${current['name_ar'] ?? ''}',
-                      maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 11.5,
-                          color: dark ? AppColors.gold : AppColors.primaryDark)),
-                ),
-            ]),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: TextField(
-              controller: _search,
-              onChanged: _filter,
-              decoration: InputDecoration(
-                hintText: 'گەڕان بۆ قاری...',
-                prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                isDense: true,
-                filled: true,
-                fillColor: dark ? AppColors.nightBg : const Color(0xFFF4F5F7),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none),
-              ),
-            ),
-          ),
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _shown.isEmpty
-                    ? Center(child: Text('هیچ قارییەک نەدۆزرایەوە',
-                        style: TextStyle(color: txt.withOpacity(.6))))
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        itemCount: _shown.length,
-                        itemBuilder: (context, i) {
-                          final r = _shown[i];
-                          final rid = '${r['id'] ?? ''}';
-                          final selected = rid == widget.currentId;
-                          final asset = int.tryParse(rid) != null &&
-                                  int.parse(rid) >= 1 && int.parse(rid) <= 81
-                              ? 'assets/images/qari/$rid.png'
-                              : null;
-                          return ListTile(
-                            onTap: () => Navigator.pop(context, r),
-                            leading: Container(
-                              width: 44, height: 44,
-                              padding: const EdgeInsets.all(2),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: dark ? AppColors.nightBg : Colors.white,
-                                border: Border.all(
-                                    color: selected
-                                        ? AppColors.gold
-                                        : (dark ? Colors.white24 : Colors.black12),
-                                    width: selected ? 2.2 : 1),
-                              ),
-                              child: ClipOval(
-                                child: asset != null
-                                    ? Image.asset(asset, fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) =>
-                                            Icon(Icons.mic_rounded, size: 18,
-                                                color: txt.withOpacity(.5)))
-                                    : Icon(Icons.mic_rounded, size: 18,
-                                        color: txt.withOpacity(.5)),
-                              ),
-                            ),
-                            title: Text('${r['name_ar'] ?? ''}',
-                                maxLines: 1, overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                    fontWeight: selected
-                                        ? FontWeight.bold : FontWeight.w500,
-                                    fontSize: 14,
-                                    color: selected
-                                        ? (dark ? AppColors.gold : AppColors.primaryDark)
-                                        : txt)),
-                            subtitle: const Text('دەنگ و ئایەت بەردەستە',
-                                style: TextStyle(fontSize: 10.5)),
-                            trailing: selected
-                                ? Icon(Icons.check_circle_rounded, size: 22,
-                                    color: dark ? AppColors.gold : AppColors.primaryDark)
-                                : null,
-                          );
-                        },
-                      ),
-          ),
-        ]),
-      ),
-    );
-  }
 }

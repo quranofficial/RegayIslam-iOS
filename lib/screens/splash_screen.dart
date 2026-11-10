@@ -6,7 +6,9 @@ import '../data/db.dart';
 import '../data/prayer_notifications.dart';
 import '../data/rtdb.dart';
 import '../data/home_widgets.dart';
+import '../main.dart' show kNavigatorKey;
 import 'main_screen.dart';
+import 'misc/zikr_detail_screen.dart';
 
 /// Original: SplashActivity — initializes services, shows the admin
 /// announcement dialog from Firebase "dialogg/dialog" (once per version),
@@ -33,22 +35,120 @@ class _SplashScreenState extends State<SplashScreen> {
     try {
       await Db.I.init();
     } catch (_) {}
+    // Item "bang danesh esh nakat": EVERY step is guarded on its own so one
+    // failure (e.g. the permission dialog being dismissed, or a network
+    // hiccup) can never skip the scheduling of the بانگ alarms.
     try {
       await PrayerNotifications.I.init();
+    } catch (_) {}
+    try {
       await PrayerNotifications.warmUp(); // find downloaded adhan voices
+    } catch (_) {}
+    try {
       await PrayerNotifications.I.requestPermission();
+    } catch (_) {}
+    try {
       await PrayerNotifications.I.scheduleAll();
+    } catch (_) {}
+    try {
       await HomeWidgets.updatePrayer();
-      // Item 5: the Quran widget always carries one fresh ayah of the day.
+    } catch (_) {}
+    // Item 5: the Quran widget always carries one fresh ayah of the day.
+    try {
       await HomeWidgets.pushDailyAyah();
     } catch (_) {}
     _checkAdminNotification();
     if (!mounted) return;
     await Future.delayed(const Duration(milliseconds: 900));
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainScreen()));
-    _maybeShowDialog();
+    // Item 5-d: "continue where I left off" — reopen the same screen the
+    // user was on (a zikr detail, or a bottom tab) when the pref is on.
+    final nav = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final last = AppPrefs.I.lastRoute;
+    final tab = last.startsWith('tab::')
+        ? (int.tryParse(last.substring(4)) ?? 0)
+        : -1;
+    final resume = AppPrefs.I.resumeWhereLeftOff && last.isNotEmpty;
+    if (resume && last.startsWith('zikr::')) {
+      // The zikr content (name/zkr/vip) is persisted in AppPrefs, so pushing
+      // the detail on top of MainScreen restores exactly that zikr.
+      nav.pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainScreen()));
+      nav.push(MaterialPageRoute(builder: (_) => const ZikrDetailScreen()));
+      _resumeSnack(messenger);
+    } else if (resume && tab >= 0) {
+      // MainScreen clamps initialTab into the valid tab range.
+      nav.pushReplacement(MaterialPageRoute(
+          builder: (_) => MainScreen(initialTab: tab)));
+      _resumeSnack(messenger);
+    } else {
+      nav.pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainScreen()));
+    }
+    _maybeShowDialog().whenComplete(_maybeExactAlarmGuide);
+  }
+
+  /// Item 2 fallback — بانگ must never fail silently: if the exact-alarm
+  /// permission (Android 12+ "Alarms & reminders") is denied, OEM phones
+  /// drop or delay the inexact alarms while the device sleeps and the user
+  /// never hears the adhan. Show a dialog guiding them to the system page.
+  Future<void> _maybeExactAlarmGuide() async {
+    if (!PrayerNotifications.isAndroidDevice) return;
+    try {
+      // Give the admin announcement dialog (if any) time to appear first.
+      await Future.delayed(const Duration(milliseconds: 600));
+      final ctx = kNavigatorKey.currentContext;
+      if (ctx == null || !ctx.mounted) return;
+      if (await PrayerNotifications.I.canScheduleExact()) return;
+      if (!ctx.mounted) return;
+      await showDialog(
+        context: ctx,
+        barrierDismissible: false,
+        builder: (c) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: const Text('ئاگادارکردنەوەی بانگ کارا نییە',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryDark)),
+            content: const Text(
+                'ڕێگەی Exact Alarm نەدرا — بڕۆ ناو ڕێکخستنەکانی مۆبایل و بەخشبێ بە "ئاگادارکردنەوە و وردی زانیاری" بۆ ئەپەکە، تا بانگی نوێژ لە کاتی خۆیدا بە دەنگ بگرێت 🔔',
+                style: TextStyle(fontSize: 13.5, height: 1.8)),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(c),
+                  child: const Text('دواتر',
+                      style: TextStyle(color: AppColors.primaryDark))),
+              ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryDark,
+                      foregroundColor: Colors.white),
+                  onPressed: () async {
+                    Navigator.pop(c);
+                    final granted = await PrayerNotifications.I
+                        .requestExactAlarmPermission();
+                    await PrayerNotifications.I.scheduleAll();
+                    final ctx2 = kNavigatorKey.currentContext;
+                    if (!granted && ctx2 != null && ctx2.mounted) {
+                      ScaffoldMessenger.of(ctx2).showSnackBar(const SnackBar(
+                          content: Text(
+                              'ڕێگەی Exact Alarm هێشتا نەدرا — بانگ بە شێوەی ئاسایی دادەنرێت')));
+                    }
+                  },
+                  child: const Text('کردنەوەی ڕێکخستنی مۆبایل')),
+            ],
+          ),
+        ),
+      );
+    } catch (_) {}
+  }
+
+  /// Item 5-d: short confirmation on the restored screen (2s).
+  void _resumeSnack(ScaffoldMessengerState messenger) {
+    messenger.showSnackBar(const SnackBar(
+        content: Text('گەڕایەوە بۆ دوایین شوێن — بەردەوام بە'),
+        duration: Duration(seconds: 2)));
   }
 
   /// Item 22: the admin panel writes {title, text, date, open} to the

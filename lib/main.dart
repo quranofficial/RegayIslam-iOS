@@ -1,12 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/prefs.dart';
+import 'data/prayer_notifications.dart';
 import 'screens/splash_screen.dart';
+
+/// Root navigator key: lets the splash's exact-alarm guidance dialog open
+/// OVER the main screen after pushReplacement disposed the splash itself.
+final GlobalKey<NavigatorState> kNavigatorKey = GlobalKey<NavigatorState>();
 
 /// Global notifier so theme changes (day/night) repaint every screen live —
 /// item 12: switching dark mode must NOT restart the app through the Splash
 /// anymore; everything (colors, system bars, bottom sections) updates in place.
 final ValueNotifier<int> kThemeEpoch = ValueNotifier<int>(0);
+
+/// Item 5-d: tiny "continue where I left off" recorder. Route names are
+/// mostly null in this app, so the KEY screens record their place manually
+/// (main_screen: 'tab::0..3' on open/tab switch, zikr_detail: 'zikr::…');
+/// the Splash reads AppPrefs.I.lastRoute back on the next start and reopens
+/// the same screen when resumeWhereLeftOff is on.
+class LastRoute {
+  static String current = '';
+  static void set(String s) {
+    current = s;
+    AppPrefs.I.lastRoute = s;
+  }
+}
 
 /// Draw behind the system bars with a transparent navigation bar and keep
 /// the icon brightness in sync with day/night (items 1, 9, 14): bottom
@@ -28,6 +46,9 @@ void applySystemUi(bool dark) {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppPrefs.I.init();
+  // Item 5: the timezone MUST be ready before anything schedules a بانگ
+  // alarm — do it in main(), before runApp, not only inside the splash.
+  PrayerNotifications.ensureTimezone();
   applySystemUi(!AppPrefs.I.day);
   runApp(const RegayIslamApp());
 }
@@ -49,6 +70,7 @@ class RegayIslamApp extends StatelessWidget {
           return MaterialApp(
             title: 'ڕێگای ئیسلام',
             debugShowCheckedModeBanner: false,
+            navigatorKey: kNavigatorKey,
             theme: AppPrefs.I.theme,
             home: const SplashScreen(),
           );

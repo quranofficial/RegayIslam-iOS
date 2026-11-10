@@ -4,11 +4,33 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/favorites.dart';
+import '../../main.dart' show LastRoute;
 
 /// Original: KrdnawaActivity — renders a zikr/detail whose content was put
 /// into the prefs by the caller (name / zkr / vip keys in the original).
-class ZikrDetailScreen extends StatelessWidget {
+class ZikrDetailScreen extends StatefulWidget {
   const ZikrDetailScreen({super.key});
+  @override
+  State<ZikrDetailScreen> createState() => _ZikrDetailScreenState();
+}
+
+class _ZikrDetailScreenState extends State<ZikrDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Item 5-d: record this zikr as the last place ("continue where I left
+    // off") — the zikr content itself lives in AppPrefs, so the next start
+    // can reopen exactly this screen.
+    LastRoute.set('zikr::${AppPrefs.I.zikrName}');
+  }
+
+  @override
+  void dispose() {
+    // Popped normally → fall back to the home tab, so closing the app
+    // afterwards reopens the top (and not this zikr again).
+    LastRoute.set('tab::0');
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

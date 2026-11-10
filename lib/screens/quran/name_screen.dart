@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -63,6 +64,10 @@ class _NameScreenState extends State<NameScreen> {
   bool _ttsReady = false;
   final AudioPlayer _ayahPlayer = AudioPlayer();
   int? _ayahPlayingId;
+  // item 2.4: the bundled full recitation of all 99 names
+  final AudioPlayer _allPlayer = AudioPlayer();
+  StreamSubscription<Duration>? _allSub;
+  int _allDurMs = 0;
   final Map<int, GlobalKey> _cardKeys = {};
 
   @override
@@ -70,6 +75,7 @@ class _NameScreenState extends State<NameScreen> {
     super.initState();
     _initTts();
     AudioSetup.prepare(_ayahPlayer);
+    AudioSetup.prepare(_allPlayer);
     _load();
   }
 
@@ -89,41 +95,41 @@ class _NameScreenState extends State<NameScreen> {
 
   Future<void> _load() async {
     List<_NameRow> rows = [];
-    // 1) the ready data file shipped with the project (item 6)
+    // 1) PRIMARY: the project's own database assets/db/name.db (item 2.4)
     try {
-      final raw = await rootBundle
-          .loadString('assets/data/nawakani_xwda.json');
-      final list = (jsonDecodeList(raw));
-      rows = list
-          .map((e) => _NameRow(
-                id: (e['id'] as num?)?.toInt() ?? 0,
-                arabic: '${e['arabic'] ?? ''}',
-                tashkeel: '${e['tashkeel'] ?? ''}',
-                ref: '${e['ref'] ?? ''}',
-                sorani: '${e['sorani'] ?? ''}',
-                badini: '${e['badini'] ?? ''}',
-                english: '${e['english'] ?? ''}',
-                farsi: '${e['farsi'] ?? ''}',
-              ))
-          .toList();
+      final dbRows = await Db.I.names();
+      rows = dbRows.map((r) {
+        final id = (r['_id'] as num?)?.toInt() ?? 0;
+        return _NameRow(
+          id: id == 0 ? 1 : id,
+          arabic: '${r['arabic'] ?? ''}',
+          tashkeel: '${r['highlight_section'] ?? ''}',
+          ref: '${r['surah_ayah'] ?? ''}',
+          sorani: '${r['sorani'] ?? ''}',
+          badini: '${r['badini'] ?? ''}',
+          english: '${r['english'] ?? ''}',
+          farsi: '${r['farsi'] ?? ''}',
+        );
+      }).toList();
     } catch (_) {}
-    // 2) fallback: the bundled SQLite database
+    // 2) fallback: the ready data file shipped with the project
     if (rows.isEmpty) {
       try {
-        final dbRows = await Db.I.names();
-        rows = dbRows.map((r) {
-          final id = (r['_id'] as num?)?.toInt() ?? 0;
-          return _NameRow(
-            id: id == 0 ? 1 : id,
-            arabic: '${r['arabic'] ?? ''}',
-            tashkeel: '${r['highlight_section'] ?? ''}',
-            ref: '${r['surah_ayah'] ?? ''}',
-            sorani: '${r['sorani'] ?? ''}',
-            badini: '${r['badini'] ?? ''}',
-            english: '${r['english'] ?? ''}',
-            farsi: '${r['farsi'] ?? ''}',
-          );
-        }).toList();
+        final raw = await rootBundle
+            .loadString('assets/data/nawakani_xwda.json');
+        final list = (jsonDecodeList(raw));
+        rows = list
+            .map((e) => _NameRow(
+                  id: (e['id'] as num?)?.toInt() ?? 0,
+                  arabic: '${e['arabic'] ?? ''}',
+                  tashkeel: '${e['tashkeel'] ?? ''}',
+                  ref: '${e['ref'] ?? ''}',
+                  sorani: '${e['sorani'] ?? ''}',
+                  badini: '${e['badini'] ?? ''}',
+                  english: '${e['english'] ?? ''}',
+                  farsi: '${e['farsi'] ?? ''}',
+                ))
+            .toList();
       } catch (_) {}
     }
     if (!mounted) return;
@@ -180,24 +186,56 @@ class _NameScreenState extends State<NameScreen> {
     }
   }
 
-  /// Item 13: recite ALL names one by one with highlight.
+  /// Item 2.4: play ALL names with the project's OWN bundled recitation
+  /// (assets/sounds/sound.mp3 — fully offline). The highlight follows the
+  /// audio by even division (the file recites the names in order).
   Future<void> _togglePlayAll() async {
     if (_playAll) {
       _playAll = false;
+      await _allPlayer.stop();
       await _tts.stop();
+      _allSub?.cancel();
       if (mounted) setState(() => _speakingId = null);
       return;
     }
+    if (_rows.isEmpty) return;
     _playAll = true;
     if (mounted) setState(() {});
-    for (final r in _rows) {
-      if (!_playAll || !mounted) break;
-      setState(() => _speakingId = r.id);
-      await _speak(r);
-      await Future.delayed(const Duration(milliseconds: 250));
+    try {
+      await _allPlayer.play(AssetSource('sounds/sound.mp3'));
+    } catch (_) {
+      _playAll = false;
+      if (mounted) setState(() => _speakingId = null);
+      return;
     }
-    _playAll = false;
-    if (mounted) setState(() => _speakingId = null);
+    _allSub?.cancel();
+    _allSub = _allPlayer.onDurationChanged.listen((d) {
+      if (d > Duration.zero) _allDurMs = d.inMilliseconds;
+    });
+    final posSub = _allPlayer.onPositionChanged.listen((p) {
+      if (!mounted || !_playAll || _allDurMs <= 0) return;
+      final idx = ((p.inMilliseconds / _allDurMs) * _rows.length)
+          .floor()
+          .clamp(0, _rows.length - 1);
+      final r = _rows[idx];
+      if (r.id != _speakingId) {
+        setState(() => _speakingId = r.id);
+        final ctx = _cardKeys[r.id]?.currentContext;
+        if (ctx != null) {
+          Scrollable.ensureVisible(ctx,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+              alignment: 0.1);
+        }
+      }
+    });
+    _allPlayer.onPlayerComplete.first.then((_) {
+      if (!mounted) return;
+      _allSub?.cancel();
+      posSub.cancel();
+      _playAll = false;
+      if (mounted) setState(() => _speakingId = null);
+    });
   }
 
   void _filter(String q) {
@@ -281,6 +319,8 @@ class _NameScreenState extends State<NameScreen> {
   void dispose() {
     _playAll = false;
     try { _tts.stop(); } catch (_) {}
+    _allSub?.cancel();
+    _allPlayer.dispose();
     _ayahPlayer.dispose();
     super.dispose();
   }

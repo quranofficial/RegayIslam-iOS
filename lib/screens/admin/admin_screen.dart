@@ -1596,7 +1596,10 @@ class _AdminCommentsPageState extends _AdminPageState<_AdminCommentsPage> {
       _comments = const [];
       _loadingComments = true;
     });
-    final c = await Rtdb.I.comments(videoId);
+    // CANONICAL BUCKET FIX: read the SAME merged buckets the user sees
+    // (legacy CommentVideo/<date> + the Flutter-era push-key one) so every
+    // comment — old and new — shows up for moderation.
+    final c = await Rtdb.I.commentsForVideo(v);
     if (!mounted) return;
     setState(() {
       _comments = c;
@@ -1605,21 +1608,24 @@ class _AdminCommentsPageState extends _AdminPageState<_AdminCommentsPage> {
   }
 
   Future<void> _deleteComment(Map<String, dynamic> c) async {
-    if (_videoId.isEmpty) return;
+    // Each merged row remembers which bucket it came from (_bucket); fall
+    // back to the row id for comments loaded before the merge existed.
+    final bucket = '${c['_bucket'] ?? _videoId}';
+    if (bucket.isEmpty) return;
     final ok = await confirm(
         'سڕینەوەی سەرنج', 'دڵنیایت لە سڕینەوەی سەرنجی "${c['userrr'] ?? c['name'] ?? ''}"؟');
     if (!ok) return;
     setState(() => busy = true);
-    final done = await Rtdb.I.delete('CommentVideo/$_videoId/${c['id']}');
+    final done = await Rtdb.I.delete('CommentVideo/$bucket/${c['id']}');
     if (mounted) setState(() => busy = false);
     if (done) {
-      widget.log('سەرنج سڕدرایەوە (video: $_videoId/${c['id']})');
+      widget.log('سەرنج سڕدرایەوە (video: CommentVideo/$bucket/${c['id']})');
       toast('سەرنج سڕدرایەوە ✅');
       if (mounted) {
         setState(() => _comments.removeWhere((x) => x['id'] == c['id']));
       }
     } else {
-      widget.log('سڕینەوەی سەرنج سەرکەوتوو نەبوو (video: $_videoId/${c['id']})');
+      widget.log('سڕینەوەی سەرنج سەرکەوتوو نەبوو (video: CommentVideo/$bucket/${c['id']})');
       failToast();
     }
   }

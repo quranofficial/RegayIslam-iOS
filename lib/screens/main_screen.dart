@@ -3,7 +3,7 @@ import '../core/constants.dart';
 import '../core/prefs.dart';
 import '../data/home_widgets.dart';
 import '../data/prayer_notifications.dart';
-import '../main.dart' show kThemeEpoch;
+import '../main.dart' show kThemeEpoch, LastRoute;
 import 'home/home_screen.dart';
 import 'quran/quran_tab.dart';
 import 'tasbih/tasbih_list.dart';
@@ -16,14 +16,17 @@ import 'settings/setting_tab.dart';
 /// kThemeEpoch and remounts the four tabs with fresh colors (no restart
 /// through the Splash anymore).
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  /// Item 5-d: optional initialTab so the Splash can reopen the app on the
+  /// tab the user was last on ("continue where I left off").
+  const MainScreen({super.key, this.initialTab = 0});
+  final int initialTab;
   @override
   State<MainScreen> createState() => _MainScreenState();
 }
 
 class _MainScreenState extends State<MainScreen>
     with WidgetsBindingObserver {
-  final PageController _pager = PageController();
+  late final PageController _pager;
   int _position = 0;
 
   static const _tabs = [
@@ -37,6 +40,12 @@ class _MainScreenState extends State<MainScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    final t = widget.initialTab;
+    _position = (t >= 0 && t < _tabs.length) ? t : 0;
+    _pager = PageController(initialPage: _position);
+    // Item 5-d: remember the tab the app was opened on; switching tabs
+    // below keeps this fresh, so the next start reopens the same tab.
+    LastRoute.set('tab::$_position');
   }
 
   @override
@@ -76,7 +85,10 @@ class _MainScreenState extends State<MainScreen>
           return Scaffold(
             body: PageView(
               controller: _pager,
-              onPageChanged: (i) => setState(() => _position = i),
+              onPageChanged: (i) {
+                setState(() => _position = i);
+                LastRoute.set('tab::$i');
+              },
               // Fresh instances (keyed by the theme epoch) so the tabs
               // repaint immediately when day/night switches.
               children: [

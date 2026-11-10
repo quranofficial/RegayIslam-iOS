@@ -26,6 +26,8 @@ class VideoPlayerScreen extends StatefulWidget {
     required this.url,
     this.folder,
     this.videoKey,
+    this.commentId,
+    this.altCommentId,
     this.initialLike,
     this.initialComment,
   });
@@ -33,6 +35,14 @@ class VideoPlayerScreen extends StatefulWidget {
   final String url;
   final String? folder;
   final String? videoKey;
+
+  /// CANONICAL BUCKET FIX: commentId = the video's legacy CommentVideo
+  /// bucket (the row's `date` millis, see Rtdb.commentIdFor); altCommentId
+  /// = the push-key bucket earlier builds wrote to (read-only). Both are
+  /// passed straight into CommentsSheet so the player shows and writes to
+  /// exactly the same comments as the videos list.
+  final String? commentId;
+  final String? altCommentId;
   final int? initialLike;
   final int? initialComment;
   @override
@@ -209,6 +219,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     final folder = widget.folder ?? '';
     final key = widget.videoKey ?? '';
     if (key.isEmpty) return;
+    final mainId = (widget.commentId ?? '').trim().isNotEmpty
+        ? widget.commentId!.trim()
+        : key.trim();
+    var altId = (widget.altCommentId ?? '').trim();
+    if (altId == mainId) altId = '';
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -216,7 +231,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (c) => CommentsSheet(
-          videoId: key, folder: folder, videoKey: key,
+          videoId: mainId, altId: altId, folder: folder, videoKey: key,
           onCounted: (n) {
             if (mounted) setState(() => _commentsCount = n);
           }),

@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import '../../core/ui.dart';
 import 'home_reorder_screen.dart';
 import '../quran/quran_studio_screen.dart';
-import '../quran/ayah_range_screen.dart';
 import '../../core/constants.dart';
 import '../../core/prefs.dart';
 import '../../data/db.dart';
@@ -675,8 +674,6 @@ class _HomeScreenState extends State<HomeScreen> {
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DasalatakanScreen()))),
       _G('کاتەکانی مانگ', Icons.calendar_month_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PrayersMonthScreen()))),
-      _G('خوێندنی ئایەتەکان', Icons.surround_sound_rounded,
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AyahRangeScreen()))),
       _G('دروستکردنی ڤیدیۆ و وێنە', Icons.movie_creation_rounded,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuranStudioScreen()))),
       _G('ڕێکخستنی بەشەکان', Icons.swap_vert_rounded, _openReorder),

@@ -23,10 +23,12 @@ class _VideosScreenState extends State<VideosScreen> {
   List<Map<String, dynamic>> _videos = [];
   List<Map<String, dynamic>> _tags = [];
   Map<String, dynamic>? _selectedTag;
+  Map<String, String> _tagName = {}; // folder id -> tag name (card chips)
   bool _loading = true;
   bool _failed = false; // list is empty because the request failed
   String? _error;
   String _q = '';
+  final TextEditingController _searchC = TextEditingController();
 
   @override
   void initState() {
@@ -34,8 +36,19 @@ class _VideosScreenState extends State<VideosScreen> {
     _load();
   }
 
-  Future<void> _load() async {
-    if (_tags.isEmpty) _tags = await Rtdb.I.videoTags();
+  @override
+  void dispose() {
+    _searchC.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load({bool refresh = false}) async {
+    if (refresh || _tags.isEmpty) _tags = await Rtdb.I.videoTags();
+    _tagName = {
+      for (final t in _tags)
+        if ('${t['tag'] ?? ''}'.trim().isNotEmpty)
+          '${t['tag']}': '${t['name'] ?? ''}',
+    };
     List<Map<String, dynamic>> v;
     final tagKey = _selectedTag == null ? '' : '${_selectedTag!['tag'] ?? ''}';
     v = tagKey.isEmpty
@@ -61,6 +74,9 @@ class _VideosScreenState extends State<VideosScreen> {
           : null;
     });
   }
+
+  /// Pull-to-refresh: re-fetch tags + videos, keep the current filters.
+  Future<void> _refresh() => _load(refresh: true);
 
   List<Map<String, dynamic>> get _filtered {
     if (_q.isEmpty) return _videos;
@@ -97,6 +113,8 @@ class _VideosScreenState extends State<VideosScreen> {
               title: '${v['name'] ?? v['title'] ?? 'ڤیدیۆ'}', url: link,
               folder: '${v['folder'] ?? ''}',
               videoKey: '${v['id'] ?? ''}',
+              commentId: Rtdb.commentIdFor(v),
+              altCommentId: Rtdb.altCommentIdFor(v),
               initialLike: int.tryParse('${v['like']}') ?? 0,
               initialComment: int.tryParse('${v['comment']}') ?? 0)));
     }
@@ -194,23 +212,28 @@ class _VideosScreenState extends State<VideosScreen> {
     }
   }
 
-  /// Item 9: comments bind to the video's stable push key and refresh the
-  /// visible counter as soon as the sheet closes.
+  /// Comments bind to the video's CANONICAL bucket (the legacy `date` node —
+  /// see Rtdb.commentIdFor) so new comments MERGE with the old Sketchware
+  /// ones; the push-key bucket used by earlier builds is still read too, so
+  /// nothing the user wrote before disappears.
   Future<void> _comments(Map<String, dynamic> v) async {
-    final id = '${v['id'] ?? ''}'.trim().isNotEmpty
-        ? '${v['id']}'
-        : '${v['date'] ?? v['name'] ?? 'video'}';
     final folder = '${v['folder'] ?? ''}';
     final key = '${v['id'] ?? ''}';
+    if (key.isEmpty) return;
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: AppPrefs.I.day ? Colors.white : AppColors.nightCard,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (c) =>
-          CommentsSheet(videoId: id, folder: folder, videoKey: key,
-              onCounted: (n) { if (mounted) setState(() => v['comment'] = n); }),
+      builder: (c) => CommentsSheet(
+          videoId: Rtdb.commentIdFor(v),
+          altId: Rtdb.altCommentIdFor(v),
+          folder: folder,
+          videoKey: key,
+          onCounted: (n) {
+            if (mounted) setState(() => v['comment'] = n);
+          }),
     );
     if (!mounted) return;
     // Re-read the row so like/comment counters reflect the database.
@@ -326,12 +349,23 @@ class _VideosScreenState extends State<VideosScreen> {
                         ),
                       ),
                     Padding(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
                       child: TextField(
+                        controller: _searchC,
                         onChanged: (v) => setState(() => _q = v),
                         decoration: InputDecoration(
                           hintText: 'گەڕان لە ڤیدیۆکان...',
                           prefixIcon: const Icon(Icons.search_rounded),
+                          suffixIcon: _q.isEmpty
+                              ? null
+                              : IconButton(
+                                  tooltip: 'سڕینەوەی گەڕان',
+                                  onPressed: () {
+                                    _searchC.clear();
+                                    setState(() => _q = '');
+                                  },
+                                  icon: const Icon(Icons.close_rounded,
+                                      size: 18)),
                           filled: true,
                           fillColor: dark ? AppColors.nightCard : Colors.white,
                           contentPadding:
@@ -342,107 +376,310 @@ class _VideosScreenState extends State<VideosScreen> {
                         ),
                       ),
                     ),
+                    // Count badge — the user always sees how many videos
+                    // (or search hits) are in front of them.
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                      child: Row(children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                              color: accent.withOpacity(.12),
+                              borderRadius: BorderRadius.circular(20)),
+                          child: Text('ڤیدیۆکان: ${_filtered.length}',
+                              style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: accent)),
+                        ),
+                        if (_q.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text('ئەنجامی گەڕان بۆ «$_q»',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: 11, color: txt.withOpacity(.6))),
+                          ),
+                        ],
+                      ]),
+                    ),
                     Expanded(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        itemCount: _filtered.length,
-                        itemBuilder: (context, i) {
-                          final v = _filtered[i];
-                          final title = '${v['name'] ?? 'ڤیدیۆ'}';
-                          final id = '${v['id'] ?? ''}';
-                          final likes = int.tryParse('${v['like']}') ?? 0;
-                          final comments = int.tryParse('${v['comment']}') ?? 0;
-                          final liked = AppPrefs.I.isVideoLiked(id);
-                          final time = '${v['timevideo'] ?? ''}';
-                          return Card(
-                            color: dark ? AppColors.nightCard : Colors.white,
-                            margin: const EdgeInsets.only(bottom: 10),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14)),
-                            child: ListTile(
-                              onTap: () => _open(v),
-                              leading: Container(
-                                width: 54, height: 54,
-                                decoration: BoxDecoration(
-                                    color:
-                                        AppColors.primaryDark.withOpacity(.1),
-                                    borderRadius: BorderRadius.circular(10)),
-                                child: const Icon(Icons.ondemand_video_rounded,
-                                    color: AppColors.primaryDark)),
-                              title: Text(title,
-                                  maxLines: 2, overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(fontWeight: FontWeight.bold,
-                                      fontSize: 13.5, color: txt)),
-                              subtitle: Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Row(children: [
-                                  if (time.isNotEmpty)
-                                    Text('$time   ',
-                                        style: TextStyle(fontSize: 11,
-                                            color: txt.withOpacity(.55))),
-                                  InkWell(
-                                    onTap: () => _like(v),
-                                    borderRadius: BorderRadius.circular(6),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 2),
-                                      child: Row(children: [
-                                        Icon(Icons.favorite_rounded,
-                                            size: 13,
-                                            color: liked
-                                                ? const Color(0xFFE91E63)
-                                                : accent),
-                                        Text(' $likes   ',
-                                            style: TextStyle(fontSize: 11,
-                                                color: txt.withOpacity(.55))),
-                                      ]),
+                      child: RefreshIndicator(
+                        onRefresh: _refresh,
+                        color: AppColors.primaryDark,
+                        child: _filtered.isEmpty
+                            ? ListView(children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(36),
+                                  child: Column(children: [
+                                    Icon(Icons.search_off_rounded,
+                                        size: 44, color: txt.withOpacity(.3)),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                        _q.isEmpty
+                                            ? 'هیچ ڤیدیۆیەک بەردەست نییە'
+                                            : 'هیچ ڤیدیۆیەک نەدۆزرایەوە بۆ «$_q»',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                            height: 1.6,
+                                            color: txt.withOpacity(.6))),
+                                    if (_q.isNotEmpty)
+                                      TextButton(
+                                          onPressed: () {
+                                            _searchC.clear();
+                                            setState(() => _q = '');
+                                          },
+                                          child: const Text('سڕینەوەی گەڕان')),
+                                  ]),
+                                ),
+                              ])
+                            : ListView.builder(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 12),
+                                itemCount: _filtered.length,
+                                itemBuilder: (context, i) {
+                                  final v = _filtered[i];
+                                  final title = '${v['name'] ?? 'ڤیدیۆ'}';
+                                  final id = '${v['id'] ?? ''}';
+                                  final likes =
+                                      int.tryParse('${v['like']}') ?? 0;
+                                  final comments =
+                                      int.tryParse('${v['comment']}') ?? 0;
+                                  final liked = AppPrefs.I.isVideoLiked(id);
+                                  final time = '${v['timevideo'] ?? ''}';
+                                  final tagName = _tagName[
+                                          '${v['folder'] ?? ''}'] ??
+                                      (_selectedTag == null
+                                          ? ''
+                                          : '${_selectedTag!['name'] ?? ''}');
+                                  return Card(
+                                    color: dark
+                                        ? AppColors.nightCard
+                                        : Colors.white,
+                                    margin:
+                                        const EdgeInsets.only(bottom: 10),
+                                    elevation: dark ? 0 : 1,
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(14)),
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(14),
+                                      onTap: () => _open(v),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(10),
+                                        child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              // Thumbnail block with a play
+                                              // overlay + duration chip.
+                                              Stack(children: [
+                                                Container(
+                                                  width: 92,
+                                                  height: 66,
+                                                  decoration: BoxDecoration(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              12),
+                                                      gradient:
+                                                          LinearGradient(
+                                                        begin: Alignment
+                                                            .topLeft,
+                                                        end: Alignment
+                                                            .bottomRight,
+                                                        colors: [
+                                                          AppColors
+                                                              .primaryDark,
+                                                          AppColors
+                                                              .primaryDark
+                                                              .withOpacity(
+                                                                  .55),
+                                                        ],
+                                                      )),
+                                                  child: const Icon(
+                                                      Icons
+                                                          .play_arrow_rounded,
+                                                      size: 36,
+                                                      color: Colors.white),
+                                                ),
+                                                if (time.isNotEmpty)
+                                                  Positioned(
+                                                    bottom: 4,
+                                                    left: 4,
+                                                    child: Container(
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                          horizontal: 5,
+                                                          vertical: 1),
+                                                      decoration: BoxDecoration(
+                                                          color: Colors.black
+                                                              .withOpacity(
+                                                                  .65),
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(
+                                                                      6)),
+                                                      child: Text(time,
+                                                          style: const TextStyle(
+                                                              color: Colors
+                                                                  .white,
+                                                              fontSize: 9,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold)),
+                                                    ),
+                                                  ),
+                                              ]),
+                                              const SizedBox(width: 10),
+                                              Expanded(
+                                                child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(title,
+                                                          maxLines: 2,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          style: TextStyle(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                              fontSize: 13.5,
+                                                              height: 1.3,
+                                                              color: txt)),
+                                                      if (tagName.isNotEmpty) ...[
+                                                        const SizedBox(
+                                                            height: 6),
+                                                        Container(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                                  horizontal:
+                                                                      8,
+                                                                  vertical: 2),
+                                                          decoration: BoxDecoration(
+                                                              color: accent
+                                                                  .withOpacity(
+                                                                      .12),
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          20)),
+                                                          child: Text(
+                                                              tagName,
+                                                              style: TextStyle(
+                                                                  fontSize:
+                                                                      10.5,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                  color:
+                                                                      accent)),
+                                                        ),
+                                                      ],
+                                                      const SizedBox(
+                                                          height: 6),
+                                                      Row(children: [
+                                                        InkWell(
+                                                          onTap: () =>
+                                                              _like(v),
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(
+                                                                      6),
+                                                          child: Padding(
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .symmetric(
+                                                                    horizontal:
+                                                                        2,
+                                                                    vertical:
+                                                                        3),
+                                                            child: Row(
+                                                                children: [
+                                                              Icon(
+                                                                  liked
+                                                                      ? Icons
+                                                                          .favorite_rounded
+                                                                      : Icons
+                                                                          .favorite_border_rounded,
+                                                                  size: 15,
+                                                                  color: liked
+                                                                      ? const Color(
+                                                                          0xFFE91E63)
+                                                                      : accent),
+                                                              Text(' $likes',
+                                                                  style: TextStyle(
+                                                                      fontSize:
+                                                                          11.5,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold,
+                                                                      color: liked
+                                                                          ? const Color(0xFFE91E63)
+                                                                          : txt.withOpacity(.6))),
+                                                            ]),
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                            width: 12),
+                                                        InkWell(
+                                                          onTap: () =>
+                                                              _comments(v),
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(
+                                                                      6),
+                                                          child: Padding(
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .symmetric(
+                                                                    horizontal:
+                                                                        2,
+                                                                    vertical:
+                                                                        3),
+                                                            child: Row(
+                                                                children: [
+                                                              Icon(
+                                                                  Icons
+                                                                      .comment_rounded,
+                                                                  size: 15,
+                                                                  color:
+                                                                      accent),
+                                                              Text(
+                                                                  ' $comments',
+                                                                  style: TextStyle(
+                                                                      fontSize:
+                                                                          11.5,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold,
+                                                                      color: txt
+                                                                          .withOpacity(.6))),
+                                                            ]),
+                                                          ),
+                                                        ),
+                                                        const Spacer(),
+                                                        FavoriteButton(
+                                                            id:
+                                                                'video::${v['id'] ?? title}',
+                                                            title: title,
+                                                            content:
+                                                                _link(v),
+                                                            route:
+                                                                'video::${v['id'] ?? title}'),
+                                                      ]),
+                                                    ]),
+                                              ),
+                                            ]),
+                                      ),
                                     ),
-                                  ),
-                                  InkWell(
-                                    onTap: () => _comments(v),
-                                    borderRadius: BorderRadius.circular(6),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 2),
-                                      child: Row(children: [
-                                        Icon(Icons.comment_rounded,
-                                            size: 13, color: accent),
-                                        Text(' $comments',
-                                            style: TextStyle(fontSize: 11,
-                                                color: txt.withOpacity(.55))),
-                                      ]),
-                                    ),
-                                  ),
-                                ]),
+                                  );
+                                },
                               ),
-                              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                                IconButton(
-                                  tooltip: 'لایک',
-                                  onPressed: () => _like(v),
-                                  icon: Icon(
-                                      liked
-                                          ? Icons.favorite_rounded
-                                          : Icons.favorite_border_rounded,
-                                      size: 22,
-                                      color: liked
-                                          ? const Color(0xFFE91E63)
-                                          : accent)),
-                                IconButton(
-                                  tooltip: 'سەرنجەکان',
-                                  onPressed: () => _comments(v),
-                                  icon: Icon(Icons.comment_rounded,
-                                      size: 22, color: accent)),
-                                FavoriteButton(
-                                    id: 'video::${v['id'] ?? title}',
-                                    title: title,
-                                    content: _link(v),
-                                    route: 'video::${v['id'] ?? title}'),
-                                const Icon(Icons.play_circle_rounded,
-                                    size: 30, color: AppColors.primaryDark),
-                              ]),
-                            ),
-                          );
-                        },
                       ),
                     ),
                   ]),
@@ -451,16 +688,26 @@ class _VideosScreenState extends State<VideosScreen> {
   }
 }
 
-/// Original: the comment dialog over "commentvideo" — {userrr, commenttt,
-/// date, comment_key, uid, verify}; stored per video id.
+/// Original: the comment dialog over "CommentVideo" — {userrr, commenttt,
+/// date, comment_key, uid, verify}; stored per video.
 /// Public + reusable so VideoPlayerScreen can open it too.
+///
+/// CANONICAL BUCKET FIX: videoId is the video's legacy bucket id (the row's
+/// `date` millis — see Rtdb.commentIdFor); altId is the secondary push-key
+/// bucket earlier builds wrote to and is READ-ONLY. Reads merge both so old
+/// comments always show; writes go to the canonical bucket only.
 class CommentsSheet extends StatefulWidget {
   final String videoId;
+  final String altId;
   final String folder;
   final String videoKey;
   final ValueChanged<int>? onCounted;
   const CommentsSheet(
-      {super.key, required this.videoId, this.folder = '', this.videoKey = '',
+      {super.key,
+      required this.videoId,
+      this.altId = '',
+      this.folder = '',
+      this.videoKey = '',
       this.onCounted});
   @override
   State<CommentsSheet> createState() => _CommentsSheetState();
@@ -481,9 +728,11 @@ class _CommentsSheetState extends State<CommentsSheet> {
   }
 
   Future<void> _load() async {
-    final v = await Rtdb.I.comments(widget.videoId);
+    // Merged read: canonical bucket + legacy Flutter-era bucket, deduped,
+    // newest first (see Rtdb.commentsForIds).
+    final v = await Rtdb.I.commentsForIds(widget.videoId, widget.altId);
     if (!mounted) return;
-    setState(() { _items = v.reversed.toList(); _loading = false; });
+    setState(() { _items = v; _loading = false; });
     widget.onCounted?.call(_items.length);
   }
 
@@ -500,9 +749,10 @@ class _CommentsSheetState extends State<CommentsSheet> {
     return '${d.year}/${d.month}/${d.day}';
   }
 
-  /// Sends the comment and STAYS OPEN: on failure the sheet is kept with an
-  /// error snack; on success the list reloads and the video's comment
-  /// counter is incremented in the DB and pushed to the caller.
+  /// Sends the comment and STAYS OPEN: on failure the sheet is kept with a
+  /// clear error snack (no fake success); on success the list reloads and
+  /// the video's comment counter is incremented in the DB and pushed to the
+  /// caller.
   Future<void> _send() async {
     final text = _textC.text.trim();
     final name = _nameC.text.trim();
@@ -514,9 +764,18 @@ class _CommentsSheetState extends State<CommentsSheet> {
       }
       return;
     }
+    if (widget.videoId.trim().isEmpty) {
+      // No valid bucket id -> a write would go to a ghost node. Say so.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('نەتوانرا کۆمێنت بنێرێت — ئینتەرنێت بپشکنە')));
+      return;
+    }
     setState(() => _sending = true);
     AppPrefs.I.commentName = name;
     final key = 'c-${DateTime.now().millisecondsSinceEpoch}';
+    // Write to the CANONICAL bucket so the comment merges with the legacy
+    // ones and is visible to the original app + admin moderation.
     final ok = await Rtdb.I.sendComment(widget.videoId, {
       'userrr': name,
       'commenttt': text,
@@ -530,9 +789,11 @@ class _CommentsSheetState extends State<CommentsSheet> {
       // Keep the sheet open and tell the user why nothing was sent.
       if (!mounted) return;
       setState(() => _sending = false);
+      final err = Rtdb.I.lastError;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(
-              'سەرنجەکەت نەنێردرا — ${Rtdb.I.lastError ?? 'دووبارە هەوڵبدە'}')));
+          content: Text(err == null || err.isEmpty
+              ? 'نەتوانرا کۆمێنت بنێرێت — ئینتەرنێت بپشکنە'
+              : 'نەتوانرا کۆمێنت بنێرێت — ئینتەرنێت بپشکنە\n($err)')));
       return;
     }
     _textC.clear();
