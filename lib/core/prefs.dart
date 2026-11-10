@@ -162,6 +162,11 @@ class AppPrefs {
   int get ayahBannerSeed => _p.getInt('ayahBannerSeed') ?? -1;
   set ayahBannerSeed(int v) => _p.setInt('ayahBannerSeed', v);
 
+  // Persist the surah as well as the ayah index so the home card and widget
+  // always refer to the same daily ayah after a rebuild or restart.
+  int get ayahBannerSura => _p.getInt('ayahBannerSura') ?? 0;
+  set ayahBannerSura(int v) => _p.setInt('ayahBannerSura', v);
+
   // --- library books json (MainActivity pref "onlybookme": the fetched
   //     ktebakan.json, kept offline) ---
   String get libraryJson => _p.getString('onlybookme') ?? '';

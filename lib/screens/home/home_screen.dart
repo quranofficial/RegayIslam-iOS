@@ -90,30 +90,79 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final now = DateTime.now();
       final dayKey = '${now.year}-${now.month}-${now.day}';
-      final seed = AppPrefs.I.ayahBannerSeed;
-      final sameDay = AppPrefs.I.ayahDay == dayKey && seed >= 0;
+      final sameDay = AppPrefs.I.ayahDay == dayKey &&
+          AppPrefs.I.ayahBannerSura > 0 &&
+          AppPrefs.I.ayahBannerSeed >= 0;
       int sura;
       int idx;
+      List<Map<String, Object?>> pool;
       if (sameDay) {
-        sura = Random(now.day * 31 + now.month).nextInt(114) + 1;
-        final pool = await Db.I.ayat(sura, AppPrefs.I.tafsir);
+        sura = AppPrefs.I.ayahBannerSura;
+        pool = await Db.I.ayat(sura, AppPrefs.I.tafsir);
         if (pool.isEmpty || !mounted) return;
-        idx = seed < pool.length ? seed : 0;
-        setState(() { _bannerAyah = pool[idx]; _bannerSuraId = sura; });
+        idx = AppPrefs.I.ayahBannerSeed.clamp(0, pool.length - 1).toInt();
       } else {
-        sura = Random(now.day * 31 + now.month).nextInt(114) + 1;
-        final pool = await Db.I.ayat(sura, AppPrefs.I.tafsir);
+        final r = Random(now.day * 31 + now.month);
+        sura = r.nextInt(114) + 1;
+        pool = await Db.I.ayat(sura, AppPrefs.I.tafsir);
         if (pool.isEmpty || !mounted) return;
-        idx = Random(now.day * 31 + now.month).nextInt(pool.length);
-        setState(() { _bannerAyah = pool[idx]; _bannerSuraId = sura; });
+        idx = r.nextInt(pool.length);
         AppPrefs.I.ayahDay = dayKey;
+        AppPrefs.I.ayahBannerSura = sura;
         AppPrefs.I.ayahBannerSeed = idx;
       }
+      if (!mounted) return;
+      setState(() { _bannerAyah = pool[idx]; _bannerSuraId = sura; });
       HomeWidgets.updateAyah(
-        text: '${_bannerAyah!['text'] ?? ''}',
+        text: '${pool[idx]['text'] ?? ''}',
         reference:
-            '${_bannerAyah!['sura_name_ar'] ?? ''} — ئایەتی ${_bannerAyah!['ayah'] ?? ''}');
+            '${suraLabel('${pool[idx]['sura_name_ar'] ?? ''}')} — ئایەتی ${toArabicDigits((pool[idx]['ayah'] as num?)?.toInt() ?? 0)}');
     } catch (_) {}
+  }
+
+  /// Item 1: a real REFRESH for the daily ayah — one tap generates ONE new
+  /// ayah (random surah + ayah, never the one on screen) and persists it
+  /// immediately, so no later rebuild can swap it again. A busy flag makes
+  /// double taps impossible and the widget is updated with the same ayah.
+  bool _ayahRefreshing = false;
+  Future<void> _refreshAyah() async {
+    if (_ayahRefreshing) return;
+    _ayahRefreshing = true;
+    try {
+      final r = Random();
+      Map<String, Object?> row = {};
+      int sura = 0;
+      int savedIdx = 0;
+      for (var attempt = 0; attempt < 10; attempt++) {
+        sura = r.nextInt(114) + 1;
+        final pool = await Db.I.ayat(sura, AppPrefs.I.tafsir);
+        if (pool.isEmpty) continue;
+        final idx = r.nextInt(pool.length);
+        final cand = pool[idx];
+        // Never "refresh" into the same ayah that is already on screen.
+        final same = _bannerSuraId == sura &&
+            (cand['ayah'] as num?)?.toInt() ==
+                (_bannerAyah?['ayah'] as num?)?.toInt();
+        if (same && attempt < 9) continue;
+        row = cand;
+        savedIdx = idx;
+        break;
+      }
+      if (row.isEmpty || !mounted) return;
+      setState(() { _bannerAyah = row; _bannerSuraId = sura; });
+      final now = DateTime.now();
+      AppPrefs.I.ayahDay = '${now.year}-${now.month}-${now.day}';
+      AppPrefs.I.ayahBannerSura = sura;
+      // The seed is the INDEX inside this surah's pool (same convention as
+      // _loadBannerAyah) — saving anything else would swap the ayah again.
+      AppPrefs.I.ayahBannerSeed = savedIdx;
+      HomeWidgets.updateAyah(
+        text: '${row['text'] ?? ''}',
+        reference:
+            '${suraLabel('${row['sura_name_ar'] ?? ''}')} — ئایەتی ${toArabicDigits((row['ayah'] as num?)?.toInt() ?? 0)}');
+    } catch (_) {} finally {
+      _ayahRefreshing = false;
+    }
   }
 
   /// Item 2: clicking the daily ayah opens the Quran at that EXACT ayah.
@@ -270,6 +319,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: const Icon(Icons.add_circle_outline_rounded,
                         color: Colors.white70, size: 19)),
                 const SizedBox(width: 4),
+                // One tap chooses and persists one new daily ayah.
+                IconButton(visualDensity: VisualDensity.compact,
+                    tooltip: 'ئایەتێکی نوێ',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed:
+                        _ayahRefreshing ? null : _refreshAyah,
+                    icon: Icon(
+                        _ayahRefreshing
+                            ? Icons.hourglass_top_rounded
+                            : Icons.refresh_rounded,
+                        color: Colors.white70, size: 19)),
+                const SizedBox(width: 2),
                 // Item 2: click opens the Quran at this exact ayah.
                 const Icon(Icons.touch_app_rounded,
                     color: Colors.white54, size: 16),

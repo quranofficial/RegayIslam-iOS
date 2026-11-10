@@ -33,6 +33,19 @@ class PrayerNotifications {
     await android?.requestNotificationsPermission();
     _canUseExactAlarms =
         await android?.canScheduleExactNotifications() ?? false;
+    // Item 3 (feedback): بانگ must actually RING. On Android 12+ the
+    // exact-alarm permission is a separate grant — if it is missing many
+    // OEMs silently drop or delay the inexact fallback while the phone is
+    // in deep sleep, and the user never hears the adhan. Ask for it right
+    // here (opens the system alarm permission page) so scheduling starts
+    // exact from the first launch.
+    if (!_canUseExactAlarms) {
+      try {
+        await android?.requestExactAlarmsPermission();
+        _canUseExactAlarms =
+            await android?.canScheduleExactNotifications() ?? false;
+      } catch (_) {}
+    }
   }
 
   Future<bool> requestExactAlarmPermission() async {
