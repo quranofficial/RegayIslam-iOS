@@ -12,19 +12,24 @@ class Reciters {
   static bool supported(Map<String, dynamic> r) =>
       '${r['doxx'] ?? ''}'.trim().toLowerCase() == 'true';
 
-  /// The supported reciters only — every caller of dangakan.json goes
-  /// through this so the list is consistent app-wide.
-  static Future<List<Map<String, dynamic>>> supportedList() async {
+  /// Every reciter from the original Sketchware list. Some entries have
+  /// full-surah audio but no per-ayah timing database; they must remain
+  /// selectable in the reciter screen instead of disappearing.
+  static Future<List<Map<String, dynamic>>> allList() async {
     final cached = _cache;
     if (cached != null) return cached;
     final raw = await rootBundle.loadString('assets/data/dangakan.json');
     final list = (jsonDecode(raw) as List)
         .map((e) => Map<String, dynamic>.from(e))
-        .where(supported)
         .toList();
     _cache = list;
     return list;
   }
+
+  /// Reciters with a matching per-reciter timing database. Use this list
+  /// only for ayah-synchronized features such as the Quran Studio.
+  static Future<List<Map<String, dynamic>>> supportedList() async =>
+      (await allList()).where(supported).toList();
 
   /// A reciter by id from the supported list (null when unknown).
   static Future<Map<String, dynamic>?> byId(String id) async {
