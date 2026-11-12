@@ -220,13 +220,23 @@ class _QariakanScreenState extends State<QariakanScreen> {
     _cancelAll = false;
     _downloadingId = 'all';
     final ctx = context;
-    showDialog(
+    var dialogOpen = true;
+    final dialogFuture = showDialog<void>(
       context: ctx,
       barrierDismissible: false,
-      builder: (c) => _DownloadAllDialog(
+      builder: (dialogContext) => _DownloadAllDialog(
           name: name, done: done, failed: failed, total: total,
-          onCancel: () { _cancelAll = true; Navigator.pop(c); }),
+          onCancel: () {
+            _cancelAll = true;
+            if (dialogOpen) {
+              dialogOpen = false;
+              Navigator.pop(dialogContext);
+            }
+          }),
     );
+    // If Android back or another route event closes the dialog, do not let
+    // the completion handler accidentally pop the Quran screen itself.
+    dialogFuture.whenComplete(() => dialogOpen = false);
     try {
       final surahs = await Db.I.surahs();
       total.value = surahs.length;
@@ -249,7 +259,10 @@ class _QariakanScreenState extends State<QariakanScreen> {
     } catch (_) {}
     _downloadingId = null;
     if (mounted) setState(() {});
-    if (ctx.mounted) Navigator.of(ctx, rootNavigator: true).pop();
+    if (dialogOpen && ctx.mounted) {
+      dialogOpen = false;
+      Navigator.of(ctx, rootNavigator: true).pop();
+    }
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(_cancelAll
