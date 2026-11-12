@@ -75,9 +75,9 @@ class _QariakanScreenState extends State<QariakanScreen> {
 
   Future<void> _load() async {
     try {
-      // Reciters come ONLY from dangakan.json — and only the entries marked
-      // doxx=true (audio + ayah timings db assets/db/<id>.db ready) are shown.
-      _reciters = await Reciters.supportedList();
+      // Keep all 81 original entries visible. Some have full-surah audio
+      // without an ayah-timing database, exactly as in Sketchware.
+      _reciters = await Reciters.allList();
       _filtered = _reciters;
       final surahs = await Db.I.surahs();
       if (!mounted) return;
@@ -220,13 +220,23 @@ class _QariakanScreenState extends State<QariakanScreen> {
     _cancelAll = false;
     _downloadingId = 'all';
     final ctx = context;
-    showDialog(
+    var dialogOpen = true;
+    final dialogFuture = showDialog<void>(
       context: ctx,
       barrierDismissible: false,
-      builder: (c) => _DownloadAllDialog(
+      builder: (dialogContext) => _DownloadAllDialog(
           name: name, done: done, failed: failed, total: total,
-          onCancel: () { _cancelAll = true; Navigator.pop(c); }),
+          onCancel: () {
+            _cancelAll = true;
+            if (dialogOpen) {
+              dialogOpen = false;
+              Navigator.pop(dialogContext);
+            }
+          }),
     );
+    // If Android back or another route event closes the dialog, do not let
+    // the completion handler accidentally pop the Quran screen itself.
+    dialogFuture.whenComplete(() => dialogOpen = false);
     try {
       final surahs = await Db.I.surahs();
       total.value = surahs.length;
@@ -249,7 +259,10 @@ class _QariakanScreenState extends State<QariakanScreen> {
     } catch (_) {}
     _downloadingId = null;
     if (mounted) setState(() {});
-    if (ctx.mounted) Navigator.of(ctx, rootNavigator: true).pop();
+    if (dialogOpen && ctx.mounted) {
+      dialogOpen = false;
+      Navigator.of(ctx, rootNavigator: true).pop();
+    }
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(_cancelAll
@@ -398,10 +411,13 @@ class _QariakanScreenState extends State<QariakanScreen> {
                           leading: _reciterAvatar(r, dark),
                           title: Text('${r['name_ar'] ?? ''}',
                               style: TextStyle(fontWeight: FontWeight.bold, color: txt)),
-                          // doxx=true only — audio + ayah timings are ready
-                          // (assets/db/<id>.db), so download is always possible.
-                          subtitle: const Text('دەنگ و ئایەت بەردەستە — داگرتن بۆ ئۆفلاین',
-                              style: TextStyle(fontSize: 11)),
+                          // The original list included all reciters; only
+                          // some have per-ayah timing databases.
+                          subtitle: Text(
+                              Reciters.supported(r)
+                                  ? 'دەنگ و هاوکاتی ئایەت بەردەستە — ئۆفلاین'
+                                  : 'دەنگی تەواوی سوورەت بەردەستە — بێ هاوکاتی ئایەت',
+                              style: const TextStyle(fontSize: 11)),
                           trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                             FavoriteButton(id: 'reciter::${r['id']}',
                               title: '${r['name_ar'] ?? 'قاری'}',
