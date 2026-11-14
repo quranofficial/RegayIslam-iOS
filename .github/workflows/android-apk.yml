@@ -2,6 +2,9 @@ name: Build RegayIslam Android APK
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - codex/full-repair-2026
 
 concurrency:
   group: regayislam-${{ github.workflow }}
@@ -29,8 +32,11 @@ jobs:
       - name: Get Flutter packages
         run: flutter pub get
 
-      - name: Generate Android platform
-        run: flutter create --platforms=android --org com.nwezhakanm --project-name regayislam .
+      # Keep the checked-in Android host project intact. Regenerating it here
+      # overwrote custom AppWidget receivers and notification configuration.
+
+      - name: Run Flutter tests
+        run: flutter test
 
       - name: Prepare Adhan notification sound
         run: |

@@ -71,12 +71,13 @@ class Db {
 
   /// Whole-surah tafsir text (Fate7a detail screens).
   Future<String> surahTafsir(int suraId, String tafsirCol) async {
+    final safe = _safeCol(tafsirCol);
     final rows = await _quran!.query('ayah_text',
         where: 'suraId = ?', whereArgs: [suraId],
-        columns: [_safeCol(tafsirCol)], orderBy: 'ayah');
+        columns: [safe], orderBy: 'ayah');
     final sb = StringBuffer();
     for (final r in rows) {
-      final v = r[tafsirCol];
+      final v = r[safe];
       if (v != null && v.toString().trim().isNotEmpty) {
         sb.writeln(v); sb.writeln();
       }
