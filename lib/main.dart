@@ -1,4 +1,5 @@
 import 'dart:ui' show PlatformDispatcher;
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/prefs.dart';
