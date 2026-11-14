@@ -214,7 +214,7 @@ class PrayerNotifications {
         android: _androidDetails(),
         iOS: DarwinNotificationDetails(
             presentSound: p.adhanSoundEnabled,
-            sound: p.adhanSoundEnabled ? 'adhan.mp3' : null));
+            sound: p.adhanSoundEnabled ? 'adhan.caf' : null));
   }
 
   Future<void> showNow(String title, String body) async {
