@@ -213,8 +213,12 @@ class PrayerNotifications {
     return NotificationDetails(
         android: _androidDetails(),
         iOS: DarwinNotificationDetails(
-            presentSound: p.adhanSoundEnabled,
-            sound: p.adhanSoundEnabled ? 'adhan.mp3' : null));
+            // iOS plays custom notification sounds only when they are <= 30 s.
+            // CI converts assets/sounds/dang.MP3 -> ios/Runner/adhan.caf (29 s).
+            sound: p.adhanSoundEnabled ? 'adhan.caf' : null,
+            presentAlert: true,
+            presentBadge: false,
+            presentSound: p.adhanSoundEnabled));
   }
 
   Future<void> showNow(String title, String body) async {
