@@ -296,7 +296,7 @@ class _NameScreenState extends State<NameScreen> {
     final (sid, ayah) = ref;
     try {
       await _ayahPlayer.stop();
-      setState(() => _ayahPlayingId = r.id);
+      if (mounted) setState(() => _ayahPlayingId = r.id);
       final g = await Db.I.globalAyah(sid, ayah);
       final url = Downloader.httpsify(
           'https://cdn.islamic.network/quran/audio/128/ar.alafasy/$g.mp3');

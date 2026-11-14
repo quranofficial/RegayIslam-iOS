@@ -191,12 +191,12 @@ class _QariakanScreenState extends State<QariakanScreen> {
           await _player.play(UrlSource(Downloader.httpsify(url)));
         } catch (_) {
           // streaming refused — download then play, like PRDownloader
-          setState(() => _downloadingId = '${r['id'] ?? ''}');
+          if (mounted) setState(() => _downloadingId = '${r['id'] ?? ''}');
           await _fetchToFile(r);
           await _player.play(DeviceFileSource(local.path));
         }
       }
-      setState(() => _selected = rid);
+      if (mounted) setState(() => _selected = rid);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(

@@ -621,7 +621,7 @@ class _MushafScreenState extends State<MushafScreen> {
       final local = await _playSurahLocal(surahId, startMs, notify: true);
       if (local) return;
     }
-    setState(() { _ayahByAyah = true; _selAyah = ayah; _selSurah = surahId; });
+    if (mounted) setState(() { _ayahByAyah = true; _selAyah = ayah; _selSurah = surahId; });
     _repeatLeft = AppPrefs.I.ayahRepeat;
     await _playAyahFile(ayah);
   }

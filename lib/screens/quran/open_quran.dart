@@ -316,7 +316,7 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
             rethrow; // surface the network snackbar below
           }
         }
-        setState(() => _currentUrl = url);
+        if (mounted) setState(() => _currentUrl = url);
       }
     } catch (_) {
       if (mounted) {
@@ -501,7 +501,7 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
       final local = await _playSurahLocal(startMs: startMs, notify: true);
       if (local) return;
     }
-    setState(() { _ayahByAyah = true; _playingAyah = ayah; });
+    if (mounted) setState(() { _ayahByAyah = true; _playingAyah = ayah; });
     await _playAyahFile(ayah);
   }
 

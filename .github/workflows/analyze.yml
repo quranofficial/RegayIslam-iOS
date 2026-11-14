@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   analyze:
@@ -24,11 +24,19 @@ jobs:
           cache: true
       - run: flutter pub get
       - name: flutter analyze
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings 2>&1 | tee analyze.txt
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings 2>&1 | tee /tmp/analyze.txt
       - name: Summary
         if: always()
         run: |
           echo '### flutter analyze' >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          tail -n 150 analyze.txt >> "$GITHUB_STEP_SUMMARY" || true
+          tail -n 150 /tmp/analyze.txt >> "$GITHUB_STEP_SUMMARY" || true
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish report to analyze-report branch
+        if: always()
+        run: |
+          mkdir /tmp/rep && cp /tmp/analyze.txt /tmp/rep/analyze.txt
+          cd /tmp/rep && git init -q && git checkout -q -b analyze-report
+          git config user.name "github-actions" && git config user.email "actions@github.com"
+          git add analyze.txt && git commit -q -m "analyze report for ${GITHUB_SHA}"
+          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" analyze-report

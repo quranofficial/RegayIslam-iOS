@@ -269,7 +269,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
       for (var i = 0; i < range.length; i++) {
         final a = range[i];
         final ay = (a['ayah'] as num?)?.toInt() ?? 0;
-        setState(() => _progress = 'دروستکردنی وێنە ${i + 1}/${range.length}');
+        if (mounted) setState(() => _progress = 'دروستکردنی وێنە ${i + 1}/${range.length}');
         frames.add(await _frameToFile('${a['text'] ?? ''}', _reference(ay),
             work, index: i, total: range.length, bgImage: bgImage));
       }
