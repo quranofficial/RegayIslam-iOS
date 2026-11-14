@@ -182,7 +182,7 @@ class _KtebScreenState extends State<KtebScreen> {
             ? const Center(child: CircularProgressIndicator())
             : _books.isEmpty
                 ? Center(child: Text('کتێبێک بەردەست نییە',
-                    style: TextStyle(color: txt.withOpacity(.6))))
+                    style: TextStyle(color: txt.withValues(alpha: .6))))
                 : Column(children: [
                     Padding(
                       padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
@@ -230,7 +230,7 @@ class _KtebScreenState extends State<KtebScreen> {
                     Expanded(
                       child: _filtered.isEmpty
                           ? Center(child: Text('هیچ کتێبێک نەدۆزرایەوە',
-                              style: TextStyle(color: txt.withOpacity(.5))))
+                              style: TextStyle(color: txt.withValues(alpha: .5))))
                           : GridView.builder(
                               padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
                               gridDelegate:
@@ -276,7 +276,7 @@ class _KtebScreenState extends State<KtebScreen> {
                                                                 Container(
                                                                     color: AppColors
                                                                         .primaryDark
-                                                                        .withOpacity(
+                                                                        .withValues(alpha: 
                                                                             .08),
                                                                     child: const Icon(
                                                                         Icons
@@ -287,7 +287,7 @@ class _KtebScreenState extends State<KtebScreen> {
                                                         : Container(
                                                             color: AppColors
                                                                 .primaryDark
-                                                                .withOpacity(.08),
+                                                                .withValues(alpha: .08),
                                                             child: const Icon(
                                                                 Icons
                                                                     .menu_book_rounded,
@@ -346,7 +346,7 @@ class _KtebScreenState extends State<KtebScreen> {
                                                         style: TextStyle(
                                                             fontSize: 11,
                                                             color: txt
-                                                                .withOpacity(
+                                                                .withValues(alpha: 
                                                                     .55))),
                                                   ]),
                                             ),
@@ -454,11 +454,11 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                       ? Image.network(img,
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => Container(
-                              color: AppColors.primaryDark.withOpacity(.08),
+                              color: AppColors.primaryDark.withValues(alpha: .08),
                               child: const Icon(Icons.menu_book_rounded,
                                   size: 48, color: AppColors.primaryDark)))
                       : Container(
-                          color: AppColors.primaryDark.withOpacity(.08),
+                          color: AppColors.primaryDark.withValues(alpha: .08),
                           child: const Icon(Icons.menu_book_rounded,
                               size: 48, color: AppColors.primaryDark)),
                 ),
@@ -468,7 +468,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
           const SizedBox(height: 14),
           Text('ناوی کتێب',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13,
-                  color: txt.withOpacity(.55))),
+                  color: txt.withValues(alpha: .55))),
           const SizedBox(height: 4),
           Text('${b['name'] ?? ''}',
               style: TextStyle(fontWeight: FontWeight.bold,
@@ -476,14 +476,14 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
           const SizedBox(height: 12),
           Text('کورتە',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13,
-                  color: txt.withOpacity(.55))),
+                  color: txt.withValues(alpha: .55))),
           const SizedBox(height: 4),
           Text('${b['about'] ?? 'ئەم کتێبە هیچ کورتەیەکی لەسەر نەنوسراوە'}',
               style: TextStyle(fontSize: 14, height: 1.7, color: txt)),
           const SizedBox(height: 12),
           Text('نوسەر',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13,
-                  color: txt.withOpacity(.55))),
+                  color: txt.withValues(alpha: .55))),
           const SizedBox(height: 4),
           Text('${b['admin'] ?? ''}',
               style: TextStyle(fontSize: 14, color: txt)),
@@ -493,7 +493,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
               LinearProgressIndicator(
                   value: _progress > 0 ? _progress / 100 : null,
                   backgroundColor:
-                      AppColors.primaryDark.withOpacity(.15),
+                      AppColors.primaryDark.withValues(alpha: .15),
                   color: AppColors.primaryDark),
               const SizedBox(height: 8),
               Text('داگرتن... $_progress%',
@@ -504,7 +504,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
               style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.primaryDark,
                   side: BorderSide(
-                      color: AppColors.primaryDark.withOpacity(.5)),
+                      color: AppColors.primaryDark.withValues(alpha: .5)),
                   padding: const EdgeInsets.symmetric(vertical: 11)),
               onPressed: _downloaded ? null : _download,
               icon: Icon(_downloaded
@@ -531,7 +531,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
           const SizedBox(height: 8),
           if (widget.url.isEmpty)
             Center(child: Text('لینکی کتێب بەردەست نییە',
-                style: TextStyle(fontSize: 12, color: txt.withOpacity(.5)))),
+                style: TextStyle(fontSize: 12, color: txt.withValues(alpha: .5)))),
         ]),
       ),
     );

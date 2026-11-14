@@ -80,7 +80,7 @@ class _LiveScreenState extends State<LiveScreen> {
         body: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? Center(child: Text(_error!, style: TextStyle(color: txt.withOpacity(.6))))
+                ? Center(child: Text(_error!, style: TextStyle(color: txt.withValues(alpha: .6))))
                 : ListView(
                     padding: const EdgeInsets.all(12),
                     children: [
@@ -109,7 +109,7 @@ class _LiveScreenState extends State<LiveScreen> {
                             subtitle: Text(
                                 'پەخشی ڕاستەوخۆ — کلیک بکە بۆ بینین',
                                 style: TextStyle(fontSize: 11,
-                                    color: txt.withOpacity(.5))),
+                                    color: txt.withValues(alpha: .5))),
                             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                               FavoriteButton(
                                   id: 'live::${s['url'] ?? s['name'] ?? 'live_stream'}',

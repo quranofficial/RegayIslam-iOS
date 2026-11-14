@@ -95,7 +95,7 @@ class _SettingTabState extends State<SettingTab> {
                   title: Text('دڵخوازەکان', style: TextStyle(color: txt)),
                   subtitle: Text('هەموو ئەو شتانەی دڵخوازت بوون',
                       style: TextStyle(fontSize: 11,
-                          color: txt.withOpacity(.55))),
+                          color: txt.withValues(alpha: .55))),
                   trailing: const Icon(Icons.chevron_left),
                   onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const FavoritesScreen())))),
@@ -117,7 +117,7 @@ class _SettingTabState extends State<SettingTab> {
                         color: AppColors.primaryDark),
                     title: Text('ژمارە کوردی', style: TextStyle(color: txt)),
                     subtitle: Text(p.useKurdishDigits ? '١٢٣' : '123',
-                        style: TextStyle(color: txt.withOpacity(.55))),
+                        style: TextStyle(color: txt.withValues(alpha: .55))),
                     value: p.useKurdishDigits,
                     onChanged: (v) => setState(() => p.useKurdishDigits = v)),
                 const Divider(height: 1),
@@ -130,7 +130,7 @@ class _SettingTabState extends State<SettingTab> {
                         style: TextStyle(color: txt)),
                     subtitle: Text(
                         'کاتی کردنەوەی ئەپ، دەگەڕێتەوە بۆ دوایین بەش کە تێیدا بوویت',
-                        style: TextStyle(color: txt.withOpacity(.55))),
+                        style: TextStyle(color: txt.withValues(alpha: .55))),
                     value: p.resumeWhereLeftOff,
                     onChanged: (v) =>
                         setState(() => p.resumeWhereLeftOff = v)),
@@ -160,7 +160,7 @@ class _SettingTabState extends State<SettingTab> {
                     title: Text('دەنگی بانگبێژ',
                         style: TextStyle(fontSize: 14, color: txt)),
                     subtitle: Text('دەنگی هەڵبژێردراو : ${p.adhanVoiceName}',
-                        style: TextStyle(fontSize: 11, color: txt.withOpacity(.55))),
+                        style: TextStyle(fontSize: 11, color: txt.withValues(alpha: .55))),
                     trailing: const Icon(Icons.chevron_left),
                     onTap: () => Navigator.push(context, MaterialPageRoute(
                         builder: (_) => const AdhanVoiceScreen()))
@@ -240,7 +240,7 @@ class _SettingTabState extends State<SettingTab> {
               trailing: const Icon(Icons.chevron_left),
               onTap: () => _openAdmin(context)),
           Center(child: Text('ڕێگای ئیسلام — v70.2',
-              style: TextStyle(fontSize: 12, color: txt.withOpacity(.4)))),
+              style: TextStyle(fontSize: 12, color: txt.withValues(alpha: .4)))),
           const SizedBox(height: 20),
         ]),
       ),
@@ -250,5 +250,5 @@ class _SettingTabState extends State<SettingTab> {
   Widget _section(String t, bool dark, Color txt) => Padding(
       padding: const EdgeInsets.fromLTRB(6, 12, 6, 6),
       child: Text(t, style: TextStyle(fontWeight: FontWeight.bold,
-          fontSize: 13, color: txt.withOpacity(.6))));
+          fontSize: 13, color: txt.withValues(alpha: .6))));
 }

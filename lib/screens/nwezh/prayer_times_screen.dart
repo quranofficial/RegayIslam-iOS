@@ -78,7 +78,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                   const SizedBox(height: 4),
                   // Item 16: weekday + Hijri + normal date, all three.
                   Text(fullDateKu(DateTime.now()),
-                    style: TextStyle(color: txt.withOpacity(.55), fontSize: 12.5)),
+                    style: TextStyle(color: txt.withValues(alpha: .55), fontSize: 12.5)),
                   if (_cities.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
@@ -111,8 +111,8 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: dark ? AppColors.gold.withOpacity(.15)
-                          : AppColors.primaryDark.withOpacity(.08),
+                        backgroundColor: dark ? AppColors.gold.withValues(alpha: .15)
+                          : AppColors.primaryDark.withValues(alpha: .08),
                         child: Icon(Icons.access_time_rounded,
                           color: dark ? AppColors.gold : AppColors.primaryDark)),
                       title: Text(entry.value,

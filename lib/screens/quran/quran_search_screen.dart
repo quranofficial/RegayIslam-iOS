@@ -76,10 +76,10 @@ class _QuranSearchScreenState extends State<QuranSearchScreen> {
           Expanded(
             child: !_searched
                 ? Center(child: Text('گەڕان بکە بۆ دۆزینەوەی ئایەتەکان',
-                    style: TextStyle(color: txt.withOpacity(.5))))
+                    style: TextStyle(color: txt.withValues(alpha: .5))))
                 : _results.isEmpty
                     ? Center(child: Text('هیچ ئەنجامێک نەدۆزرایەوە',
-                        style: TextStyle(color: txt.withOpacity(.5))))
+                        style: TextStyle(color: txt.withValues(alpha: .5))))
                     : ListView.separated(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         itemCount: _results.length,

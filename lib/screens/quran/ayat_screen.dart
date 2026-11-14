@@ -146,7 +146,7 @@ class _AyatScreenState extends State<AyatScreen> {
             : _ayat.isEmpty
                 ? Center(
                     child: Text('داتای ئایەتەکان بەردەست نییە',
-                        style: TextStyle(color: Colors.white.withOpacity(.8))))
+                        style: TextStyle(color: Colors.white.withValues(alpha: .8))))
                 : Column(children: [
                     Expanded(
                       // Item 1: the gallery — swipe left/right to move
@@ -184,7 +184,7 @@ class _AyatScreenState extends State<AyatScreen> {
                                     shape: BoxShape.circle,
                                     color: i == _index
                                         ? (dark ? AppColors.gold : Colors.white)
-                                        : Colors.white.withOpacity(.25)),
+                                        : Colors.white.withValues(alpha: .25)),
                               ),
                             ),
                             if (_ayat.length > 24)
@@ -233,7 +233,7 @@ class _AyatScreenState extends State<AyatScreen> {
                 color: dark ? AppColors.gold : AppColors.primaryDark),
               Text('ڕێگای ئیسلام',
                   style: TextStyle(
-                      fontSize: 11, color: Colors.white.withOpacity(.4))),
+                      fontSize: 11, color: Colors.white.withValues(alpha: .4))),
             ]),
             const Divider(height: 22),
             Directionality(
@@ -251,13 +251,13 @@ class _AyatScreenState extends State<AyatScreen> {
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                   color: dark
-                      ? Colors.white.withOpacity(.05)
+                      ? Colors.white.withValues(alpha: .05)
                       : const Color(0xFFF7F5EF),
                   borderRadius: BorderRadius.circular(10)),
               child: Text(tafsir,
                   style: TextStyle(
                       fontSize: 14, height: 1.8,
-                      color: dark ? Colors.white.withOpacity(.85) : Colors.black.withOpacity(.85))),
+                      color: dark ? Colors.white.withValues(alpha: .85) : Colors.black.withValues(alpha: .85))),
             ),
           ]),
         ),
@@ -287,7 +287,7 @@ class _AyatScreenState extends State<AyatScreen> {
   Widget _zoomBar() => SafeArea(
         top: false,
         child: Container(
-          color: Colors.black.withOpacity(.18),
+          color: Colors.black.withValues(alpha: .18),
           padding: EdgeInsets.fromLTRB(8, 4, 8, bottomInset(context, extra: 4)),
           child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             IconButton(

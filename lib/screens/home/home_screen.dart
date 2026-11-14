@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../core/ui.dart';
 import 'home_reorder_screen.dart';
 import '../quran/quran_studio_screen.dart';
@@ -269,7 +268,7 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: 'هاوبەشی ئەپ',
             onPressed: () => sharePage('ڕێگای ئیسلام — قورئان، کاتەکانی نوێژ، زیکر و زانیاری ئاینی'),
             icon: Icon(Icons.share_rounded, size: 20,
-                color: txt.withOpacity(.6))),
+                color: txt.withValues(alpha: .6))),
         IconButton(
             onPressed: toggleDayNight,
             icon: Icon(dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
@@ -398,7 +397,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Text(tafsir,
                       maxLines: 2, overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                          color: Colors.white.withOpacity(.75),
+                          color: Colors.white.withValues(alpha: .75),
                           fontSize: 12, height: 1.7)),
                 ),
               ],
@@ -416,7 +415,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [color, color.withOpacity(.7)]),
+                  gradient: LinearGradient(colors: [color, color.withValues(alpha: .7)]),
                   borderRadius: BorderRadius.circular(16)),
               child: Row(children: [
                 Icon(icon, color: Colors.white, size: 28),
@@ -429,7 +428,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           fontSize: 16, fontWeight: FontWeight.bold)),
                   Text(sub,
                       maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: Colors.white.withOpacity(.8), fontSize: 12)),
+                      style: TextStyle(color: Colors.white.withValues(alpha: .8), fontSize: 12)),
                 ])),
                 const SizedBox(width: 4),
                 if (favId != null)
@@ -461,7 +460,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
               Text(_ramadanDay?['text'] ?? 'ڕۆژی ١ لە مانگی ڕەمەزانی پیرۆز',
                   maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: Colors.white.withOpacity(.85), fontSize: 12)),
+                  style: TextStyle(color: Colors.white.withValues(alpha: .85), fontSize: 12)),
             ])),
             const Icon(Icons.chevron_left, color: Colors.white70),
             FavoriteButton(
@@ -499,7 +498,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 textDirection: TextDirection.rtl,
                 child: Text('اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ وَعَلَى آلِ مُحَمَّدٍ',
                     maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Colors.white.withOpacity(.85),
+                    style: TextStyle(color: Colors.white.withValues(alpha: .85),
                         fontFamily: 'Quran', fontSize: 13)),
               ),
             ])),
@@ -526,13 +525,13 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Row(children: [
             CircleAvatar(
                 radius: 26,
-                backgroundColor: dark ? AppColors.gold.withOpacity(.15) : AppColors.primaryDark.withOpacity(.08),
+                backgroundColor: dark ? AppColors.gold.withValues(alpha: .15) : AppColors.primaryDark.withValues(alpha: .08),
                 child: Icon(Icons.fingerprint_rounded,
                     size: 32, color: dark ? AppColors.gold : AppColors.primaryDark)),
             const SizedBox(width: 12),
             Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('تەسبیح', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: txt)),
-              Text('ژماردنی زیکر و تەسبیحات', style: TextStyle(fontSize: 12, color: txt.withOpacity(.6))),
+              Text('ژماردنی زیکر و تەسبیحات', style: TextStyle(fontSize: 12, color: txt.withValues(alpha: .6))),
             ]),
             const Spacer(),
             FavoriteButton(
@@ -562,7 +561,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: txt)),
               const Spacer(),
               Text(AppPrefs.I.cityName,
-                  style: TextStyle(fontSize: 13, color: txt.withOpacity(.6))),
+                  style: TextStyle(fontSize: 13, color: txt.withValues(alpha: .6))),
               FavoriteButton(
                   id: 'section::کاتەکانی بانگ',
                   title: 'کاتەکانی بانگ',
@@ -589,7 +588,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ])));
 
   Widget _t(String label, String? v, Color txt, bool dark) => Column(children: [
-        Text(label, style: TextStyle(fontSize: 11, color: txt.withOpacity(.6))),
+        Text(label, style: TextStyle(fontSize: 11, color: txt.withValues(alpha: .6))),
         const SizedBox(height: 2),
         Text(v ?? '00:00',
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold,

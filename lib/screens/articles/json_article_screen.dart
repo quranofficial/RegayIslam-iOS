@@ -152,7 +152,7 @@ class _JsonArticleScreenState extends State<JsonArticleScreen> {
                 Expanded(
                   child: _filtered.isEmpty
                       ? Center(child: Text('هیچ نەدۆزرایەوە',
-                          style: TextStyle(color: txt.withOpacity(.5))))
+                          style: TextStyle(color: txt.withValues(alpha: .5))))
                       : ListView.builder(
                           padding: EdgeInsets.fromLTRB(12, 12, 12, bottomInset(context, extra: 14)),
                           itemCount: _filtered.length,
@@ -211,7 +211,7 @@ class _JsonArticleScreenState extends State<JsonArticleScreen> {
                                       Icon(open
                                           ? Icons.expand_less_rounded
                                           : Icons.expand_more_rounded,
-                                          color: txt.withOpacity(.4)),
+                                          color: txt.withValues(alpha: .4)),
                                     ]),
                                     if (open) ...[
                                       const SizedBox(height: 10),

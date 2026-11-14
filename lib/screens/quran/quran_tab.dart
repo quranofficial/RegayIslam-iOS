@@ -179,11 +179,11 @@ class _QuranTabState extends State<QuranTab> {
                                   width: 44, height: 44,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: dark ? AppColors.gold.withOpacity(.14)
-                                        : AppColors.primaryDark.withOpacity(.08),
+                                    color: dark ? AppColors.gold.withValues(alpha: .14)
+                                        : AppColors.primaryDark.withValues(alpha: .08),
                                     border: Border.all(
-                                      color: dark ? AppColors.gold.withOpacity(.45)
-                                          : AppColors.primaryDark.withOpacity(.2)),
+                                      color: dark ? AppColors.gold.withValues(alpha: .45)
+                                          : AppColors.primaryDark.withValues(alpha: .2)),
                                   ),
                                   child: Stack(alignment: Alignment.center, children: [
                                     Icon(Icons.auto_stories_rounded, size: 25,
@@ -207,7 +207,7 @@ class _QuranTabState extends State<QuranTab> {
                                 subtitle: Text(
                                     '${toArabicDigits(int.tryParse('${s['aya']}') ?? 0)} ئایەت • ${s['place']} • ${s['juz']}',
                                     style: TextStyle(
-                                        fontSize: 12, color: txt.withOpacity(.6))),
+                                        fontSize: 12, color: txt.withValues(alpha: .6))),
                                 trailing: Row(mainAxisSize: MainAxisSize.min,
                                     children: [
                                       FavoriteButton(
@@ -217,7 +217,7 @@ class _QuranTabState extends State<QuranTab> {
                                         route: 'surah::$num',
                                         iconSize: 20),
                                       Icon(Icons.chevron_left,
-                                          color: txt.withOpacity(.4)),
+                                          color: txt.withValues(alpha: .4)),
                                     ]),
                               ),
                             );
@@ -238,14 +238,14 @@ class _QuranTabState extends State<QuranTab> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
       child: Card(
-        color: dark ? AppColors.gold.withOpacity(.12) : const Color(0xFFE8F0FE),
+        color: dark ? AppColors.gold.withValues(alpha: .12) : const Color(0xFFE8F0FE),
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
             side: BorderSide(
                 color: dark
-                    ? AppColors.gold.withOpacity(.4)
-                    : AppColors.primaryDark.withOpacity(.25))),
+                    ? AppColors.gold.withValues(alpha: .4)
+                    : AppColors.primaryDark.withValues(alpha: .25))),
         child: ListTile(
           onTap: () => _openSurahAt(s, ayah),
           leading: Icon(Icons.history_edu_rounded,
@@ -301,7 +301,7 @@ class _QuranTabState extends State<QuranTab> {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                   color: isLast
-                      ? AppColors.gold.withOpacity(.16)
+                      ? AppColors.gold.withValues(alpha: .16)
                       : (dark ? AppColors.nightCard : Colors.white),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
@@ -319,7 +319,7 @@ class _QuranTabState extends State<QuranTab> {
                                 : (dark ? Colors.white : Colors.black87))),
                     Text('لاپەڕە',
                         style: TextStyle(fontSize: 9.5,
-                            color: txt.withOpacity(.45))),
+                            color: txt.withValues(alpha: .45))),
                   ]),
             ),
           );

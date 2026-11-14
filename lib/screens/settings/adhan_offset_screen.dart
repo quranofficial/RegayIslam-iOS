@@ -81,7 +81,7 @@ class _AdhanOffsetScreenState extends State<AdhanOffsetScreen> {
                     Text(_label(row.$3()),
                         style: TextStyle(fontSize: 12,
                             color: row.$3() == 0
-                                ? txt.withOpacity(.55)
+                                ? txt.withValues(alpha: .55)
                                 : AppColors.gold)),
                   ]),
                   Slider(
@@ -95,9 +95,9 @@ class _AdhanOffsetScreenState extends State<AdhanOffsetScreen> {
                   Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('-٦٠', style: TextStyle(
-                            fontSize: 11, color: txt.withOpacity(.5))),
+                            fontSize: 11, color: txt.withValues(alpha: .5))),
                         Text('٦٠+', style: TextStyle(
-                            fontSize: 11, color: txt.withOpacity(.5))),
+                            fontSize: 11, color: txt.withValues(alpha: .5))),
                       ]),
                 ]),
               ),

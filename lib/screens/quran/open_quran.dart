@@ -678,9 +678,9 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
         margin: const EdgeInsets.fromLTRB(10, 6, 10, 6),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-            color: AppColors.gold.withOpacity(.14),
+            color: AppColors.gold.withValues(alpha: .14),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.gold.withOpacity(.55))),
+            border: Border.all(color: AppColors.gold.withValues(alpha: .55))),
         child: Row(children: [
           Icon(Icons.repeat_one_rounded, size: 18, color: AppColors.gold),
           const SizedBox(width: 8),
@@ -716,7 +716,7 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
       );
     }
     return Container(
-      color: dark ? AppColors.nightBg.withOpacity(.5) : const Color(0xFFF4F5F7),
+      color: dark ? AppColors.nightBg.withValues(alpha: .5) : const Color(0xFFF4F5F7),
       padding: const EdgeInsets.fromLTRB(10, 5, 10, 5),
       child: Row(children: [
         Icon(Icons.repeat_rounded, size: 16, color: accent),
@@ -725,7 +725,7 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
             style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: txt.withOpacity(.75))),
+                color: txt.withValues(alpha: .75))),
         const SizedBox(width: 6),
         Expanded(
           child: SingleChildScrollView(
@@ -746,20 +746,20 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                         color: AppPrefs.I.ayahRepeat == n
                             ? accent
                             : (dark
-                                ? Colors.white.withOpacity(.06)
-                                : Colors.black.withOpacity(.04)),
+                                ? Colors.white.withValues(alpha: .06)
+                                : Colors.black.withValues(alpha: .04)),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                             color: AppPrefs.I.ayahRepeat == n
                                 ? accent
-                                : accent.withOpacity(.25))),
+                                : accent.withValues(alpha: .25))),
                     child: Text(n == 1 ? 'یەک جار' : '$n جار',
                         style: TextStyle(
                             fontSize: 10.5,
                             fontWeight: FontWeight.w700,
                             color: AppPrefs.I.ayahRepeat == n
                                 ? (dark ? Colors.black : Colors.white)
-                                : txt.withOpacity(.8))),
+                                : txt.withValues(alpha: .8))),
                   ),
                 ),
             ]),
@@ -802,7 +802,7 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
       spans.add(TextSpan(
           text: word,
           style: TextStyle(
-              background: Paint()..color = accent.withOpacity(.28),
+              background: Paint()..color = accent.withValues(alpha: .28),
               color: accent,
               fontWeight: FontWeight.bold)));
       rest = rest.substring(i + word.length);
@@ -911,7 +911,7 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                                 width: ringed ? 2.2 : 1),
                             boxShadow: ringed
                                 ? [BoxShadow(
-                                    color: AppColors.gold.withOpacity(.35),
+                                    color: AppColors.gold.withValues(alpha: .35),
                                     blurRadius: 14)]
                                 : null,
                           ),
@@ -928,8 +928,8 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                                         horizontal: 8, vertical: 2),
                                     decoration: BoxDecoration(
                                         color: dark
-                                            ? AppColors.gold.withOpacity(.15)
-                                            : AppColors.primaryDark.withOpacity(.08),
+                                            ? AppColors.gold.withValues(alpha: .15)
+                                            : AppColors.primaryDark.withValues(alpha: .08),
                                         borderRadius: BorderRadius.circular(10)),
                                     child: Row(mainAxisSize: MainAxisSize.min,
                                         children: [
@@ -965,10 +965,10 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                                         horizontal: 7, vertical: 2),
                                     decoration: BoxDecoration(
                                         color: (rowRepeatHere || _rowRepeatActive)
-                                            ? AppColors.gold.withOpacity(.22)
+                                            ? AppColors.gold.withValues(alpha: .22)
                                             : (dark
-                                                ? AppColors.gold.withOpacity(.08)
-                                                : AppColors.primaryDark.withOpacity(.05)),
+                                                ? AppColors.gold.withValues(alpha: .08)
+                                                : AppColors.primaryDark.withValues(alpha: .05)),
                                         borderRadius: BorderRadius.circular(10),
                                         border: rowRepeatHere
                                             ? Border.all(
@@ -980,8 +980,8 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                                         color: (rowRepeatHere || _rowRepeatActive)
                                             ? AppColors.gold
                                             : (dark
-                                                ? AppColors.gold.withOpacity(.75)
-                                                : AppColors.primaryDark.withOpacity(.65))),
+                                                ? AppColors.gold.withValues(alpha: .75)
+                                                : AppColors.primaryDark.withValues(alpha: .65))),
                                   ),
                                 ),
                               ),
@@ -1014,7 +1014,7 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                                 color: dark ? AppColors.gold : AppColors.primaryDark),
                               if (AppPrefs.I.showQuranAyahNumbers) Text('${suraLabel(widget.surahName)} • ئایەتی ${toArabicDigits(ayahNum)}',
                                 style: TextStyle(fontSize: 10,
-                                  color: ayahColor.withOpacity(.55),
+                                  color: ayahColor.withValues(alpha: .55),
                                   fontWeight: FontWeight.w600)),
                             ]),
                             const SizedBox(height: 8),
@@ -1025,13 +1025,13 @@ class _OpenQuranScreenState extends State<OpenQuranScreen> {
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
                                     color: dark
-                                        ? Colors.white.withOpacity(.05)
+                                        ? Colors.white.withValues(alpha: .05)
                                         : const Color(0xFFF7F5EF),
                                     borderRadius: BorderRadius.circular(8)),
                                 child: Text(tafsir,
                                     style: TextStyle(
                                         fontSize: 13, height: 1.7,
-                                        color: ayahColor.withOpacity(.85))),
+                                        color: ayahColor.withValues(alpha: .85))),
                               ),
                             ],
                           ]),

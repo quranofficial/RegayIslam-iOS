@@ -372,7 +372,7 @@ class _NameScreenState extends State<NameScreen> {
           Expanded(
             child: _filtered.isEmpty
                 ? Center(child: Text('هیچ ناوێک نەدۆزرایەوە',
-                    style: TextStyle(color: txt.withOpacity(.5))))
+                    style: TextStyle(color: txt.withValues(alpha: .5))))
                 : ListView.separated(
                     padding: EdgeInsets.fromLTRB(12, 4, 12,
                         bottomInset(context, extra: 14)),
@@ -404,7 +404,7 @@ class _NameScreenState extends State<NameScreen> {
         color: dark ? AppColors.nightCard : Colors.white,
         border: Border(
             top: BorderSide(
-                color: accent.withOpacity(.35), width: 1)),
+                color: accent.withValues(alpha: .35), width: 1)),
       ),
       padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
       child: SafeArea(
@@ -434,7 +434,7 @@ class _NameScreenState extends State<NameScreen> {
                 Text('ناوی ${toArabicDigits(_playAllIdx + 1)} '
                     'لە ${toArabicDigits(_rows.length)}',
                     style: TextStyle(fontSize: 10.5,
-                        color: txt.withOpacity(.6))),
+                        color: txt.withValues(alpha: .6))),
               ]),
             ),
             InkWell(
@@ -444,7 +444,7 @@ class _NameScreenState extends State<NameScreen> {
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: accent.withOpacity(.12)),
+                    color: accent.withValues(alpha: .12)),
                 child: const Icon(Icons.stop_circle_rounded, size: 26),
               ),
             ),
@@ -456,7 +456,7 @@ class _NameScreenState extends State<NameScreen> {
                 value: (_playAllIdx + 1) / _rows.length,
                 minHeight: 3,
                 color: accent,
-                backgroundColor: txt.withOpacity(.08)),
+                backgroundColor: txt.withValues(alpha: .08)),
           ),
         ]),
       ),
@@ -470,7 +470,7 @@ class _NameScreenState extends State<NameScreen> {
     return Card(
       key: key,
       color: speaking
-          ? accent.withOpacity(dark ? .18 : .10)
+          ? accent.withValues(alpha: dark ? .18 : .10)
           : (dark ? AppColors.nightCard : Colors.white),
       margin: EdgeInsets.zero,
       elevation: 0,
@@ -495,8 +495,8 @@ class _NameScreenState extends State<NameScreen> {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: accent.withOpacity(.12),
-                    border: Border.all(color: accent.withOpacity(.4))),
+                    color: accent.withValues(alpha: .12),
+                    border: Border.all(color: accent.withValues(alpha: .4))),
                 child: Text(toArabicDigits(r.id),
                     style: TextStyle(fontSize: 12,
                         fontWeight: FontWeight.bold, color: accent)),
@@ -519,7 +519,7 @@ class _NameScreenState extends State<NameScreen> {
                   decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: speaking
-                          ? accent.withOpacity(.22)
+                          ? accent.withValues(alpha: .22)
                           : Colors.transparent),
                   child: Icon(
                       speaking
@@ -532,7 +532,7 @@ class _NameScreenState extends State<NameScreen> {
               Icon(open
                   ? Icons.expand_less_rounded
                   : Icons.expand_more_rounded,
-                  color: txt.withOpacity(.4)),
+                  color: txt.withValues(alpha: .4)),
             ]),
             if (r.sorani.isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -541,11 +541,11 @@ class _NameScreenState extends State<NameScreen> {
                   overflow: open ? null : TextOverflow.ellipsis,
                   style: TextStyle(
                       fontSize: 12.5, height: 1.6,
-                      color: txt.withOpacity(.8))),
+                      color: txt.withValues(alpha: .8))),
             ],
             if (open) ...[
               const SizedBox(height: 10),
-              Divider(height: 1, color: txt.withOpacity(.15)),
+              Divider(height: 1, color: txt.withValues(alpha: .15)),
               const SizedBox(height: 10),
               if (r.ref.isNotEmpty)
                 // Item 13: the location is CLICKABLE — one tap opens the
@@ -559,9 +559,9 @@ class _NameScreenState extends State<NameScreen> {
                         horizontal: 10, vertical: 8),
                     margin: const EdgeInsets.only(bottom: 6),
                     decoration: BoxDecoration(
-                        color: accent.withOpacity(.08),
+                        color: accent.withValues(alpha: .08),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: accent.withOpacity(.25))),
+                        border: Border.all(color: accent.withValues(alpha: .25))),
                     child: Row(children: [
                       Icon(Icons.menu_book_rounded, size: 17, color: accent),
                       const SizedBox(width: 8),

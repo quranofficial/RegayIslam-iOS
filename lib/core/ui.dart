@@ -137,7 +137,7 @@ class _AudioPlayerBarState extends State<AudioPlayerBar> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(fontSize: 11,
-                              color: txt.withOpacity(.65),
+                              color: txt.withValues(alpha: .65),
                               fontWeight: FontWeight.w600)),
                     SliderTheme(
                       data: SliderTheme.of(context).copyWith(
@@ -181,10 +181,10 @@ class _AudioPlayerBarState extends State<AudioPlayerBar> {
                         children: [
                           Text(_mmss(_pos),
                               style: TextStyle(fontSize: 10.5,
-                                  color: txt.withOpacity(.5))),
+                                  color: txt.withValues(alpha: .5))),
                           Text(_mmss(_dur),
                               style: TextStyle(fontSize: 10.5,
-                                  color: txt.withOpacity(.5))),
+                                  color: txt.withValues(alpha: .5))),
                         ]),
                   ]),
             ),
@@ -246,7 +246,7 @@ Future<int?> showRepeatCountSheet(
             if (subtitle != null && subtitle.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(subtitle,
-                  style: TextStyle(fontSize: 12, color: txt.withOpacity(.6))),
+                  style: TextStyle(fontSize: 12, color: txt.withValues(alpha: .6))),
             ],
             const SizedBox(height: 14),
             Wrap(
@@ -262,9 +262,9 @@ Future<int?> showRepeatCountSheet(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 10),
                         decoration: BoxDecoration(
-                            color: accent.withOpacity(.08),
+                            color: accent.withValues(alpha: .08),
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: accent.withOpacity(.35))),
+                            border: Border.all(color: accent.withValues(alpha: .35))),
                         child: Text(
                             n == 0 ? '∞ بێسنوور' : '${_kuDigits(n)} جار',
                             style: TextStyle(fontSize: 13.5,
@@ -277,7 +277,7 @@ Future<int?> showRepeatCountSheet(
             Text('دوگمەی وەستان هەموو کاتێک لە باری لێداندایە',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 10.5,
-                    color: txt.withOpacity(.45))),
+                    color: txt.withValues(alpha: .45))),
           ]),
         ),
       ),

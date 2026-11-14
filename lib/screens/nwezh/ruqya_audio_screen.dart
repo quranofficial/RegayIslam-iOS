@@ -195,7 +195,7 @@ class _RuqyaAudioScreenState extends State<RuqyaAudioScreen> {
                   for (var i = 0; i < _items.length; i++)
                     Card(
                       color: _selected == i
-                          ? AppColors.primaryDark.withOpacity(dark ? .25 : .08)
+                          ? AppColors.primaryDark.withValues(alpha: dark ? .25 : .08)
                           : (dark ? AppColors.nightCard : Colors.white),
                       margin: const EdgeInsets.only(bottom: 8),
                       shape: RoundedRectangleBorder(
@@ -313,7 +313,7 @@ class _RuqyaAudioScreenState extends State<RuqyaAudioScreen> {
                     }),
               ),
               Text(_fmt(_pos),
-                  style: TextStyle(fontSize: 11, color: txt.withOpacity(.6))),
+                  style: TextStyle(fontSize: 11, color: txt.withValues(alpha: .6))),
             ]),
           ]),
         ),

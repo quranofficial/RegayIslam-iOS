@@ -45,14 +45,14 @@ class WomenScreen extends StatelessWidget {
                     builder: (_) => JsonArticleScreen(
                         file: it.$4, title: it.$1))),
                 leading: CircleAvatar(
-                    backgroundColor: AppColors.primaryDark.withOpacity(.1),
+                    backgroundColor: AppColors.primaryDark.withValues(alpha: .1),
                     child: Icon(it.$3,
                         color: dark ? AppColors.gold : AppColors.primaryDark)),
                 title: Text(it.$1,
                     style: TextStyle(fontWeight: FontWeight.bold,
                         fontSize: 14, color: txt)),
                 subtitle: Text(it.$2,
-                    style: TextStyle(fontSize: 12, color: txt.withOpacity(.55))),
+                    style: TextStyle(fontSize: 12, color: txt.withValues(alpha: .55))),
                 trailing: const Icon(Icons.chevron_left),
               ),
             ),

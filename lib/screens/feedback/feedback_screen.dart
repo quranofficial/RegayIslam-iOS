@@ -80,7 +80,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 
   InputDecoration _dec(String hint, bool dark) => InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(color: (dark ? Colors.white : Colors.black).withOpacity(.35)),
+      hintStyle: TextStyle(color: (dark ? Colors.white : Colors.black).withValues(alpha: .35)),
       filled: true,
       fillColor: dark ? AppColors.nightCard : const Color(0xFFF4F5F7),
       border: OutlineInputBorder(

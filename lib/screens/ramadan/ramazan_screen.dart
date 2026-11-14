@@ -56,7 +56,7 @@ class _RamazanScreenState extends State<RamazanScreen> {
                   hintStyle: const TextStyle(color: Colors.white54, fontSize: 13),
                   isDense: true,
                   filled: true,
-                  fillColor: Colors.white.withOpacity(.12),
+                  fillColor: Colors.white.withValues(alpha: .12),
                   contentPadding: const EdgeInsets.symmetric(vertical: 0),
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -70,7 +70,7 @@ class _RamazanScreenState extends State<RamazanScreen> {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 30),
                     child: Text('هیچ بەشێک نەدۆزرایەوە',
-                        style: TextStyle(color: Colors.white.withOpacity(.7))),
+                        style: TextStyle(color: Colors.white.withValues(alpha: .7))),
                   ),
                 ),
               for (final t in titles)
@@ -94,7 +94,7 @@ class _RamazanScreenState extends State<RamazanScreen> {
                     trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                       FavoriteButton(id: 'ramadan_section::${t['tableName']}',
                         title: '${t['titles'] ?? 'ڕەمەزان'}', content: 'بەشی مانگی ڕەمەزان'),
-                      Icon(Icons.chevron_left, color: txt.withOpacity(.4)),
+                      Icon(Icons.chevron_left, color: txt.withValues(alpha: .4)),
                     ]),
                   ),
                 ),
@@ -117,7 +117,7 @@ class _RamazanScreenState extends State<RamazanScreen> {
                   return Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(.12),
+                        color: Colors.white.withValues(alpha: .12),
                         borderRadius: BorderRadius.circular(14)),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -128,14 +128,14 @@ class _RamazanScreenState extends State<RamazanScreen> {
                             const SizedBox(height: 4),
                             Text(when,
                                 style: TextStyle(
-                                    color: Colors.white.withOpacity(.85),
+                                    color: Colors.white.withValues(alpha: .85),
                                     fontSize: 12.5, height: 1.6)),
                           ],
                           if (extra.isNotEmpty) ...[
                             const SizedBox(height: 4),
                             Text(extra,
                                 style: TextStyle(
-                                    color: Colors.white.withOpacity(.85),
+                                    color: Colors.white.withValues(alpha: .85),
                                     fontSize: 12.5, height: 1.6)),
                           ],
                         ]),

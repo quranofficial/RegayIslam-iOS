@@ -354,7 +354,7 @@ class _MushafScreenState extends State<MushafScreen> {
                 LinearProgressIndicator(
                     value: _totalPages > 0 ? _dlDone / _totalPages : 0,
                     color: accent,
-                    backgroundColor: txt.withOpacity(.1)),
+                    backgroundColor: txt.withValues(alpha: .1)),
                 const SizedBox(height: 8),
                 Text('${((_dlDone / _totalPages) * 100).toStringAsFixed(0)}%',
                     style: TextStyle(fontSize: 11.5,
@@ -362,7 +362,7 @@ class _MushafScreenState extends State<MushafScreen> {
               ] else
                 Text('~٧٥ مێگابایت — پەیوەندی WiFi پێشنیار کراوە',
                     style: TextStyle(
-                        fontSize: 11.5, color: txt.withOpacity(.6))),
+                        fontSize: 11.5, color: txt.withValues(alpha: .6))),
             ]),
             actions: [
               if (!_dlPages)
@@ -541,7 +541,7 @@ class _MushafScreenState extends State<MushafScreen> {
               const SizedBox(height: 6),
               Text('ئایەتەکە هەڵبژێردرا — چی بکەم؟',
                   style: TextStyle(fontSize: 12,
-                      color: txt.withOpacity(.55))),
+                      color: txt.withValues(alpha: .55))),
               const SizedBox(height: 12),
               Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
                 _action(c, Icons.play_circle_rounded, 'لێدان لەم ئایەتەوە',
@@ -941,7 +941,7 @@ class _MushafScreenState extends State<MushafScreen> {
           if (_showChrome && !_fullscreen && _pageSurahs.isNotEmpty)
             Container(
               width: double.infinity,
-              color: dark ? AppColors.nightCard.withOpacity(.7) : const Color(0xFFEFE7D2),
+              color: dark ? AppColors.nightCard.withValues(alpha: .7) : const Color(0xFFEFE7D2),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               child: Wrap(
                 spacing: 6,
@@ -953,7 +953,7 @@ class _MushafScreenState extends State<MushafScreen> {
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                           color: (dark ? AppColors.gold : AppColors.primaryDark)
-                              .withOpacity(.12),
+                              .withValues(alpha: .12),
                           borderRadius: BorderRadius.circular(20)),
                       child: Text(
                           '${suraLabel('${s['name'] ?? ''}')} • ئایەتی ${toArabicDigits((s['firstAyah'] as num?)?.toInt() ?? 1)}',
@@ -1089,7 +1089,7 @@ class _MushafScreenState extends State<MushafScreen> {
                       style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: txt.withOpacity(.55))),
+                          color: txt.withValues(alpha: .55))),
                 ),
               ),
             ),
@@ -1211,7 +1211,7 @@ class _MushafScreenState extends State<MushafScreen> {
                 decoration: BoxDecoration(
                     color: badge.isEmpty
                         ? Colors.transparent
-                        : AppColors.gold.withOpacity(.18),
+                        : AppColors.gold.withValues(alpha: .18),
                     borderRadius: BorderRadius.circular(10),
                     border: badge.isEmpty
                         ? null
@@ -1255,7 +1255,7 @@ class _MushafScreenState extends State<MushafScreen> {
               }
             },
             icon: Icon(Icons.stop_circle_rounded,
-                size: 28, color: txt.withOpacity(.6))),
+                size: 28, color: txt.withValues(alpha: .6))),
       ]),
     );
   }
@@ -1264,7 +1264,7 @@ class _MushafScreenState extends State<MushafScreen> {
       padding: const EdgeInsets.all(24),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.wifi_off_rounded, size: 40,
-            color: AppColors.primaryDark.withOpacity(.6)),
+            color: AppColors.primaryDark.withValues(alpha: .6)),
         const SizedBox(height: 10),
         Text('لاپەڕە ${toArabicDigits(p)} بارنەبوو — ئینتەرنێت بپشکنە',
             textAlign: TextAlign.center,
@@ -1302,10 +1302,10 @@ class _HighlightPainter extends CustomPainter {
     final dx = (viewport.width - img.width * scale) / 2;
     final dy = (viewport.height - img.height * scale) / 2;
     final paint = Paint()
-      ..color = AppColors.gold.withOpacity(playing ? .30 : .18)
+      ..color = AppColors.gold.withValues(alpha: playing ? .30 : .18)
       ..style = PaintingStyle.fill;
     final stroke = Paint()
-      ..color = AppColors.gold.withOpacity(.85)
+      ..color = AppColors.gold.withValues(alpha: .85)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.2;
     for (final r in rects) {

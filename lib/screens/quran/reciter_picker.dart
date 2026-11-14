@@ -89,7 +89,7 @@ class _ReciterPickerSheetState extends State<ReciterPickerSheet> {
           const SizedBox(height: 10),
           Container(width: 44, height: 4,
               decoration: BoxDecoration(
-                  color: txt.withOpacity(.25),
+                  color: txt.withValues(alpha: .25),
                   borderRadius: BorderRadius.circular(4))),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
@@ -132,7 +132,7 @@ class _ReciterPickerSheetState extends State<ReciterPickerSheet> {
                 ? const Center(child: CircularProgressIndicator())
                 : _shown.isEmpty
                     ? Center(child: Text('هیچ قارییەک نەدۆزرایەوە',
-                        style: TextStyle(color: txt.withOpacity(.6))))
+                        style: TextStyle(color: txt.withValues(alpha: .6))))
                     : ListView.builder(
                         padding: const EdgeInsets.only(bottom: 16),
                         itemCount: _shown.length,
@@ -163,9 +163,9 @@ class _ReciterPickerSheetState extends State<ReciterPickerSheet> {
                                     ? Image.asset(asset, fit: BoxFit.cover,
                                         errorBuilder: (_, __, ___) =>
                                             Icon(Icons.mic_rounded, size: 18,
-                                                color: txt.withOpacity(.5)))
+                                                color: txt.withValues(alpha: .5)))
                                     : Icon(Icons.mic_rounded, size: 18,
-                                        color: txt.withOpacity(.5)),
+                                        color: txt.withValues(alpha: .5)),
                               ),
                             ),
                             title: Text('${r['name_ar'] ?? ''}',

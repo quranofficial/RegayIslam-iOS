@@ -165,16 +165,16 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
           : Rect.fromLTWH(0, 0, w, scaledH);
       canvas.drawImageRect(bgImage, src, dst, paint);
       // dark scrim so the text stays readable
-      paint.color = Colors.black.withOpacity(.35);
+      paint.color = Colors.black.withValues(alpha: .35);
       canvas.drawRect(rect, paint);
     } else {
       paint.shader = ui.Gradient.linear(
           const Offset(0, 0), Offset(0, h),
-          [Color(_bgColor), Color(_bgColor).withOpacity(.82)]);
+          [Color(_bgColor), Color(_bgColor).withValues(alpha: .82)]);
       canvas.drawRect(rect, paint);
       paint.shader = ui.Gradient.radial(
           Offset(w / 2, h * .38), w * .75,
-          [Colors.white.withOpacity(.10), Colors.transparent]);
+          [Colors.white.withValues(alpha: .10), Colors.transparent]);
       canvas.drawRect(rect, paint);
     }
 
@@ -183,7 +183,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
       final frame = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3
-        ..color = const Color(0xFFFFD54F).withOpacity(.8);
+        ..color = const Color(0xFFFFD54F).withValues(alpha: .8);
       canvas.drawRRect(
           RRect.fromRectAndRadius(rect.deflate(26), const Radius.circular(28)),
           frame);
@@ -195,7 +195,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
     // bismillah header
     final bismPara = _paragraph(
         'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ', 30,
-        Color(_textColor).withOpacity(.9), w - 160, center: true);
+        Color(_textColor).withValues(alpha: .9), w - 160, center: true);
     canvas.drawParagraph(bismPara, Offset(80, 80));
 
     // verse text (wrapped, fitted)
@@ -210,14 +210,14 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
 
     // reference footer
     final refPara = _paragraph(ref, 26,
-        Color(_textColor).withOpacity(.85), w - 160, center: true);
+        Color(_textColor).withValues(alpha: .85), w - 160, center: true);
     canvas.drawParagraph(refPara, Offset(80, h - 170));
     final brand = _paragraph('ڕێگای ئیسلام', 20,
-        Color(_textColor).withOpacity(.75), w - 160, center: true);
+        Color(_textColor).withValues(alpha: .75), w - 160, center: true);
     canvas.drawParagraph(brand, Offset(80, h - 110));
     if (total != null && index != null && total > 1) {
       final cnt = _paragraph('${index + 1} / $total', 18,
-          Color(_textColor).withOpacity(.55), w - 160, center: true);
+          Color(_textColor).withValues(alpha: .55), w - 160, center: true);
       canvas.drawParagraph(cnt, Offset(80, h - 64));
     }
 
@@ -626,7 +626,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
                     const SizedBox(height: 8),
                     Row(children: [
                       Icon(Icons.volume_up_rounded,
-                          size: 18, color: txt.withOpacity(.65)),
+                          size: 18, color: txt.withValues(alpha: .65)),
                       const SizedBox(width: 8),
                       Expanded(child: Text('دەنگ بۆ ڤیدیۆ',
                           style: TextStyle(fontSize: 13, color: txt))),
@@ -668,7 +668,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
                   children: [
                     Text('ئەنیمەیشن تەنها بۆ ڤیدیۆ جێبەجێ دەکرێت',
                         style: TextStyle(fontSize: 12,
-                            color: txt.withOpacity(.65))),
+                            color: txt.withValues(alpha: .65))),
                     const SizedBox(height: 8),
                     Wrap(spacing: 8, runSpacing: 8, children: [
                       for (var i = 0; i < _animations.length; i++)
@@ -677,7 +677,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
                               style: TextStyle(fontSize: 12,
                                   color: _animation == i ? accent : txt)),
                           selected: _animation == i,
-                          selectedColor: accent.withOpacity(.18),
+                          selectedColor: accent.withValues(alpha: .18),
                           showCheckmark: false,
                           onSelected: (_) => setState(() {
                             _animation = i;
@@ -695,7 +695,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                         color: dark
-                            ? Colors.white.withOpacity(.05)
+                            ? Colors.white.withValues(alpha: .05)
                             : Colors.white,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
@@ -754,7 +754,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
                 Text('وێنە و ڤیدیۆکان دەچنە ناو گەلەری مۆبایل (ئەلبوومی ڕێگای ئیسلام). '
                     'دروستکردنی ڤیدیۆ پێویستی بە ئینتەرنێت هەیە بۆ دەنگی ئایەتەکان.',
                     style: TextStyle(fontSize: 11.5,
-                        color: txt.withOpacity(.5))),
+                        color: txt.withValues(alpha: .5))),
               ]),
       ),
     );
@@ -783,7 +783,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                    color: accent.withOpacity(.12),
+                    color: accent.withValues(alpha: .12),
                     borderRadius: BorderRadius.circular(10)),
                 child: Icon(icon, size: 18, color: accent),
               ),
@@ -814,7 +814,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
     final content = Column(children: [
       Text('بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
           style: TextStyle(
-              color: Color(_textColor).withOpacity(.9), fontSize: 15)),
+              color: Color(_textColor).withValues(alpha: .9), fontSize: 15)),
       const Spacer(),
       Text(text,
           maxLines: 4,
@@ -829,11 +829,11 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
       const Spacer(),
       Text(_from <= _to ? _reference(_from) : '',
           style: TextStyle(
-              color: Color(_textColor).withOpacity(.85), fontSize: 12)),
+              color: Color(_textColor).withValues(alpha: .85), fontSize: 12)),
       const SizedBox(height: 2),
       Text('ڕێگای ئیسلام',
           style: TextStyle(
-              color: Color(_textColor).withOpacity(.7), fontSize: 10)),
+              color: Color(_textColor).withValues(alpha: .7), fontSize: 10)),
     ]);
 
     final Widget box;
@@ -845,7 +845,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
             color: const Color(0xFF1A1A1A),
             borderRadius: BorderRadius.circular(20),
             border:
-                Border.all(color: AppColors.gold.withOpacity(.6), width: 2)),
+                Border.all(color: AppColors.gold.withValues(alpha: .6), width: 2)),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -854,7 +854,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
             const SizedBox(height: 8),
             Text('ڤیدیۆی پاشبنەما هەڵبژێردرا ✅',
                 style: TextStyle(
-                    color: Colors.white.withOpacity(.85), fontSize: 12.5)),
+                    color: Colors.white.withValues(alpha: .85), fontSize: 12.5)),
             const SizedBox(height: 4),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -863,7 +863,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                      color: Colors.white.withOpacity(.45), fontSize: 11)),
+                      color: Colors.white.withValues(alpha: .45), fontSize: 11)),
             ),
           ],
         ),
@@ -876,7 +876,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
           foregroundDecoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
               border:
-                  Border.all(color: AppColors.gold.withOpacity(.6), width: 2)),
+                  Border.all(color: AppColors.gold.withValues(alpha: .6), width: 2)),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: Stack(children: [
@@ -886,7 +886,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => const SizedBox())),
               Positioned.fill(
-                  child: Container(color: Colors.black.withOpacity(.35))),
+                  child: Container(color: Colors.black.withValues(alpha: .35))),
               Padding(padding: const EdgeInsets.all(12), child: content),
             ]),
           ),
@@ -903,10 +903,10 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
                 end: Alignment.bottomCenter,
                 colors: [
                   Color(_bgColor),
-                  Color(_bgColor).withOpacity(.82)
+                  Color(_bgColor).withValues(alpha: .82)
                 ]),
             border:
-                Border.all(color: AppColors.gold.withOpacity(.6), width: 2)),
+                Border.all(color: AppColors.gold.withValues(alpha: .6), width: 2)),
         padding: const EdgeInsets.all(12),
         child: content,
       );
@@ -927,7 +927,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
             }),
             child: Text('سڕینەوەی پاشبنەما',
                 style:
-                    TextStyle(fontSize: 12, color: txt.withOpacity(.65))),
+                    TextStyle(fontSize: 12, color: txt.withValues(alpha: .65))),
           ),
         ),
     ]);
@@ -938,7 +938,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
             color: dark
-                ? Colors.white.withOpacity(.05)
+                ? Colors.white.withValues(alpha: .05)
                 : const Color(0xFFF4F5F7),
             borderRadius: BorderRadius.circular(12),
             border:
@@ -948,7 +948,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
             value: _surah,
             isExpanded: true,
             icon: Icon(Icons.keyboard_arrow_down_rounded,
-                color: txt.withOpacity(.6)),
+                color: txt.withValues(alpha: .6)),
             dropdownColor: dark ? AppColors.nightCard : Colors.white,
             items: [
               for (final s in _surahs)
@@ -1004,7 +1004,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
           ),
           Text('ژمارەی ئایەتەکان: ${toArabicDigits(count)}',
               style:
-                  TextStyle(fontSize: 12, color: txt.withOpacity(.65))),
+                  TextStyle(fontSize: 12, color: txt.withValues(alpha: .65))),
         ]);
   }
 
@@ -1018,7 +1018,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
             children: [
           Text('لە ئایەتی',
               style:
-                  TextStyle(fontSize: 12.5, color: txt.withOpacity(.8))),
+                  TextStyle(fontSize: 12.5, color: txt.withValues(alpha: .8))),
           const SizedBox(height: 6),
           _stepper(dark, txt, _from,
               min: 1,
@@ -1036,7 +1036,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
             children: [
           Text('بۆ ئایەتی',
               style:
-                  TextStyle(fontSize: 12.5, color: txt.withOpacity(.8))),
+                  TextStyle(fontSize: 12.5, color: txt.withValues(alpha: .8))),
           const SizedBox(height: 6),
           _stepper(dark, txt, _to,
               min: _from,
@@ -1056,7 +1056,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 2),
         decoration: BoxDecoration(
             color: dark
-                ? Colors.white.withOpacity(.05)
+                ? Colors.white.withValues(alpha: .05)
                 : const Color(0xFFF4F5F7),
             borderRadius: BorderRadius.circular(12),
             border:
@@ -1108,7 +1108,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
         children: [
           Text('ڕەنگی دەقی ئایەت',
               style:
-                  TextStyle(fontSize: 12, color: txt.withOpacity(.65))),
+                  TextStyle(fontSize: 12, color: txt.withValues(alpha: .65))),
           const SizedBox(height: 8),
           Wrap(spacing: 10, runSpacing: 10, children: [
             for (final c in _textColors)
@@ -1126,7 +1126,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
   /// ayah text size slider (22..72), value shown in Arabic digits
   Widget _sizeRow(Color txt, Color accent) => Row(children: [
         Icon(Icons.text_decrease_rounded,
-            size: 18, color: txt.withOpacity(.6)),
+            size: 18, color: txt.withValues(alpha: .6)),
         Expanded(
           child: Slider(
             min: 22,
@@ -1142,12 +1142,12 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
           ),
         ),
         Icon(Icons.text_increase_rounded,
-            size: 18, color: txt.withOpacity(.6)),
+            size: 18, color: txt.withValues(alpha: .6)),
         const SizedBox(width: 10),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-              color: accent.withOpacity(.12),
+              color: accent.withValues(alpha: .12),
               borderRadius: BorderRadius.circular(10)),
           child: Text(toArabicDigits(_textSize.round()),
               style: TextStyle(fontSize: 12.5,
@@ -1175,7 +1175,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
                             : FontWeight.normal)),
               ),
               selected: _fontIndex == i,
-              selectedColor: accent.withOpacity(.18),
+              selectedColor: accent.withValues(alpha: .18),
               showCheckmark: false,
               onSelected: (_) => setState(() {
                 _fontIndex = i;
@@ -1191,7 +1191,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
         children: [
           Text('ڕەنگی پاشبنەما',
               style:
-                  TextStyle(fontSize: 12, color: txt.withOpacity(.65))),
+                  TextStyle(fontSize: 12, color: txt.withValues(alpha: .65))),
           const SizedBox(height: 8),
           Wrap(spacing: 10, runSpacing: 10, children: [
             for (final c in _bgColors)
@@ -1223,7 +1223,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
                     size: 18,
                     color: _bgImagePath != null
                         ? AppColors.gold
-                        : txt.withOpacity(.7)),
+                        : txt.withValues(alpha: .7)),
                 label: Text(
                     _bgImagePath == null
                         ? 'وێنەی پاشبنەما'
@@ -1246,7 +1246,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
                     size: 18,
                     color: _bgVideoPath != null
                         ? AppColors.gold
-                        : txt.withOpacity(.7)),
+                        : txt.withValues(alpha: .7)),
                 label: Text(
                     _bgVideoPath == null
                         ? 'ڤیدیۆی پاشبنەما'
@@ -1263,7 +1263,7 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
             color: dark
-                ? Colors.white.withOpacity(.05)
+                ? Colors.white.withValues(alpha: .05)
                 : const Color(0xFFF4F5F7),
             borderRadius: BorderRadius.circular(12),
             border:
@@ -1273,11 +1273,11 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
             value: _reciter,
             isExpanded: true,
             icon: Icon(Icons.keyboard_arrow_down_rounded,
-                color: txt.withOpacity(.6)),
+                color: txt.withValues(alpha: .6)),
             dropdownColor: dark ? AppColors.nightCard : Colors.white,
             hint: Text('قاری بۆ دەنگی ڤیدیۆ',
                 style: TextStyle(fontSize: 12.5,
-                    color: txt.withOpacity(.65))),
+                    color: txt.withValues(alpha: .65))),
             items: [
               for (final r in _reciters)
                 DropdownMenuItem(

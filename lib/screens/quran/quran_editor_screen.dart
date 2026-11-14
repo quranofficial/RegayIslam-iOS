@@ -123,7 +123,7 @@ class _QuranEditorScreenState extends State<QuranEditorScreen> {
                 const Icon(Icons.text_increase_rounded),
               ]),
               Text('${p.quranFontSize}',
-                style: TextStyle(color: txt.withOpacity(.65))),
+                style: TextStyle(color: txt.withValues(alpha: .65))),
             ]),
           )),
           const SizedBox(height: 12),

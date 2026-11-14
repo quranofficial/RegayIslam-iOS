@@ -63,7 +63,7 @@ class _SahihMuslimScreenState extends State<SahihMuslimScreen> {
                             title: '${c['title'] ?? ''}',
                             tag: '${c['tag'] ?? ''}'))),
                     leading: CircleAvatar(
-                        backgroundColor: AppColors.primaryDark.withOpacity(.1),
+                        backgroundColor: AppColors.primaryDark.withValues(alpha: .1),
                         child: Text(toArabicDigits(i + 1),
                             style: TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -145,7 +145,7 @@ class _MuslimChapterScreenState extends State<MuslimChapterScreen> {
             ? const Center(child: CircularProgressIndicator())
             : _rows.isEmpty
                 ? Center(child: Text('ئەم بەشە بەتاڵە',
-                    style: TextStyle(color: txt.withOpacity(.5))))
+                    style: TextStyle(color: txt.withValues(alpha: .5))))
                 : ListView.separated(
                     padding: const EdgeInsets.all(12),
                     itemCount: _rows.length,
@@ -176,7 +176,7 @@ class _MuslimChapterScreenState extends State<MuslimChapterScreen> {
                               Icon(open
                                   ? Icons.expand_less_rounded
                                   : Icons.expand_more_rounded,
-                                  color: txt.withOpacity(.4)),
+                                  color: txt.withValues(alpha: .4)),
                             ]),
                           ),
                           if (open) ...[

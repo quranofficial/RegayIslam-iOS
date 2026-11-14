@@ -161,7 +161,7 @@ class _NwezhHubScreenState extends State<NwezhHubScreen> {
                 child: shown.isEmpty
                     ? Center(
                         child: Text('هیچ بەشێک نەدۆزرایەوە',
-                            style: TextStyle(color: txt.withOpacity(.5))))
+                            style: TextStyle(color: txt.withValues(alpha: .5))))
                     : GridView.count(
                         padding: EdgeInsets.fromLTRB(12, 8, 12,
                             bottomInset(context, extra: 14)),
@@ -200,7 +200,7 @@ class _NwezhHubScreenState extends State<NwezhHubScreen> {
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                           fontSize: 11,
-                                          color: txt.withOpacity(.55))),
+                                          color: txt.withValues(alpha: .55))),
                                 ]),
                               ),
                             ),

@@ -51,7 +51,7 @@ void showQuranSettingsSheet(BuildContext context, VoidCallback onChange) {
                     Text(group == 'quran' ? 'فۆنتی قورئان' : 'فۆنتی ئەپ',
                         style: TextStyle(fontSize: 9.5,
                             color: current == fonts.first
-                                ? Colors.white70 : txt.withOpacity(.6))),
+                                ? Colors.white70 : txt.withValues(alpha: .6))),
                   ]),
               selected: current == fonts.first,
               selectedColor: AppColors.primaryDark,

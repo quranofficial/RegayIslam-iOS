@@ -164,7 +164,7 @@ class _HomeReorderScreenState extends State<HomeReorderScreen> {
                   padding: const EdgeInsets.all(12),
                   child: Text(
                       'بە گرتنی هەر بەشێک و ڕاکێشان بۆ سەرەوە/خوارەوە یان دوگمەکان بەکاری بهێنە؛ ڕێکخستنەکە پاشەکەوت دەکرێت.',
-                      style: TextStyle(fontSize: 12, color: txt.withOpacity(.6))),
+                      style: TextStyle(fontSize: 12, color: txt.withValues(alpha: .6))),
                 ),
                 Expanded(
                   child: ReorderableListView.builder(
@@ -220,7 +220,7 @@ class _HomeReorderScreenState extends State<HomeReorderScreen> {
                                 icon: Icon(Icons.arrow_upward_rounded,
                                     size: 20,
                                     color: i == 0
-                                        ? txt.withOpacity(.25)
+                                        ? txt.withValues(alpha: .25)
                                         : (dark ? AppColors.gold : AppColors.primaryDark))),
                             IconButton(
                                 visualDensity: VisualDensity.compact,
@@ -230,10 +230,10 @@ class _HomeReorderScreenState extends State<HomeReorderScreen> {
                                 icon: Icon(Icons.arrow_downward_rounded,
                                     size: 20,
                                     color: i == _items.length - 1
-                                        ? txt.withOpacity(.25)
+                                        ? txt.withValues(alpha: .25)
                                         : (dark ? AppColors.gold : AppColors.primaryDark))),
                             Icon(Icons.drag_handle_rounded,
-                                size: 18, color: txt.withOpacity(.35)),
+                                size: 18, color: txt.withValues(alpha: .35)),
                           ]),
                         ),
                       );

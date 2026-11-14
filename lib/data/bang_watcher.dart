@@ -166,7 +166,7 @@ class BangWatcher {
                     end: Alignment.bottomCenter,
                     colors: [
                       AppColors.primaryDark,
-                      AppColors.primaryDark.withOpacity(.85),
+                      AppColors.primaryDark.withValues(alpha: .85),
                     ])),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               const Icon(Icons.notifications_active_rounded,
@@ -186,7 +186,7 @@ class BangWatcher {
               const SizedBox(height: 4),
               Text('لە ${AppPrefs.I.cityName} — ڕێگای ئیسلام',
                   style: TextStyle(
-                      color: Colors.white.withOpacity(.75), fontSize: 12)),
+                      color: Colors.white.withValues(alpha: .75), fontSize: 12)),
               const SizedBox(height: 18),
               SizedBox(
                 width: double.infinity,

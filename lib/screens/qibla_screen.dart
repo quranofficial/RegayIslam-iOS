@@ -163,12 +163,12 @@ class _QiblaScreenState extends State<QiblaScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                 decoration: BoxDecoration(
                     color: aligned
-                        ? AppColors.green.withOpacity(.15)
-                        : (dark ? Colors.white.withOpacity(.06) : Colors.black.withOpacity(.05)),
+                        ? AppColors.green.withValues(alpha: .15)
+                        : (dark ? Colors.white.withValues(alpha: .06) : Colors.black.withValues(alpha: .05)),
                     borderRadius: BorderRadius.circular(30),
                     border: Border.all(
                         color: aligned
-                            ? AppColors.green.withOpacity(.6)
+                            ? AppColors.green.withValues(alpha: .6)
                             : Colors.transparent)),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Icon(aligned ? Icons.check_circle_rounded : Icons.explore_rounded,
@@ -195,7 +195,7 @@ class _QiblaScreenState extends State<QiblaScreen> {
                         shape: BoxShape.circle,
                         gradient: RadialGradient(colors: [
                           (aligned ? AppColors.green : AppColors.primaryDark)
-                              .withOpacity(.10),
+                              .withValues(alpha: .10),
                           Colors.transparent,
                         ])),
                   ),
@@ -222,12 +222,12 @@ class _QiblaScreenState extends State<QiblaScreen> {
                         border: Border.all(
                             color: aligned
                                 ? AppColors.green
-                                : (dark ? AppColors.gold.withOpacity(.4) : AppColors.primaryDark.withOpacity(.3)),
+                                : (dark ? AppColors.gold.withValues(alpha: .4) : AppColors.primaryDark.withValues(alpha: .3)),
                             width: aligned ? 2.4 : 1.4),
                         boxShadow: [
                           BoxShadow(
                               color: (aligned ? AppColors.green : AppColors.primaryDark)
-                                  .withOpacity(aligned ? .45 : .3),
+                                  .withValues(alpha: aligned ? .45 : .3),
                               blurRadius: aligned ? 26 : 12),
                         ]),
                     child: Icon(Icons.mosque_rounded, size: 38,
@@ -240,7 +240,7 @@ class _QiblaScreenState extends State<QiblaScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                 decoration: BoxDecoration(
-                    color: dark ? Colors.white.withOpacity(.05) : Colors.white,
+                    color: dark ? Colors.white.withValues(alpha: .05) : Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                         color: dark ? Colors.white10 : Colors.black12)),
@@ -260,13 +260,13 @@ class _QiblaScreenState extends State<QiblaScreen> {
                         'دووری قیبلە: ${_distanceKm(_lat!, _lng!).toStringAsFixed(0)} کم — ناوخۆکەت: ${_lat!.toStringAsFixed(2)}, ${_lng!.toStringAsFixed(2)}',
                         textAlign: TextAlign.center,
                         style: TextStyle(fontSize: 11.5,
-                            color: txt.withOpacity(.6))),
+                            color: txt.withValues(alpha: .6))),
                   ],
                 ]),
               ),
               const SizedBox(height: 14),
               Text('مۆبایلەکە تەخت ڕابگرە و لە دوور لە مێتال بەکاری بهێنە',
-                  style: TextStyle(fontSize: 11, color: txt.withOpacity(.4))),
+                  style: TextStyle(fontSize: 11, color: txt.withValues(alpha: .4))),
             ],
           ]),
         ),

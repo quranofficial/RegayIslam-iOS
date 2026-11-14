@@ -1,3 +1,4 @@
+import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/prefs.dart';
@@ -43,8 +44,35 @@ void applySystemUi(bool dark) {
   ));
 }
 
+/// Never let a stray exception kill the app or show a raw red/grey error
+/// box: log it and keep running (release builds show a friendly message).
+void _installErrorHandlers() {
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    debugPrint('FlutterError: ${details.exceptionAsString()}');
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('Uncaught async error: $error\n$stack');
+    return true; // handled
+  };
+  ErrorWidget.builder = (FlutterErrorDetails d) => kReleaseMode
+      ? const Directionality(
+          textDirection: TextDirection.rtl,
+          child: Center(
+              child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text('هەڵەیەک ڕوویدا — بگەڕێوە و دووبارە هەوڵبدەرەوە',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 14,
+                          decoration: TextDecoration.none)))))
+      : ErrorWidget(d.exception);
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  _installErrorHandlers();
   await AppPrefs.I.init();
   // Item 5: the timezone MUST be ready before anything schedules a بانگ
   // alarm — do it in main(), before runApp, not only inside the splash.

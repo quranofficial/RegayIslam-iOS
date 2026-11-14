@@ -438,7 +438,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             ? const Center(child: CircularProgressIndicator())
             : _items.isEmpty && _q.isEmpty
             ? Center(child: Text('هیچ بابەتێک لە دڵخوازەکانت نییە',
-                style: TextStyle(color: txt.withOpacity(.6))))
+                style: TextStyle(color: txt.withValues(alpha: .6))))
             // Item 7: fixed-height tiles — never overflow or fall apart.
             : Column(children: [
                 // Items 5 + 11: search inside the wishlist itself.
@@ -465,7 +465,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 Expanded(
                   child: _items.isEmpty
                       ? Center(child: Text('هیچ ئەنجامێک نەدۆزرایەوە',
-                          style: TextStyle(color: txt.withOpacity(.6))))
+                          style: TextStyle(color: txt.withValues(alpha: .6))))
                       : ListView.separated(
                 padding: EdgeInsets.fromLTRB(12, 6, 12, bottomInset(context, extra: 16)),
                 itemCount: _items.length,
@@ -488,8 +488,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                           CircleAvatar(
                             radius: 20,
                             backgroundColor: dark
-                                ? AppColors.gold.withOpacity(.15)
-                                : AppColors.primaryDark.withOpacity(.08),
+                                ? AppColors.gold.withValues(alpha: .15)
+                                : AppColors.primaryDark.withValues(alpha: .08),
                             child: Icon(kind.icon, size: 20,
                                 color: dark ? AppColors.gold : AppColors.primaryDark)),
                           const SizedBox(width: 10),
@@ -511,7 +511,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                 Text(item.content, maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(fontSize: 12, height: 1.4,
-                                      color: txt.withOpacity(.6))),
+                                      color: txt.withValues(alpha: .6))),
                               ],
                             ]),
                           ),

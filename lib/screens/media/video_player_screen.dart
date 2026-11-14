@@ -278,7 +278,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   Widget _lbl(String s, Color txt) => Text(s,
       style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700,
-          color: txt.withOpacity(.7)));
+          color: txt.withValues(alpha: .7)));
 
   Widget _chip(String label,
       {required bool selected, required Color accent, required Color txt,
@@ -289,10 +289,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
         decoration: BoxDecoration(
-            color: selected ? accent : txt.withOpacity(.06),
+            color: selected ? accent : txt.withValues(alpha: .06),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-                color: selected ? accent : accent.withOpacity(.3))),
+                color: selected ? accent : accent.withValues(alpha: .3))),
         child: Text(label,
             style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
                 color: selected ? Colors.white : txt)),
@@ -422,7 +422,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         decoration: BoxDecoration(
           color: dark ? AppColors.nightCard : Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: accent.withOpacity(.30)),
+          border: Border.all(color: accent.withValues(alpha: .30)),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           IconButton(
@@ -566,7 +566,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                                   child: Container(
                                     padding: const EdgeInsets.all(16),
                                     decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(.45),
+                                        color: Colors.black.withValues(alpha: .45),
                                         shape: BoxShape.circle),
                                     child: const Icon(
                                         Icons.play_arrow_rounded,

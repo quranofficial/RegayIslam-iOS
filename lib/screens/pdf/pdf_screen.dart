@@ -260,7 +260,7 @@ class _PdfScreenState extends State<PdfScreen> {
                 ? Center(child: Column(
                     mainAxisAlignment: MainAxisAlignment.center, children: [
                     Icon(Icons.cloud_off_rounded, size: 44,
-                        color: Colors.red.withOpacity(.7)),
+                        color: Colors.red.withValues(alpha: .7)),
                     const SizedBox(height: 12),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 28),

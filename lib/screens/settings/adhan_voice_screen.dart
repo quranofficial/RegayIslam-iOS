@@ -259,7 +259,7 @@ class _AdhanVoiceScreenState extends State<AdhanVoiceScreen> {
                 Expanded(
                   child: _filtered.isEmpty
                       ? Center(child: Text('هیچ نەدۆزرایەوە',
-                          style: TextStyle(color: txt.withOpacity(.5))))
+                          style: TextStyle(color: txt.withValues(alpha: .5))))
                       : Column(children: [
                     Expanded(
                       child: ListView.builder(
@@ -277,7 +277,7 @@ class _AdhanVoiceScreenState extends State<AdhanVoiceScreen> {
                             final busy = _busyFile == file;
                             return Card(
                               color: selected
-                                  ? AppColors.primaryDark.withOpacity(dark ? .25 : .12)
+                                  ? AppColors.primaryDark.withValues(alpha: dark ? .25 : .12)
                                   : card,
                               margin: const EdgeInsets.only(bottom: 8),
                               shape: RoundedRectangleBorder(
@@ -379,7 +379,7 @@ class _AdhanVoiceScreenState extends State<AdhanVoiceScreen> {
                   child: Text(
                       'تێبینی: ئاگەدارکردنەوەی بانگی نوێژ بە دەنگی هەڵبژێردراو لەناو ئەپەکە دەبیستیت؛ ئاگەدارکردنەوەی سیستەم (لە دەرەوەی ئەپ) دەنگی بنەڕەتی بەکاردەهێنێت.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 11, color: txt.withOpacity(.5))),
+                      style: TextStyle(fontSize: 11, color: txt.withValues(alpha: .5))),
                 ),
               ]),
       ),

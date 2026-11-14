@@ -381,7 +381,7 @@ class _QariakanScreenState extends State<QariakanScreen> {
                     const SizedBox(width: 6),
                     Text('${_filtered.length} قاری — دەنگ و ئایەت بەردەستە',
                         style: TextStyle(fontSize: 11.5,
-                            color: txt.withOpacity(.6))),
+                            color: txt.withValues(alpha: .6))),
                   ]),
                 ),
                 Expanded(child: ListView(padding: const EdgeInsets.all(12), children: [

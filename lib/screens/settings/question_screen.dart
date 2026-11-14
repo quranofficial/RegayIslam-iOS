@@ -39,7 +39,7 @@ class QuestionScreen extends StatelessWidget {
               const SizedBox(height: 8),
               Text('پرسیارەکان لە سێرڤەرەوە دێن و هەموو جارێک نوێ دەبنەوە',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, color: txt.withOpacity(.6))),
+                  style: TextStyle(fontSize: 13, color: txt.withValues(alpha: .6))),
               const SizedBox(height: 24),
               ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(

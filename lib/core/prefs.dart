@@ -352,7 +352,24 @@ class AppPrefs {
             backgroundColor:
                 day ? AppColors.primaryDark : AppColors.nightCard,
             foregroundColor: Colors.white,
+            centerTitle: true,
+            scrolledUnderElevation: 0,
             elevation: 0),
+        cardTheme: CardThemeData(
+            color: day ? Colors.white : AppColors.nightCard,
+            elevation: day ? 1.5 : 0,
+            shadowColor: Colors.black26,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16))),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 12))),
+        inputDecorationTheme: InputDecorationTheme(
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12))),
         dialogBackgroundColor: day ? Colors.white : AppColors.nightCard,
         dialogTheme: DialogThemeData(
             backgroundColor: day ? Colors.white : AppColors.nightCard,
@@ -365,11 +382,16 @@ class AppPrefs {
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16))),
         bottomSheetTheme: BottomSheetThemeData(
+            shape: const RoundedRectangleBorder(
+                borderRadius:
+                    BorderRadius.vertical(top: Radius.circular(20))),
             backgroundColor: day ? Colors.white : AppColors.nightCard,
             modalBackgroundColor: day ? Colors.white : AppColors.nightCard),
         snackBarTheme: SnackBarThemeData(
             backgroundColor: day ? AppColors.primaryDark : AppColors.gold,
             contentTextStyle: TextStyle(color: Colors.white, fontSize: 13),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
             behavior: SnackBarBehavior.floating),
         dividerColor: day ? Colors.black12 : Colors.white10,
         switchTheme: SwitchThemeData(
@@ -380,8 +402,8 @@ class AppPrefs {
             trackColor: WidgetStateProperty.resolveWith((s) =>
                 s.contains(WidgetState.selected)
                     ? (day
-                        ? AppColors.primaryDark.withOpacity(.4)
-                        : AppColors.gold.withOpacity(.4))
+                        ? AppColors.primaryDark.withValues(alpha: .4)
+                        : AppColors.gold.withValues(alpha: .4))
                     : (day ? Colors.black26 : Colors.white24))),
       );
 }

@@ -285,7 +285,7 @@ class _VideosScreenState extends State<VideosScreen> {
                         child: Text(_error!,
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                                color: txt.withOpacity(.6), height: 1.6)),
+                                color: txt.withValues(alpha: .6), height: 1.6)),
                       ),
                       if (_failed) ...[
                         const SizedBox(height: 14),
@@ -385,7 +385,7 @@ class _VideosScreenState extends State<VideosScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                              color: accent.withOpacity(.12),
+                              color: accent.withValues(alpha: .12),
                               borderRadius: BorderRadius.circular(20)),
                           child: Text('ڤیدیۆکان: ${_filtered.length}',
                               style: TextStyle(
@@ -400,7 +400,7 @@ class _VideosScreenState extends State<VideosScreen> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                    fontSize: 11, color: txt.withOpacity(.6))),
+                                    fontSize: 11, color: txt.withValues(alpha: .6))),
                           ),
                         ],
                       ]),
@@ -415,7 +415,7 @@ class _VideosScreenState extends State<VideosScreen> {
                                   padding: const EdgeInsets.all(36),
                                   child: Column(children: [
                                     Icon(Icons.search_off_rounded,
-                                        size: 44, color: txt.withOpacity(.3)),
+                                        size: 44, color: txt.withValues(alpha: .3)),
                                     const SizedBox(height: 12),
                                     Text(
                                         _q.isEmpty
@@ -424,7 +424,7 @@ class _VideosScreenState extends State<VideosScreen> {
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
                                             height: 1.6,
-                                            color: txt.withOpacity(.6))),
+                                            color: txt.withValues(alpha: .6))),
                                     if (_q.isNotEmpty)
                                       TextButton(
                                           onPressed: () {
@@ -473,7 +473,7 @@ class _VideosScreenState extends State<VideosScreen> {
           color: dark ? AppColors.nightCard : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-              color: dark ? Colors.white10 : Colors.black.withOpacity(.06))),
+              color: dark ? Colors.white10 : Colors.black.withValues(alpha: .06))),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () => _open(v),
@@ -490,9 +490,9 @@ class _VideosScreenState extends State<VideosScreen> {
                       end: Alignment.bottomRight,
                       colors: [
                         AppColors.primaryDark,
-                        AppColors.primaryDark.withOpacity(.45),
+                        AppColors.primaryDark.withValues(alpha: .45),
                         (dark ? AppColors.gold : AppColors.primaryDark)
-                            .withOpacity(.75),
+                            .withValues(alpha: .75),
                       ],
                     )),
               ),
@@ -500,7 +500,7 @@ class _VideosScreenState extends State<VideosScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(.14),
+                      color: Colors.white.withValues(alpha: .14),
                       shape: BoxShape.circle),
                   child: const Icon(Icons.play_arrow_rounded,
                       size: 40, color: Colors.white),
@@ -514,7 +514,7 @@ class _VideosScreenState extends State<VideosScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(.65),
+                        color: Colors.black.withValues(alpha: .65),
                         borderRadius: BorderRadius.circular(7)),
                     child: Text(time,
                         style: const TextStyle(
@@ -531,7 +531,7 @@ class _VideosScreenState extends State<VideosScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(.45),
+                        color: Colors.black.withValues(alpha: .45),
                         borderRadius: BorderRadius.circular(20)),
                     child: Text(tagName,
                         maxLines: 1,
@@ -579,7 +579,7 @@ class _VideosScreenState extends State<VideosScreen> {
                               fontWeight: FontWeight.bold,
                               color: liked
                                   ? const Color(0xFFE91E63)
-                                  : txt.withOpacity(.6))),
+                                  : txt.withValues(alpha: .6))),
                     ]),
                   ),
                 ),
@@ -596,7 +596,7 @@ class _VideosScreenState extends State<VideosScreen> {
                           style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: txt.withOpacity(.6))),
+                              color: txt.withValues(alpha: .6))),
                     ]),
                   ),
                 ),
@@ -767,7 +767,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
                   ? const Center(child: CircularProgressIndicator())
                   : _items.isEmpty
                       ? Center(child: Text('هێشتا هیچ سەرنجێک نییە',
-                          style: TextStyle(color: txt.withOpacity(.5))))
+                          style: TextStyle(color: txt.withValues(alpha: .5))))
                       : ListView.builder(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           itemCount: _items.length,
@@ -778,7 +778,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
                             return ListTile(
                               leading: CircleAvatar(
                                   backgroundColor:
-                                      AppColors.primaryDark.withOpacity(.12),
+                                      AppColors.primaryDark.withValues(alpha: .12),
                                   child: Text(
                                       user.isEmpty ? '?' : user.characters.first,
                                       style: const TextStyle(
@@ -794,7 +794,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
                                   : Text(when,
                                       style: TextStyle(
                                           fontSize: 10,
-                                          color: txt.withOpacity(.45))),
+                                          color: txt.withValues(alpha: .45))),
                             );
                           },
                         ),

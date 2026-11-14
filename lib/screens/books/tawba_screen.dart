@@ -70,7 +70,7 @@ class _TawbaScreenState extends State<TawbaScreen> {
                                 table: table, title: title))),
                         leading: CircleAvatar(
                             backgroundColor:
-                                AppColors.primaryDark.withOpacity(.1),
+                                AppColors.primaryDark.withValues(alpha: .1),
                             child: Text(r['idku']?.toString() ?? '',
                                 style: TextStyle(
                                     fontWeight: FontWeight.bold,
@@ -94,7 +94,7 @@ class _TawbaScreenState extends State<TawbaScreen> {
                         onTap: () => setState(() => _open = open ? null : i),
                         leading: CircleAvatar(
                             backgroundColor:
-                                AppColors.primaryDark.withOpacity(.1),
+                                AppColors.primaryDark.withValues(alpha: .1),
                             child: Text(r['idku']?.toString() ?? '',
                                 style: TextStyle(
                                     fontWeight: FontWeight.bold,
@@ -111,7 +111,7 @@ class _TawbaScreenState extends State<TawbaScreen> {
                           Icon(open
                               ? Icons.expand_less_rounded
                               : Icons.expand_more_rounded,
-                              color: txt.withOpacity(.4)),
+                              color: txt.withValues(alpha: .4)),
                         ]),
                       ),
                       if (open) ...[
@@ -224,7 +224,7 @@ class _TawbaSectionScreenState extends State<TawbaSectionScreen> {
                         onTap: () => setState(() => _open = open ? null : i),
                         leading: CircleAvatar(
                             backgroundColor:
-                                AppColors.primaryDark.withOpacity(.1),
+                                AppColors.primaryDark.withValues(alpha: .1),
                             child: Text(
                                 r['idku']?.toString().isNotEmpty == true
                                     ? '${r['idku']}'
@@ -245,7 +245,7 @@ class _TawbaSectionScreenState extends State<TawbaSectionScreen> {
                           Icon(open
                               ? Icons.expand_less_rounded
                               : Icons.expand_more_rounded,
-                              color: txt.withOpacity(.4)),
+                              color: txt.withValues(alpha: .4)),
                         ]),
                       ),
                       if (open) ...[

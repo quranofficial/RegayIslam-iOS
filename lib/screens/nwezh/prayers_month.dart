@@ -340,7 +340,7 @@ class _PrayersMonthScreenState extends State<PrayersMonthScreen> {
               color: dayColor, height: 1.15)),
       Text(weekdayKu(d),
           style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700,
-              color: dayColor.withOpacity(.85), height: 1.2)),
+              color: dayColor.withValues(alpha: .85), height: 1.2)),
     ]);
   }
 

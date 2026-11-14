@@ -31,7 +31,7 @@ class BandScreen extends StatelessWidget {
             return ListView(padding: const EdgeInsets.all(16), children: [
               Center(child: CircleAvatar(
                   radius: 44,
-                  backgroundColor: AppColors.primaryDark.withOpacity(.08),
+                  backgroundColor: AppColors.primaryDark.withValues(alpha: .08),
                   child: Icon(Icons.person_rounded, size: 50,
                       color: dark ? AppColors.gold : AppColors.primaryDark))),
               const SizedBox(height: 12),
@@ -41,7 +41,7 @@ class BandScreen extends StatelessWidget {
                 const SizedBox(height: 20),
                 Center(child: Text('هیچ زانیارییەک بۆ پرۆفایل بەردەست نییە',
                     style: TextStyle(fontSize: 12.5,
-                        color: txt.withOpacity(.5)))),
+                        color: txt.withValues(alpha: .5)))),
               ],
               const SizedBox(height: 20),
               for (final b in items)
@@ -59,7 +59,7 @@ class BandScreen extends StatelessWidget {
                         const SizedBox(height: 6),
                         SelectableText('${b['about'] ?? b['text'] ?? ''}',
                             style: TextStyle(fontSize: 14, height: 1.8,
-                                color: txt.withOpacity(.85))),
+                                color: txt.withValues(alpha: .85))),
                       ]),
                 ),
             ]);

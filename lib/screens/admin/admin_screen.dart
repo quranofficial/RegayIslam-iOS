@@ -46,7 +46,7 @@ abstract class _AdminPageState<T extends StatefulWidget> extends State<T> {
       ? const <BoxShadow>[]
       : <BoxShadow>[
           BoxShadow(
-              color: Colors.black.withOpacity(.06),
+              color: Colors.black.withValues(alpha: .06),
               blurRadius: 8,
               offset: const Offset(0, 2)),
         ];
@@ -97,18 +97,18 @@ abstract class _AdminPageState<T extends StatefulWidget> extends State<T> {
           style: TextStyle(fontSize: 13.5, color: txt),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(fontSize: 12.5, color: txt.withOpacity(.45)),
+            hintStyle: TextStyle(fontSize: 12.5, color: txt.withValues(alpha: .45)),
             isDense: true,
             filled: true,
             fillColor:
-                dark ? Colors.white.withOpacity(.05) : Colors.black.withOpacity(.03),
+                dark ? Colors.white.withValues(alpha: .05) : Colors.black.withValues(alpha: .03),
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             border:
                 OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
             enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: txt.withOpacity(.15))),
+                borderSide: BorderSide(color: txt.withValues(alpha: .15))),
             focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
                 borderSide: BorderSide(color: accent)),
@@ -156,7 +156,7 @@ abstract class _AdminPageState<T extends StatefulWidget> extends State<T> {
 
   Widget note(String t) => Text(t,
       style: TextStyle(
-          fontSize: 11.5, color: txt.withOpacity(.55), height: 1.6));
+          fontSize: 11.5, color: txt.withValues(alpha: .55), height: 1.6));
 
   Widget get spinner => const Center(
         child: Padding(
@@ -331,7 +331,7 @@ class _AdminScreenState extends _AdminPageState<AdminScreen> {
               child: Text(label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11, color: txt.withOpacity(.6))),
+                  style: TextStyle(fontSize: 11, color: txt.withValues(alpha: .6))),
             ),
           ]),
           const SizedBox(height: 8),
@@ -908,7 +908,7 @@ class _TagVideosSheetState extends State<_TagVideosSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                  color: txt.withOpacity(.25),
+                  color: txt.withValues(alpha: .25),
                   borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 10),
           Padding(
@@ -951,7 +951,7 @@ class _TagVideosSheetState extends State<_TagVideosSheet> {
                             subtitle: Text('id: ${v['id']}',
                                 style: TextStyle(
                                     fontSize: 10,
-                                    color: txt.withOpacity(.5))),
+                                    color: txt.withValues(alpha: .5))),
                             trailing: Row(mainAxisSize: MainAxisSize.min,
                                 children: [
                                   // Item 20: edit-in-place (PATCH)
@@ -1338,7 +1338,7 @@ class _AdminGithubPageState extends _AdminPageState<_AdminGithubPage> {
                 color: card,
                 borderRadius: BorderRadius.circular(10),
                 border:
-                    Border.all(color: AppColors.green.withOpacity(.4))),
+                    Border.all(color: AppColors.green.withValues(alpha: .4))),
             child: Row(children: [
               Expanded(
                 child: SelectableText(_result,
@@ -1504,11 +1504,11 @@ class _AdminDataPageState extends _AdminPageState<_AdminDataPage> {
             decoration: InputDecoration(
                 hintText: 'ناوەڕۆکی JSON…',
                 hintStyle: TextStyle(
-                    fontSize: 12, color: txt.withOpacity(.4)),
+                    fontSize: 12, color: txt.withValues(alpha: .4)),
                 filled: true,
                 fillColor: dark
-                    ? Colors.white.withOpacity(.05)
-                    : Colors.black.withOpacity(.03),
+                    ? Colors.white.withValues(alpha: .05)
+                    : Colors.black.withValues(alpha: .03),
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10))),
           ),
@@ -1645,14 +1645,14 @@ class _AdminCommentsPageState extends _AdminPageState<_AdminCommentsPage> {
       decoration: BoxDecoration(
         color: card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: txt.withOpacity(.08)),
+        border: Border.all(color: txt.withValues(alpha: .08)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
             radius: 16,
-            backgroundColor: accent.withOpacity(.15),
+            backgroundColor: accent.withValues(alpha: .15),
             child: Icon(Icons.person_rounded, size: 16, color: accent),
           ),
           const SizedBox(width: 10),
@@ -1671,13 +1671,13 @@ class _AdminCommentsPageState extends _AdminPageState<_AdminCommentsPage> {
                             color: txt)),
                   ),
                   Text(_fmtDate(c['date']),
-                      style: TextStyle(fontSize: 10, color: txt.withOpacity(.5))),
+                      style: TextStyle(fontSize: 10, color: txt.withValues(alpha: .5))),
                 ]),
                 const SizedBox(height: 4),
                 SelectableText('${c['commenttt'] ?? c['text'] ?? ''}',
                     style: TextStyle(
                         fontSize: 12.5,
-                        color: txt.withOpacity(.85),
+                        color: txt.withValues(alpha: .85),
                         height: 1.5)),
               ],
             ),
@@ -1716,15 +1716,15 @@ class _AdminCommentsPageState extends _AdminPageState<_AdminCommentsPage> {
               isDense: true,
               filled: true,
               fillColor: dark
-                  ? Colors.white.withOpacity(.05)
-                  : Colors.black.withOpacity(.03),
+                  ? Colors.white.withValues(alpha: .05)
+                  : Colors.black.withValues(alpha: .03),
               contentPadding: const EdgeInsets.symmetric(
                   horizontal: 12, vertical: 10),
               border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10)),
               enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: txt.withOpacity(.15))),
+                  borderSide: BorderSide(color: txt.withValues(alpha: .15))),
               focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide(color: accent)),
@@ -1759,15 +1759,15 @@ class _AdminCommentsPageState extends _AdminPageState<_AdminCommentsPage> {
                 isDense: true,
                 filled: true,
                 fillColor: dark
-                    ? Colors.white.withOpacity(.05)
-                    : Colors.black.withOpacity(.03),
+                    ? Colors.white.withValues(alpha: .05)
+                    : Colors.black.withValues(alpha: .03),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10)),
                 enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: txt.withOpacity(.15))),
+                    borderSide: BorderSide(color: txt.withValues(alpha: .15))),
                 focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide(color: accent)),
@@ -1864,7 +1864,7 @@ class _AdminLogPage extends StatelessWidget {
                             ? null
                             : [
                                 BoxShadow(
-                                    color: Colors.black.withOpacity(.05),
+                                    color: Colors.black.withValues(alpha: .05),
                                     blurRadius: 4,
                                     offset: const Offset(0, 1)),
                               ]),
