@@ -40,13 +40,28 @@ class HomeWidgets {
         final v = t[e.key];
         if (v == null || v.isEmpty) continue;
         final p = v.split(':');
-        final m = (int.tryParse(p[0]) ?? 0) * 60 + (int.tryParse(p[1]) ?? 0);
+        if (p.length < 2) continue;
+        final m = (int.tryParse(p[0]) ?? 0) * 60 +
+            (int.tryParse(p[1]) ?? 0);
         if (m >= hm && nextName.isEmpty) {
           nextName = e.value;
           nextTime = v;
         }
       }
-      await _save('prayer_next_name', nextName.isEmpty ? 'خەوتنان تێپەڕی' : 'دواترین بانگ: ${nextName}');
+      // After Isha, show tomorrow's Fajr instead of a dead "--:--" state.
+      if (nextName.isEmpty) {
+        try {
+          final tomorrow = await Db.I.prayerTimes(
+              AppPrefs.I.cityId, now.add(const Duration(days: 1)));
+          final fajr = tomorrow?['bayani'];
+          if (fajr != null && fajr.isNotEmpty) {
+            nextName = 'بەیانیی سبەی';
+            nextTime = fajr;
+          }
+        } catch (_) {}
+      }
+      await _save('prayer_next_name',
+          nextName.isEmpty ? 'کاتی بانگی داهاتوو دیاری نییە' : 'دواترین بانگ: $nextName');
       await _save('prayer_next_time', nextTime.isEmpty ? '--:--' : nextTime);
       for (final e in names.entries) {
         await _save('prayer_${e.key}', t[e.key] ?? '--:--');
