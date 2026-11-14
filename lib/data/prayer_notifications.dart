@@ -291,7 +291,10 @@ class PrayerNotifications {
     // "granted" would make zonedSchedule throw exact_alarms_not_permitted).
     await canScheduleExact();
     final keys = switches.keys.toList();
-    final now = DateTime.now();
+    // Use the pinned prayer-time zone (Asia/Baghdad), NOT the phone's own
+    // zone: otherwise a phone set to another timezone computes the wrong
+    // calendar day and the adhan rings at the wrong moment.
+    final now = tz.TZDateTime.now(tz.local);
     for (var d = 0; d < 7; d++) {
       final date = now.add(Duration(days: d));
       Map<String, String>? row;

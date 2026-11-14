@@ -533,13 +533,13 @@ class _QuranStudioScreenState extends State<QuranStudioScreen> {
 
   Future<void> _pickBgImage() async {
     final x = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (x == null) return;
+    if (x == null || !mounted) return;
     setState(() { _bgImagePath = x.path; _bgVideoPath = null; });
   }
 
   Future<void> _pickBgVideo() async {
     final x = await ImagePicker().pickVideo(source: ImageSource.gallery);
-    if (x == null) return;
+    if (x == null || !mounted) return;
     setState(() { _bgVideoPath = x.path; });
   }
 

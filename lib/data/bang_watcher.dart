@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:timezone/timezone.dart' as tz;
 import 'package:vibration/vibration.dart';
 import '../core/constants.dart';
 import '../core/prefs.dart';
@@ -69,7 +70,8 @@ class BangWatcher {
     _checking = true;
     try {
       final p = AppPrefs.I;
-      final now = DateTime.now();
+      PrayerNotifications.ensureTimezone();
+      final now = tz.TZDateTime.now(tz.local); // same zone as the alarms
       // refresh the (day, city) prayer-time cache
       if (_timesCache == null ||
           _dayCache != DateTime(now.year, now.month, now.day) ||
@@ -99,7 +101,7 @@ class BangWatcher {
         final h = int.tryParse(parts[0]);
         final m = int.tryParse(parts[1]);
         if (h == null || m == null) continue;
-        final at = DateTime(now.year, now.month, now.day, h, m)
+        final at = tz.TZDateTime(tz.local, now.year, now.month, now.day, h, m)
             .add(Duration(minutes: p.adhanOffset(key)));
         final diff = now.difference(at).inMilliseconds;
         if (diff < 0 || diff > _windowMs) continue;
