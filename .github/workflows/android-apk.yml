@@ -3,6 +3,9 @@ name: Build RegayIslam Android APK
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 concurrency:
   group: regayislam-${{ github.workflow }}
   cancel-in-progress: true
@@ -132,7 +135,18 @@ jobs:
           grep -n 'applicationId = "com.nwezhakanm"' android/app/build.gradle.kts
 
       - name: Build Release APK
-        run: flutter build apk --release
+        run: |
+          set -o pipefail
+          flutter build apk --release 2>&1 | tee /tmp/build.txt
+
+      - name: Publish build log to build-report branch
+        if: always()
+        run: |
+          mkdir /tmp/rep && tail -n 400 /tmp/build.txt > /tmp/rep/android-build.txt || true
+          cd /tmp/rep && git init -q && git checkout -q -b build-report
+          git config user.name "github-actions" && git config user.email "actions@github.com"
+          git add -A && git commit -q -m "android build log ${GITHUB_SHA}"
+          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" build-report
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
