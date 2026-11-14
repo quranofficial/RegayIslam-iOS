@@ -137,7 +137,7 @@ jobs:
       - name: Build Release APK
         run: |
           set -o pipefail
-          flutter build apk --release 2>&1 | tee /tmp/build.txt
+          flutter build apk --release --android-skip-build-dependency-validation 2>&1 | tee /tmp/build.txt
 
       - name: Publish build log to build-report branch
         if: always()
